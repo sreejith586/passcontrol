@@ -5,7 +5,10 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
-import { CurrentTenantContext } from '../../access/decorators/current-tenant.decorator';
+import {
+  CurrentTenantContext,
+  TenantContext,
+} from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'alert-events', version: '1' })
 @UseGuards(AuthGuard, RbacGuard)
@@ -15,7 +18,7 @@ export class AlertEventsController {
   @Get()
   @RequirePermissions('alert.view')
   async list(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Query() query: ListAlertEventsQueryDto,
   ) {
     const list = await this.service.list(ctx, query);
@@ -25,7 +28,7 @@ export class AlertEventsController {
   @Get(':id')
   @RequirePermissions('alert.view')
   async get(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const alert = await this.service.getById(ctx, id);
@@ -35,7 +38,7 @@ export class AlertEventsController {
   @Post(':id/acknowledge')
   @RequirePermissions('alert.acknowledge')
   async acknowledge(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const updated = await this.service.acknowledge(ctx, id);
@@ -45,7 +48,7 @@ export class AlertEventsController {
   @Post(':id/resolve')
   @RequirePermissions('alert.resolve')
   async resolve(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const updated = await this.service.resolve(ctx, id);

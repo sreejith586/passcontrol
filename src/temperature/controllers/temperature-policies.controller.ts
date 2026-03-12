@@ -17,7 +17,10 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
-import { CurrentTenantContext } from '../../access/decorators/current-tenant.decorator';
+import {
+  CurrentTenantContext,
+  TenantContext,
+} from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'temperature-policies', version: '1' })
 @UseGuards(AuthGuard, RbacGuard)
@@ -27,7 +30,7 @@ export class TemperaturePoliciesController {
   @Post()
   @RequirePermissions('temperature.policy.create')
   async create(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Body() dto: CreateTemperaturePolicyDto,
   ) {
     const policy = await this.service.create(ctx, dto);
@@ -37,7 +40,7 @@ export class TemperaturePoliciesController {
   @Get()
   @RequirePermissions('temperature.policy.view')
   async list(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Query() query: ListTemperaturePoliciesQueryDto,
   ) {
     const list = await this.service.list(ctx, query);
@@ -47,7 +50,7 @@ export class TemperaturePoliciesController {
   @Get(':id')
   @RequirePermissions('temperature.policy.view')
   async get(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const policy = await this.service.getById(ctx, id);
@@ -57,7 +60,7 @@ export class TemperaturePoliciesController {
   @Patch(':id')
   @RequirePermissions('temperature.policy.update')
   async update(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
     @Body() dto: UpdateTemperaturePolicyDto,
   ) {
@@ -68,7 +71,7 @@ export class TemperaturePoliciesController {
   @Delete(':id')
   @RequirePermissions('temperature.policy.update')
   async deactivate(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const result = await this.service.deactivate(ctx, id);

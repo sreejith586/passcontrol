@@ -6,7 +6,10 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
-import { CurrentTenantContext } from '../../access/decorators/current-tenant.decorator';
+import {
+  CurrentTenantContext,
+  TenantContext,
+} from '../../access/decorators/current-tenant.decorator';
 import { AlertEventsService } from '../../alert-events/services/alert-events.service';
 
 @Controller({ path: 'temperature-readings', version: '1' })
@@ -20,7 +23,7 @@ export class TemperatureReadingsController {
   @Post()
   @RequirePermissions('temperature.reading.create')
   async create(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Body() dto: CreateTemperatureReadingDto,
   ) {
     const createAlert = (payload: Parameters<AlertEventsService['createFromPayload']>[0]) =>
@@ -32,7 +35,7 @@ export class TemperatureReadingsController {
   @Get()
   @RequirePermissions('temperature.reading.view')
   async list(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Query() query: ListTemperatureReadingsQueryDto,
   ) {
     const list = await this.service.list(ctx, query);
@@ -42,7 +45,7 @@ export class TemperatureReadingsController {
   @Get(':id')
   @RequirePermissions('temperature.reading.view')
   async get(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const reading = await this.service.getById(ctx, id);

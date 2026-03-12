@@ -6,7 +6,10 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
-import { CurrentTenantContext } from '../../access/decorators/current-tenant.decorator';
+import {
+  CurrentTenantContext,
+  TenantContext,
+} from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'files', version: '1' })
 @UseGuards(AuthGuard, RbacGuard)
@@ -16,7 +19,7 @@ export class FilesController {
   @Post('init-upload')
   @RequirePermissions('file.upload')
   async initUpload(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Body() dto: InitUploadDto,
   ) {
     const result = await this.service.initUpload(ctx, dto);
@@ -26,7 +29,7 @@ export class FilesController {
   @Post()
   @RequirePermissions('file.upload')
   async registerFile(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Body() dto: RegisterFileDto,
   ) {
     const file = await this.service.registerFile(ctx, dto);
@@ -36,7 +39,7 @@ export class FilesController {
   @Get(':id')
   @RequirePermissions('file.view')
   async get(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const file = await this.service.getById(ctx, id);

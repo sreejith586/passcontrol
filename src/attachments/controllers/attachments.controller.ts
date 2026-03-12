@@ -15,7 +15,10 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
-import { CurrentTenantContext } from '../../access/decorators/current-tenant.decorator';
+import {
+  CurrentTenantContext,
+  TenantContext,
+} from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'attachments', version: '1' })
 @UseGuards(AuthGuard, RbacGuard)
@@ -25,7 +28,7 @@ export class AttachmentsController {
   @Post()
   @RequirePermissions('attachment.create')
   async create(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Body() dto: CreateAttachmentDto,
   ) {
     const attachment = await this.service.create(ctx, dto);
@@ -35,7 +38,7 @@ export class AttachmentsController {
   @Get()
   @RequirePermissions('attachment.view')
   async list(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Query() query: ListAttachmentsQueryDto,
   ) {
     const list = await this.service.list(ctx, query);
@@ -45,7 +48,7 @@ export class AttachmentsController {
   @Get(':id')
   @RequirePermissions('attachment.view')
   async get(
-    @CurrentTenantContext() ctx: { organizationId: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const attachment = await this.service.getById(ctx, id);
@@ -55,7 +58,7 @@ export class AttachmentsController {
   @Delete(':id')
   @RequirePermissions('attachment.delete')
   async delete(
-    @CurrentTenantContext() ctx: { organizationId: string; userId?: string },
+    @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
   ) {
     const result = await this.service.delete(ctx, id);
