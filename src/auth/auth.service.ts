@@ -1,0 +1,130 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as argon2 from 'argon2';
+import { PrismaService } from '../infra/prisma/prisma.service';
+import { AuditLogsService } from '../audit/services/audit-logs.service';
+import { LoginDto } from './dto/login.dto';
+
+interface JwtPayload {
+  sub: string;
+  orgId: string;
+  email?: string;
+  type?: string;
+}
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly audit: AuditLogsService,
+  ) {}
+
+  async validateUser(email: string, password: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { email, isActive: true },
+    });
+    if (!user?.passwordHash) return null;
+    const valid = await argon2.verify(user.passwordHash, password);
+    return valid ? user : null;
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.validateUser(dto.email, dto.password);
+    if (!user) {
+      await this.audit.recordAuthEvent('LOGIN_FAILED', { email: dto.email });
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const assignment = await this.prisma.userRoleAssignment.findFirst({
+      where: { userId: user.id },
+    });
+    if (!assignment) {
+      await this.audit.recordAuthEvent('LOGIN_NO_ORG', { userId: user.id });
+      throw new UnauthorizedException('No organization assigned');
+    }
+
+    const accessToken = await this.jwt.signAsync(
+      { sub: user.id, orgId: assignment.organizationId, email: user.email } as JwtPayload,
+      { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m' },
+    );
+
+    const refreshToken = await this.jwt.signAsync(
+      { sub: user.id, orgId: assignment.organizationId, type: 'refresh' } as JwtPayload,
+      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' },
+    );
+
+    await this.audit.recordAuthEvent('LOGIN_SUCCESS', {
+      userId: user.id,
+      organizationId: assignment.organizationId,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 900,
+      user: { id: user.id, email: user.email, name: user.name },
+    };
+  }
+
+  async refresh(refreshToken: string) {
+    try {
+      const payload = await this.jwt.verifyAsync<JwtPayload>(refreshToken);
+      if (payload.type !== 'refresh') throw new Error('Invalid token type');
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+      if (!user?.isActive) throw new Error('User inactive');
+
+      const accessToken = await this.jwt.signAsync(
+        { sub: user.id, orgId: payload.orgId, email: user.email } as JwtPayload,
+        { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m' },
+      );
+
+      const newRefreshToken = await this.jwt.signAsync(
+        { sub: user.id, orgId: payload.orgId, type: 'refresh' } as JwtPayload,
+        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' },
+      );
+
+      await this.audit.recordAuthEvent('TOKEN_REFRESH', {
+        userId: user.id,
+        organizationId: payload.orgId,
+      });
+
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
+        expiresIn: 900,
+      };
+    } catch {
+      await this.audit.recordAuthEvent('TOKEN_REFRESH_FAILED', {});
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async me(userId: string, organizationId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new UnauthorizedException();
+
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: { userId, organizationId },
+      include: { role: { include: { permissions: { include: { permission: true } } } } },
+    });
+
+    const roles = assignments.map((a) => a.role.key);
+    const permissions = new Set<string>();
+    assignments.forEach((a) =>
+      a.role.permissions.forEach((rp) => permissions.add(rp.permission.key)),
+    );
+
+    return {
+      user: { id: user.id, email: user.email, name: user.name },
+      organizationId,
+      roles,
+      permissions: Array.from(permissions),
+    };
+  }
+}

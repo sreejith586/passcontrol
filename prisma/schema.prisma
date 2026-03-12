@@ -1,0 +1,385 @@
+// Minimal MVP schema for shared foundations and existing modules.
+// Extend with full frozen schema as needed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- Identity & RBAC ----
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String
+  passwordHash String? @map("password_hash")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  roleAssignments UserRoleAssignment[]
+  auditLogs       AuditLog[]           @relation("AuditActor")
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  auditLogs  AuditLog[] @relation("AuditOrg")
+  brands     Brand[]
+  locations  Location[]
+  users      UserRoleAssignment[]
+  files      File[]
+  attachments Attachment[]
+  incidents  Incident[]
+  tasks      Task[]
+  temperaturePolicies  TemperaturePolicy[]
+  temperatureReadings  TemperatureReading[]
+  alertEvents AlertEvent[]
+  checklistRuns        ChecklistRun[]
+  checklistRunResponses ChecklistRunResponse[]
+
+  @@map("organizations")
+}
+
+model Brand {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  locations    Location[]
+
+  @@map("brands")
+}
+
+model Location {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  brandId        String   @map("brand_id") @db.Uuid
+  name           String
+  timezone       String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  brand        Brand        @relation(fields: [brandId], references: [id])
+  zones        Zone[]
+  assets       Asset[]
+  incidents    Incident[]
+  tasks        Task[]
+
+  @@map("locations")
+}
+
+model Zone {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  locationId     String   @map("location_id") @db.Uuid
+  name           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  location     Location     @relation(fields: [locationId], references: [id])
+  assets       Asset[]
+
+  @@map("zones")
+}
+
+model Asset {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  locationId     String   @map("location_id") @db.Uuid
+  zoneId         String?  @map("zone_id") @db.Uuid
+  name           String
+  assetType      String   @map("asset_type")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  location     Location     @relation(fields: [locationId], references: [id])
+  zone         Zone?        @relation(fields: [zoneId], references: [id])
+  attachments  Attachment[]
+
+  @@map("assets")
+}
+
+model Role {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  name           String
+  key            String
+  scope          String
+  isSystem       Boolean  @default(false) @map("is_system")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  permissions RolePermission[]
+  assignments UserRoleAssignment[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id   String @id @default(uuid()) @db.Uuid
+  key  String @unique
+  name String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRoleAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  roleId         String   @map("role_id") @db.Uuid
+  brandId        String?  @map("brand_id") @db.Uuid
+  locationId     String?  @map("location_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  role         Role         @relation(fields: [roleId], references: [id])
+
+  @@map("user_role_assignments")
+}
+
+// ---- Files & Attachments ----
+model File {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String?  @map("organization_id") @db.Uuid
+  bucket          String
+  objectKey       String   @map("object_key")
+  fileName        String   @map("file_name")
+  mimeType        String   @map("mime_type")
+  sizeBytes       Int      @map("size_bytes")
+  checksum        String?
+  uploadedByUserId String?  @map("uploaded_by_user_id") @db.Uuid
+  uploadedAt      DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization?  @relation(fields: [organizationId], references: [id])
+  attachments  Attachment[]
+
+  @@map("files")
+}
+
+model Attachment {
+  id                   String   @id @default(uuid()) @db.Uuid
+  organizationId       String?  @map("organization_id") @db.Uuid
+  fileId               String   @map("file_id") @db.Uuid
+  incidentId           String?  @map("incident_id") @db.Uuid
+  taskId               String?  @map("task_id") @db.Uuid
+  checklistRunId       String?  @map("checklist_run_id") @db.Uuid
+  checklistRunResponseId String? @map("checklist_run_response_id") @db.Uuid
+  assetId              String?  @map("asset_id") @db.Uuid
+  attachmentType       String   @map("attachment_type")
+  purpose              String?
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  file         File         @relation(fields: [fileId], references: [id])
+  asset        Asset?       @relation(fields: [assetId], references: [id])
+
+  @@map("attachments")
+}
+
+// ---- Temperature ----
+model TemperaturePolicy {
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  brandId           String?  @map("brand_id") @db.Uuid
+  locationId        String?  @map("location_id") @db.Uuid
+  zoneId            String?  @map("zone_id") @db.Uuid
+  assetId           String?  @map("asset_id") @db.Uuid
+  name              String
+  minTemp           Float    @map("min_temp")
+  maxTemp           Float    @map("max_temp")
+  unit              String
+  breachGraceSeconds Int?    @map("breach_grace_seconds")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("temperature_policies")
+}
+
+model TemperatureReading {
+  id                     String   @id @default(uuid()) @db.Uuid
+  organizationId         String   @map("organization_id") @db.Uuid
+  brandId                String?  @map("brand_id") @db.Uuid
+  locationId             String?  @map("location_id") @db.Uuid
+  zoneId                 String?  @map("zone_id") @db.Uuid
+  assetId                String?  @map("asset_id") @db.Uuid
+  policyId               String?  @map("policy_id") @db.Uuid
+  checklistRunId         String?  @map("checklist_run_id") @db.Uuid
+  checklistRunResponseId String?  @map("checklist_run_response_id") @db.Uuid
+  sourceType             String   @map("source_type")
+  readingValue           Float    @map("reading_value")
+  unit                   String
+  recordedAt             DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+  recordedByUserId       String?  @map("recorded_by_user_id") @db.Uuid
+  isBreach               Boolean  @default(false) @map("is_breach")
+  breachType             String   @map("breach_type")
+  rawPayloadJson         Json?    @map("raw_payload_json")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("temperature_readings")
+}
+
+// ---- Alert Events ----
+model AlertEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  brandId        String?  @map("brand_id") @db.Uuid
+  locationId     String?  @map("location_id") @db.Uuid
+  zoneId         String?  @map("zone_id") @db.Uuid
+  assetId        String?  @map("asset_id") @db.Uuid
+  sourceType     String   @map("source_type")
+  sourceId       String   @map("source_id")
+  type           String
+  status         String   @default("OPEN")
+  severity       String?
+  payloadJson    Json?    @map("payload_json")
+  triggeredAt    DateTime @default(now()) @map("triggered_at") @db.Timestamptz
+  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("alert_events")
+}
+
+// ---- Incidents & Tasks (referenced by attachments) ----
+model Incident {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  brandId        String?  @map("brand_id") @db.Uuid
+  locationId     String?  @map("location_id") @db.Uuid
+  zoneId         String?  @map("zone_id") @db.Uuid
+  assetId        String?  @map("asset_id") @db.Uuid
+  category       String
+  severity       String
+  title          String
+  description    String?
+  status         String   @default("OPEN")
+  reportedAt     DateTime @default(now()) @map("reported_at") @db.Timestamptz
+  reportedByUserId String? @map("reported_by_user_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id])
+
+  @@map("incidents")
+}
+
+model Task {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  brandId        String?  @map("brand_id") @db.Uuid
+  locationId     String   @map("location_id") @db.Uuid
+  zoneId         String?  @map("zone_id") @db.Uuid
+  title          String
+  description    String?
+  status         String   @default("OPEN")
+  sourceType     String   @map("source_type")
+  sourceId       String?  @map("source_id")
+  incidentId     String?  @map("incident_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  location     Location     @relation(fields: [locationId], references: [id])
+
+  @@map("tasks")
+}
+
+// ---- Checklist (referenced by attachments) ----
+model ChecklistRunResponse {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  checklistRunId String   @map("checklist_run_id") @db.Uuid
+  result         String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  checklistRun ChecklistRun @relation(fields: [checklistRunId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("checklist_run_responses")
+}
+
+// ---- ChecklistRun relation ----
+model ChecklistRun {
+  id                   String   @id @default(uuid()) @db.Uuid
+  organizationId       String   @map("organization_id") @db.Uuid
+  checklistTemplateId  String   @map("checklist_template_id") @db.Uuid
+  locationId           String?  @map("location_id") @db.Uuid
+  zoneId               String?  @map("zone_id") @db.Uuid
+  status               String   @default("PENDING")
+  templateVersion      Int      @map("template_version")
+  templateNameSnapshot String   @map("template_name_snapshot")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  responses    ChecklistRunResponse[]
+
+  @@map("checklist_runs")
+}
+
+// ---- Audit ----
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  actorId        String?  @map("actor_id") @db.Uuid
+  entityType     String   @map("entity_type")
+  entityId       String   @map("entity_id")
+  action         String
+  before         Json?
+  after          Json?
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization? @relation("AuditOrg", fields: [organizationId], references: [id])
+  actor        User?         @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@map("audit_logs")
+}
