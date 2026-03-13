@@ -2,9 +2,6 @@ import { IsString, IsInt, Min, IsOptional } from 'class-validator';
 
 export class RegisterFileDto {
   @IsString()
-  storageProvider: string;
-
-  @IsString()
   bucket: string;
 
   @IsString()

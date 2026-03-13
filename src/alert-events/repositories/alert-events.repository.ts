@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 @Injectable()
@@ -22,7 +23,12 @@ export class AlertEventsRepository {
     return this.prisma.alertEvent.create({
       data: {
         ...data,
-        payloadJson: data.payloadJson ?? undefined,
+        payloadJson:
+          data.payloadJson === undefined
+            ? undefined
+            : data.payloadJson === null
+              ? Prisma.JsonNull
+              : (data.payloadJson as Prisma.InputJsonValue),
       },
     });
   }

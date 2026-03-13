@@ -63,7 +63,6 @@ export class FilesService {
 
     const created = await this.repo.create({
       organizationId: ctx.organizationId,
-      storageProvider: dto.storageProvider,
       bucket: dto.bucket,
       objectKey: dto.objectKey,
       fileName: dto.fileName,

@@ -7,7 +7,6 @@ export class FilesRepository {
 
   async create(data: {
     organizationId: string;
-    storageProvider: string;
     bucket: string;
     objectKey: string;
     fileName: string;
@@ -19,7 +18,6 @@ export class FilesRepository {
     return this.prisma.file.create({
       data: {
         organizationId: data.organizationId,
-        storageProvider: data.storageProvider,
         bucket: data.bucket,
         objectKey: data.objectKey,
         fileName: data.fileName,

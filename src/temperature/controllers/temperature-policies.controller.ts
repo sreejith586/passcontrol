@@ -13,7 +13,7 @@ import { TemperaturePoliciesService } from '../services/temperature-policies.ser
 import { CreateTemperaturePolicyDto } from '../dto/create-temperature-policy.dto';
 import { UpdateTemperaturePolicyDto } from '../dto/update-temperature-policy.dto';
 import { ListTemperaturePoliciesQueryDto } from '../dto/list-temperature-policies.dto';
-import { AuthGuard } from '../../auth/guards/auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
@@ -23,7 +23,7 @@ import {
 } from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'temperature-policies', version: '1' })
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacGuard)
 export class TemperaturePoliciesController {
   constructor(private readonly service: TemperaturePoliciesService) {}
 

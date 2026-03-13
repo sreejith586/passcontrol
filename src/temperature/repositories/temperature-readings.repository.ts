@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 @Injectable()
@@ -26,7 +27,12 @@ export class TemperatureReadingsRepository {
     return this.prisma.temperatureReading.create({
       data: {
         ...data,
-        rawPayloadJson: data.rawPayloadJson ?? undefined,
+        rawPayloadJson:
+          data.rawPayloadJson === undefined
+            ? undefined
+            : data.rawPayloadJson === null
+              ? Prisma.JsonNull
+              : (data.rawPayloadJson as Prisma.InputJsonValue),
       },
     });
   }

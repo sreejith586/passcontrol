@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/co
 import { TemperatureReadingsService } from '../services/temperature-readings.service';
 import { CreateTemperatureReadingDto } from '../dto/create-temperature-reading.dto';
 import { ListTemperatureReadingsQueryDto } from '../dto/list-temperature-readings.dto';
-import { AuthGuard } from '../../auth/guards/auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
@@ -13,7 +13,7 @@ import {
 import { AlertEventsService } from '../../alert-events/services/alert-events.service';
 
 @Controller({ path: 'temperature-readings', version: '1' })
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacGuard)
 export class TemperatureReadingsController {
   constructor(
     private readonly service: TemperatureReadingsService,

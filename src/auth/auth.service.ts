@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as argon2 from 'argon2';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../infra/prisma/prisma.service';
 import { AuditLogsService } from '../audit/services/audit-logs.service';
 import { LoginDto } from './dto/login.dto';
@@ -20,12 +20,16 @@ export class AuthService {
     private readonly audit: AuditLogsService,
   ) {}
 
+  async hashPassword(password: string) {
+    return bcrypt.hash(password, 10);
+  }
+
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findFirst({
       where: { email, isActive: true },
     });
     if (!user?.passwordHash) return null;
-    const valid = await argon2.verify(user.passwordHash, password);
+    const valid = await bcrypt.compare(password, user.passwordHash);
     return valid ? user : null;
   }
 

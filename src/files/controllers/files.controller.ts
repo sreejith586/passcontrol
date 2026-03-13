@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { FilesService } from '../services/files.service';
 import { InitUploadDto } from '../dto/init-upload.dto';
 import { RegisterFileDto } from '../dto/register-file.dto';
-import { AuthGuard } from '../../auth/guards/auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
@@ -12,7 +12,7 @@ import {
 } from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'files', version: '1' })
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacGuard)
 export class FilesController {
   constructor(private readonly service: FilesService) {}
 

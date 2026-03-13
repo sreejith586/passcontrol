@@ -11,7 +11,7 @@ import {
 import { AttachmentsService } from '../services/attachments.service';
 import { CreateAttachmentDto } from '../dto/create-attachment.dto';
 import { ListAttachmentsQueryDto } from '../dto/list-attachments.dto';
-import { AuthGuard } from '../../auth/guards/auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
@@ -21,7 +21,7 @@ import {
 } from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'attachments', version: '1' })
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacGuard)
 export class AttachmentsController {
   constructor(private readonly service: AttachmentsService) {}
 

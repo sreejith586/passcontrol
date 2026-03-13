@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
-import { AuthGuard } from '../../auth/guards/auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
@@ -11,7 +11,7 @@ import {
 } from '../../access/decorators/current-tenant.decorator';
 
 @Controller({ path: 'alert-events', version: '1' })
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacGuard)
 export class AlertEventsController {
   constructor(private readonly service: AlertEventsService) {}
 

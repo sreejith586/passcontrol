@@ -7,6 +7,7 @@ import { TemperatureModule } from './temperature/temperature.module';
 import { AlertEventsModule } from './alert-events/alert-events.module';
 import { FilesModule } from './files/files.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -19,5 +20,6 @@ import { AttachmentsModule } from './attachments/attachments.module';
     FilesModule,
     AttachmentsModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
