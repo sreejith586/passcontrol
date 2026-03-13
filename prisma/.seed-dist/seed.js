@@ -35,6 +35,11 @@ const PERMISSIONS = [
     { key: 'checklist.template.update', name: 'Update checklist templates' },
     { key: 'checklist.template.publish', name: 'Publish checklist templates' },
     { key: 'checklist.template.archive', name: 'Archive checklist templates' },
+    { key: 'checklist.schedule.create', name: 'Create checklist schedules' },
+    { key: 'checklist.schedule.view', name: 'View checklist schedules' },
+    { key: 'checklist.schedule.update', name: 'Update checklist schedules' },
+    { key: 'checklist.schedule.activate', name: 'Activate checklist schedules' },
+    { key: 'checklist.schedule.deactivate', name: 'Deactivate checklist schedules' },
 ];
 async function ensureOrganization() {
     const organization = await prisma.organization.findFirst({
@@ -169,6 +174,13 @@ async function setUserRoleInOrg(userId, organizationId, roleId) {
         data: { userId, organizationId, roleId },
     });
 }
+/** Platform user: remove ALL assignments, then assign only Super Admin in Demo Org */
+async function setPlatformUserToSuperAdmin(userId, organizationId, roleId) {
+    await prisma.userRoleAssignment.deleteMany({ where: { userId } });
+    return prisma.userRoleAssignment.create({
+        data: { userId, organizationId, roleId },
+    });
+}
 async function main() {
     const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
     const orgAdminPasswordHash = await bcrypt.hash(ORG_ADMIN_USER_PASSWORD, 10);
@@ -178,8 +190,9 @@ async function main() {
     const superAdminRole = await ensureSuperAdminRole();
     await ensureRolePermissions(superAdminRole.id, permissions);
     // admin@example.com → Super Admin (platform-level testing)
+    // Remove ALL assignments (including stale org_admin in other orgs), then assign only Super Admin
     const superAdminUser = await ensureUser(DEMO_USER_EMAIL, DEMO_USER_NAME, passwordHash);
-    await setUserRoleInOrg(superAdminUser.id, organization.id, superAdminRole.id);
+    await setPlatformUserToSuperAdmin(superAdminUser.id, organization.id, superAdminRole.id);
     // Org Admin: tenant-scoped role, all permissions
     const orgAdminRole = await ensureOrgAdminRole(organization.id);
     await ensureRolePermissions(orgAdminRole.id, permissions);

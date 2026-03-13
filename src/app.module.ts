@@ -8,6 +8,7 @@ import { AlertEventsModule } from './alert-events/alert-events.module';
 import { FilesModule } from './files/files.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ChecklistTemplatesModule } from './checklists/templates/checklist-templates.module';
+import { ChecklistSchedulesModule } from './checklists/schedules/checklist-schedules.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthController } from './health.controller';
     FilesModule,
     AttachmentsModule,
     ChecklistTemplatesModule,
+    ChecklistSchedulesModule,
   ],
   controllers: [HealthController],
 })
