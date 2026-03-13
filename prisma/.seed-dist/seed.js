@@ -7,9 +7,15 @@ const DEMO_ORGANIZATION_NAME = 'Demo Org';
 const DEMO_USER_NAME = 'Demo Admin';
 const DEMO_USER_EMAIL = 'admin@example.com';
 const DEMO_USER_PASSWORD = 'Password123!';
-const DEMO_ROLE_NAME = 'Super Admin';
-const DEMO_ROLE_KEY = 'super_admin';
-const DEMO_ROLE_SCOPE = 'ORGANIZATION';
+const SUPER_ADMIN_ROLE_NAME = 'Super Admin';
+const SUPER_ADMIN_ROLE_KEY = 'super_admin';
+const SUPER_ADMIN_ROLE_SCOPE = 'ORGANIZATION';
+const ORG_ADMIN_USER_EMAIL = 'org-admin@example.com';
+const ORG_ADMIN_USER_NAME = 'Org Admin';
+const ORG_ADMIN_USER_PASSWORD = 'Password123!';
+const ORG_ADMIN_ROLE_NAME = 'Org Admin';
+const ORG_ADMIN_ROLE_KEY = 'org_admin';
+const ORG_ADMIN_ROLE_SCOPE = 'ORGANIZATION';
 const PERMISSIONS = [
     { key: 'temperature.reading.create', name: 'Create temperature readings' },
     { key: 'temperature.reading.view', name: 'View temperature readings' },
@@ -24,6 +30,11 @@ const PERMISSIONS = [
     { key: 'attachment.create', name: 'Create attachments' },
     { key: 'attachment.view', name: 'View attachments' },
     { key: 'attachment.delete', name: 'Delete attachments' },
+    { key: 'checklist.template.create', name: 'Create checklist templates' },
+    { key: 'checklist.template.view', name: 'View checklist templates' },
+    { key: 'checklist.template.update', name: 'Update checklist templates' },
+    { key: 'checklist.template.publish', name: 'Publish checklist templates' },
+    { key: 'checklist.template.archive', name: 'Archive checklist templates' },
 ];
 async function ensureOrganization() {
     const organization = await prisma.organization.findFirst({
@@ -39,36 +50,59 @@ async function ensureOrganization() {
         data: { name: DEMO_ORGANIZATION_NAME },
     });
 }
-async function ensureUser(passwordHash) {
+async function ensureUser(email, name, passwordHash) {
     return prisma.user.upsert({
-        where: { email: DEMO_USER_EMAIL },
+        where: { email },
         update: {
-            name: DEMO_USER_NAME,
+            name,
             passwordHash,
             isActive: true,
             deletedAt: null,
         },
         create: {
-            email: DEMO_USER_EMAIL,
-            name: DEMO_USER_NAME,
+            email,
+            name,
             passwordHash,
             isActive: true,
         },
     });
 }
-async function ensureRole(organizationId) {
+/** Platform/global role: organizationId = null */
+async function ensureSuperAdminRole() {
     const role = await prisma.role.findFirst({
-        where: {
-            organizationId,
-            key: DEMO_ROLE_KEY,
-        },
+        where: { organizationId: null, key: SUPER_ADMIN_ROLE_KEY },
     });
     if (role) {
         return prisma.role.update({
             where: { id: role.id },
             data: {
-                name: DEMO_ROLE_NAME,
-                scope: DEMO_ROLE_SCOPE,
+                name: SUPER_ADMIN_ROLE_NAME,
+                scope: SUPER_ADMIN_ROLE_SCOPE,
+                isSystem: false,
+            },
+        });
+    }
+    return prisma.role.create({
+        data: {
+            organizationId: null,
+            name: SUPER_ADMIN_ROLE_NAME,
+            key: SUPER_ADMIN_ROLE_KEY,
+            scope: SUPER_ADMIN_ROLE_SCOPE,
+            isSystem: false,
+        },
+    });
+}
+/** Tenant-scoped role: must have organizationId */
+async function ensureOrgAdminRole(organizationId) {
+    const role = await prisma.role.findFirst({
+        where: { organizationId, key: ORG_ADMIN_ROLE_KEY },
+    });
+    if (role) {
+        return prisma.role.update({
+            where: { id: role.id },
+            data: {
+                name: ORG_ADMIN_ROLE_NAME,
+                scope: ORG_ADMIN_ROLE_SCOPE,
                 isSystem: false,
             },
         });
@@ -76,9 +110,9 @@ async function ensureRole(organizationId) {
     return prisma.role.create({
         data: {
             organizationId,
-            name: DEMO_ROLE_NAME,
-            key: DEMO_ROLE_KEY,
-            scope: DEMO_ROLE_SCOPE,
+            name: ORG_ADMIN_ROLE_NAME,
+            key: ORG_ADMIN_ROLE_KEY,
+            scope: ORG_ADMIN_ROLE_SCOPE,
             isSystem: false,
         },
     });
@@ -126,18 +160,37 @@ async function ensureUserRoleAssignment(userId, organizationId, roleId) {
         },
     });
 }
+/** Replace all org assignments for user with a single role assignment */
+async function setUserRoleInOrg(userId, organizationId, roleId) {
+    await prisma.userRoleAssignment.deleteMany({
+        where: { userId, organizationId },
+    });
+    return prisma.userRoleAssignment.create({
+        data: { userId, organizationId, roleId },
+    });
+}
 async function main() {
     const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
+    const orgAdminPasswordHash = await bcrypt.hash(ORG_ADMIN_USER_PASSWORD, 10);
     const organization = await ensureOrganization();
-    const user = await ensureUser(passwordHash);
-    const role = await ensureRole(organization.id);
     const permissions = await ensurePermissions();
-    await ensureRolePermissions(role.id, permissions);
-    await ensureUserRoleAssignment(user.id, organization.id, role.id);
-    console.log(`Seed complete for ${DEMO_USER_EMAIL}`);
+    // Super Admin: platform/global role (organizationId = null), all permissions
+    const superAdminRole = await ensureSuperAdminRole();
+    await ensureRolePermissions(superAdminRole.id, permissions);
+    // admin@example.com → Super Admin (platform-level testing)
+    const superAdminUser = await ensureUser(DEMO_USER_EMAIL, DEMO_USER_NAME, passwordHash);
+    await setUserRoleInOrg(superAdminUser.id, organization.id, superAdminRole.id);
+    // Org Admin: tenant-scoped role, all permissions
+    const orgAdminRole = await ensureOrgAdminRole(organization.id);
+    await ensureRolePermissions(orgAdminRole.id, permissions);
+    // org-admin@example.com → Org Admin (tenant-scoped testing)
+    const orgAdminUser = await ensureUser(ORG_ADMIN_USER_EMAIL, ORG_ADMIN_USER_NAME, orgAdminPasswordHash);
+    await setUserRoleInOrg(orgAdminUser.id, organization.id, orgAdminRole.id);
+    console.log(`Seed complete`);
     console.log(`Organization: ${organization.name}`);
-    console.log(`Role: ${role.name}`);
-    console.log(`Permissions linked: ${permissions.length}`);
+    console.log(`Platform user: ${DEMO_USER_EMAIL} (Super Admin)`);
+    console.log(`Tenant user: ${ORG_ADMIN_USER_EMAIL} (Org Admin)`);
+    console.log(`Permissions: ${permissions.length}`);
 }
 main()
     .catch((error) => {
