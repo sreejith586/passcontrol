@@ -5,6 +5,7 @@ export default () => ({
     url: process.env.DATABASE_URL,
   },
   jwt: {
+    // Dev-only fallbacks to keep local bootstrapping working until env vars are set.
     accessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-me',
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',

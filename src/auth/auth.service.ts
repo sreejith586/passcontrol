@@ -12,6 +12,10 @@ interface JwtPayload {
   type?: string;
 }
 
+// Dev-only fallbacks to keep local bootstrapping working until env vars are set.
+const DEV_ONLY_ACCESS_SECRET = 'dev-access-secret-change-me';
+const DEV_ONLY_REFRESH_SECRET = 'dev-refresh-secret-change-me';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -22,6 +26,22 @@ export class AuthService {
 
   async hashPassword(password: string) {
     return bcrypt.hash(password, 10);
+  }
+
+  private getAccessSecret() {
+    return process.env.JWT_ACCESS_SECRET || DEV_ONLY_ACCESS_SECRET;
+  }
+
+  private getRefreshSecret() {
+    return process.env.JWT_REFRESH_SECRET || DEV_ONLY_REFRESH_SECRET;
+  }
+
+  private getAccessExpiresIn() {
+    return process.env.JWT_ACCESS_EXPIRES_IN || '15m';
+  }
+
+  private getRefreshExpiresIn() {
+    return process.env.JWT_REFRESH_EXPIRES_IN || '7d';
   }
 
   async validateUser(email: string, password: string) {
@@ -50,12 +70,18 @@ export class AuthService {
 
     const accessToken = await this.jwt.signAsync(
       { sub: user.id, orgId: assignment.organizationId, email: user.email } as JwtPayload,
-      { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m' },
+      {
+        secret: this.getAccessSecret(),
+        expiresIn: this.getAccessExpiresIn(),
+      },
     );
 
     const refreshToken = await this.jwt.signAsync(
       { sub: user.id, orgId: assignment.organizationId, type: 'refresh' } as JwtPayload,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' },
+      {
+        secret: this.getRefreshSecret(),
+        expiresIn: this.getRefreshExpiresIn(),
+      },
     );
 
     await this.audit.recordAuthEvent('LOGIN_SUCCESS', {
@@ -73,7 +99,9 @@ export class AuthService {
 
   async refresh(refreshToken: string) {
     try {
-      const payload = await this.jwt.verifyAsync<JwtPayload>(refreshToken);
+      const payload = await this.jwt.verifyAsync<JwtPayload>(refreshToken, {
+        secret: this.getRefreshSecret(),
+      });
       if (payload.type !== 'refresh') throw new Error('Invalid token type');
 
       const user = await this.prisma.user.findUnique({
@@ -83,12 +111,18 @@ export class AuthService {
 
       const accessToken = await this.jwt.signAsync(
         { sub: user.id, orgId: payload.orgId, email: user.email } as JwtPayload,
-        { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m' },
+        {
+          secret: this.getAccessSecret(),
+          expiresIn: this.getAccessExpiresIn(),
+        },
       );
 
       const newRefreshToken = await this.jwt.signAsync(
         { sub: user.id, orgId: payload.orgId, type: 'refresh' } as JwtPayload,
-        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' },
+        {
+          secret: this.getRefreshSecret(),
+          expiresIn: this.getRefreshExpiresIn(),
+        },
       );
 
       await this.audit.recordAuthEvent('TOKEN_REFRESH', {

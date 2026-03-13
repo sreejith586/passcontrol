@@ -7,13 +7,16 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+// Dev-only fallback to keep local bootstrapping working until env vars are set.
+const DEV_ONLY_ACCESS_SECRET = 'dev-access-secret-change-me';
+
 @Module({
   imports: [
     InfraModule,
     AuditModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
-      secret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me',
+      secret: process.env.JWT_ACCESS_SECRET || DEV_ONLY_ACCESS_SECRET,
       signOptions: { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m' },
     }),
   ],
