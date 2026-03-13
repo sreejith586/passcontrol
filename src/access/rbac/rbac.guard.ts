@@ -16,11 +16,13 @@ export class RbacGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.get<string[]>(
+    const required = this.reflector.getAllAndOverride<string[]>(
       REQUIRE_PERMISSIONS,
-      context.getHandler(),
+      [context.getHandler(), context.getClass()],
     );
-    if (!required?.length) return true;
+    if (!required?.length) {
+      throw new ForbiddenException('Missing required permissions metadata');
+    }
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
