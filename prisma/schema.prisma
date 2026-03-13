@@ -34,21 +34,26 @@ model Organization {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  auditLogs             AuditLog[]             @relation("AuditOrg")
-  brands                Brand[]
-  locations             Location[]
-  users                 UserRoleAssignment[]
-  files                 File[]
-  attachments           Attachment[]
-  incidents             Incident[]
-  tasks                 Task[]
-  temperaturePolicies   TemperaturePolicy[]
-  temperatureReadings   TemperatureReading[]
-  alertEvents           AlertEvent[]
-  checklistRuns         ChecklistRun[]
-  checklistRunResponses ChecklistRunResponse[]
-  Zone                  Zone[]
-  Asset                 Asset[]
+  auditLogs                    AuditLog[]                    @relation("AuditOrg")
+  brands                       Brand[]
+  locations                    Location[]
+  users                        UserRoleAssignment[]
+  files                        File[]
+  attachments                  Attachment[]
+  incidents                    Incident[]
+  tasks                        Task[]
+  temperaturePolicies          TemperaturePolicy[]
+  temperatureReadings          TemperatureReading[]
+  alertEvents                  AlertEvent[]
+  checklistRuns                ChecklistRun[]
+  checklistTemplates           ChecklistTemplate[]
+  checklistTemplateSections    ChecklistTemplateSection[]
+  checklistTemplateItems       ChecklistTemplateItem[]
+  checklistSchedules           ChecklistSchedule[]
+  checklistRunSectionSnapshots ChecklistRunSectionSnapshot[]
+  checklistRunItemSnapshots    ChecklistRunItemSnapshot[]
+  Zone                         Zone[]
+  Asset                        Asset[]
 
   @@map("organizations")
 }
@@ -196,21 +201,22 @@ model File {
 }
 
 model Attachment {
-  id                     String   @id @default(uuid()) @db.Uuid
-  organizationId         String?  @map("organization_id") @db.Uuid
-  fileId                 String   @map("file_id") @db.Uuid
-  incidentId             String?  @map("incident_id") @db.Uuid
-  taskId                 String?  @map("task_id") @db.Uuid
-  checklistRunId         String?  @map("checklist_run_id") @db.Uuid
-  checklistRunResponseId String?  @map("checklist_run_response_id") @db.Uuid
-  assetId                String?  @map("asset_id") @db.Uuid
-  attachmentType         String   @map("attachment_type")
-  purpose                String?
-  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                         String   @id @default(uuid()) @db.Uuid
+  organizationId             String?  @map("organization_id") @db.Uuid
+  fileId                     String   @map("file_id") @db.Uuid
+  incidentId                 String?  @map("incident_id") @db.Uuid
+  taskId                     String?  @map("task_id") @db.Uuid
+  checklistRunId             String?  @map("checklist_run_id") @db.Uuid
+  checklistRunItemSnapshotId String?  @map("checklist_run_item_snapshot_id") @db.Uuid
+  assetId                    String?  @map("asset_id") @db.Uuid
+  attachmentType             String   @map("attachment_type")
+  purpose                    String?
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  organization Organization? @relation(fields: [organizationId], references: [id])
-  file         File          @relation(fields: [fileId], references: [id])
-  asset        Asset?        @relation(fields: [assetId], references: [id])
+  organization             Organization?             @relation(fields: [organizationId], references: [id])
+  file                     File                      @relation(fields: [fileId], references: [id])
+  asset                    Asset?                    @relation(fields: [assetId], references: [id])
+  checklistRunItemSnapshot ChecklistRunItemSnapshot? @relation(fields: [checklistRunItemSnapshotId], references: [id])
 
   @@map("attachments")
 }
@@ -238,25 +244,25 @@ model TemperaturePolicy {
 }
 
 model TemperatureReading {
-  id                     String   @id @default(uuid()) @db.Uuid
-  organizationId         String   @map("organization_id") @db.Uuid
-  brandId                String?  @map("brand_id") @db.Uuid
-  locationId             String?  @map("location_id") @db.Uuid
-  zoneId                 String?  @map("zone_id") @db.Uuid
-  assetId                String?  @map("asset_id") @db.Uuid
-  policyId               String?  @map("policy_id") @db.Uuid
-  checklistRunId         String?  @map("checklist_run_id") @db.Uuid
-  checklistRunResponseId String?  @map("checklist_run_response_id") @db.Uuid
-  sourceType             String   @map("source_type")
-  readingValue           Float    @map("reading_value")
-  unit                   String
-  recordedAt             DateTime @default(now()) @map("recorded_at") @db.Timestamptz
-  recordedByUserId       String?  @map("recorded_by_user_id") @db.Uuid
-  isBreach               Boolean  @default(false) @map("is_breach")
-  breachType             String   @map("breach_type")
-  rawPayloadJson         Json?    @map("raw_payload_json")
-  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                         String   @id @default(uuid()) @db.Uuid
+  organizationId             String   @map("organization_id") @db.Uuid
+  brandId                    String?  @map("brand_id") @db.Uuid
+  locationId                 String?  @map("location_id") @db.Uuid
+  zoneId                     String?  @map("zone_id") @db.Uuid
+  assetId                    String?  @map("asset_id") @db.Uuid
+  policyId                   String?  @map("policy_id") @db.Uuid
+  checklistRunId             String?  @map("checklist_run_id") @db.Uuid
+  checklistRunItemSnapshotId String?  @map("checklist_run_item_snapshot_id") @db.Uuid
+  sourceType                 String   @map("source_type")
+  readingValue               Float    @map("reading_value")
+  unit                       String
+  recordedAt                 DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+  recordedByUserId           String?  @map("recorded_by_user_id") @db.Uuid
+  isBreach                   Boolean  @default(false) @map("is_breach")
+  breachType                 String   @map("breach_type")
+  rawPayloadJson             Json?    @map("raw_payload_json")
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -333,37 +339,186 @@ model Task {
 }
 
 // ---- Checklist (referenced by attachments) ----
-model ChecklistRunResponse {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
-  checklistRunId String   @map("checklist_run_id") @db.Uuid
-  result         String
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+model ChecklistTemplate {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  templateKey    String    @map("template_key")
+  version        Int
+  name           String
+  description    String?
+  brandId        String?   @map("brand_id") @db.Uuid
+  locationId     String?   @map("location_id") @db.Uuid
+  zoneId         String?   @map("zone_id") @db.Uuid
+  status         String    @default("DRAFT")
+  isLatest       Boolean   @default(false) @map("is_latest")
+  publishedAt    DateTime? @map("published_at") @db.Timestamptz
+  archivedAt     DateTime? @map("archived_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  checklistRun ChecklistRun @relation(fields: [checklistRunId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization Organization               @relation(fields: [organizationId], references: [id])
+  sections     ChecklistTemplateSection[]
+  schedules    ChecklistSchedule[]
+  items        ChecklistTemplateItem[]
 
-  @@map("checklist_run_responses")
+  @@unique([organizationId, templateKey, version])
+  @@index([organizationId, templateKey, isLatest])
+  @@index([organizationId, status])
+  @@index([organizationId, brandId, locationId, zoneId])
+  @@map("checklist_templates")
 }
 
-// ---- ChecklistRun relation ----
+model ChecklistTemplateSection {
+  id                  String   @id @default(uuid()) @db.Uuid
+  organizationId      String   @map("organization_id") @db.Uuid
+  checklistTemplateId String   @map("checklist_template_id") @db.Uuid
+  title               String
+  description         String?
+  sortOrder           Int      @map("sort_order")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization      Organization            @relation(fields: [organizationId], references: [id])
+  checklistTemplate ChecklistTemplate       @relation(fields: [checklistTemplateId], references: [id])
+  items             ChecklistTemplateItem[]
+
+  @@unique([checklistTemplateId, sortOrder])
+  @@index([organizationId, checklistTemplateId])
+  @@map("checklist_template_sections")
+}
+
+model ChecklistTemplateItem {
+  id                         String   @id @default(uuid()) @db.Uuid
+  organizationId             String   @map("organization_id") @db.Uuid
+  checklistTemplateId        String   @map("checklist_template_id") @db.Uuid
+  checklistTemplateSectionId String   @map("checklist_template_section_id") @db.Uuid
+  itemType                   String   @map("item_type")
+  label                      String
+  helpText                   String?  @map("help_text")
+  isRequired                 Boolean  @default(true) @map("is_required")
+  requiresEvidenceOnFail     Boolean  @default(false) @map("requires_evidence_on_fail")
+  failureCreatesIncident     Boolean  @default(false) @map("failure_creates_incident")
+  configJson                 Json?    @map("config_json")
+  sortOrder                  Int      @map("sort_order")
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization             Organization             @relation(fields: [organizationId], references: [id])
+  checklistTemplate        ChecklistTemplate        @relation(fields: [checklistTemplateId], references: [id])
+  checklistTemplateSection ChecklistTemplateSection @relation(fields: [checklistTemplateSectionId], references: [id])
+
+  @@unique([checklistTemplateSectionId, sortOrder])
+  @@index([organizationId, checklistTemplateId])
+  @@map("checklist_template_items")
+}
+
+model ChecklistSchedule {
+  id                  String    @id @default(uuid()) @db.Uuid
+  organizationId      String    @map("organization_id") @db.Uuid
+  checklistTemplateId String    @map("checklist_template_id") @db.Uuid
+  name                String
+  brandId             String?   @map("brand_id") @db.Uuid
+  locationId          String?   @map("location_id") @db.Uuid
+  zoneId              String?   @map("zone_id") @db.Uuid
+  timezone            String
+  rrule               String
+  nextRunAt           DateTime? @map("next_run_at") @db.Timestamptz
+  startsAt            DateTime? @map("starts_at") @db.Timestamptz
+  endsAt              DateTime? @map("ends_at") @db.Timestamptz
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization      Organization      @relation(fields: [organizationId], references: [id])
+  checklistTemplate ChecklistTemplate @relation(fields: [checklistTemplateId], references: [id])
+
+  @@index([organizationId, isActive, nextRunAt])
+  @@index([organizationId, brandId, locationId, zoneId, isActive])
+  @@map("checklist_schedules")
+}
+
 model ChecklistRun {
-  id                   String   @id @default(uuid()) @db.Uuid
-  organizationId       String   @map("organization_id") @db.Uuid
-  checklistTemplateId  String   @map("checklist_template_id") @db.Uuid
-  locationId           String?  @map("location_id") @db.Uuid
-  zoneId               String?  @map("zone_id") @db.Uuid
-  status               String   @default("PENDING")
-  templateVersion      Int      @map("template_version")
-  templateNameSnapshot String   @map("template_name_snapshot")
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                   String    @id @default(uuid()) @db.Uuid
+  organizationId       String    @map("organization_id") @db.Uuid
+  checklistTemplateId  String    @map("checklist_template_id") @db.Uuid
+  checklistScheduleId  String?   @map("checklist_schedule_id") @db.Uuid
+  brandId              String?   @map("brand_id") @db.Uuid
+  locationId           String?   @map("location_id") @db.Uuid
+  zoneId               String?   @map("zone_id") @db.Uuid
+  runSource            String    @default("MANUAL") @map("run_source")
+  status               String    @default("PENDING")
+  dueAt                DateTime? @map("due_at") @db.Timestamptz
+  startedAt            DateTime? @map("started_at") @db.Timestamptz
+  completedAt          DateTime? @map("completed_at") @db.Timestamptz
+  performedByUserId    String?   @map("performed_by_user_id") @db.Uuid
+  runNumber            Int       @map("run_number")
+  templateVersion      Int       @map("template_version")
+  templateKeySnapshot  String    @map("template_key_snapshot")
+  templateNameSnapshot String    @map("template_name_snapshot")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization Organization           @relation(fields: [organizationId], references: [id])
-  responses    ChecklistRunResponse[]
+  organization     Organization                  @relation(fields: [organizationId], references: [id])
+  sectionSnapshots ChecklistRunSectionSnapshot[]
+  itemSnapshots    ChecklistRunItemSnapshot[]
 
+  @@unique([organizationId, runNumber])
+  @@index([organizationId, status, dueAt])
+  @@index([organizationId, locationId, zoneId, createdAt])
+  @@index([organizationId, checklistTemplateId, createdAt])
   @@map("checklist_runs")
+}
+
+model ChecklistRunSectionSnapshot {
+  id                         String   @id @default(uuid()) @db.Uuid
+  organizationId             String   @map("organization_id") @db.Uuid
+  checklistRunId             String   @map("checklist_run_id") @db.Uuid
+  checklistTemplateSectionId String?  @map("checklist_template_section_id") @db.Uuid
+  titleSnapshot              String   @map("title_snapshot")
+  descriptionSnapshot        String?  @map("description_snapshot")
+  sortOrder                  Int      @map("sort_order")
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization  Organization               @relation(fields: [organizationId], references: [id])
+  checklistRun  ChecklistRun               @relation(fields: [checklistRunId], references: [id])
+  itemSnapshots ChecklistRunItemSnapshot[]
+
+  @@unique([checklistRunId, sortOrder])
+  @@index([organizationId, checklistRunId])
+  @@map("checklist_run_section_snapshots")
+}
+
+model ChecklistRunItemSnapshot {
+  id                             String    @id @default(uuid()) @db.Uuid
+  organizationId                 String    @map("organization_id") @db.Uuid
+  checklistRunId                 String    @map("checklist_run_id") @db.Uuid
+  checklistRunSectionSnapshotId  String    @map("checklist_run_section_snapshot_id") @db.Uuid
+  checklistTemplateItemId        String?   @map("checklist_template_item_id") @db.Uuid
+  itemTypeSnapshot               String    @map("item_type_snapshot")
+  labelSnapshot                  String    @map("label_snapshot")
+  helpTextSnapshot               String?   @map("help_text_snapshot")
+  isRequiredSnapshot             Boolean   @map("is_required_snapshot")
+  requiresEvidenceOnFailSnapshot Boolean   @map("requires_evidence_on_fail_snapshot")
+  failureCreatesIncidentSnapshot Boolean   @map("failure_creates_incident_snapshot")
+  configSnapshotJson             Json?     @map("config_snapshot_json")
+  sortOrder                      Int       @map("sort_order")
+  result                         String?
+  valueJson                      Json?     @map("value_json")
+  comment                        String?
+  respondedAt                    DateTime? @map("responded_at") @db.Timestamptz
+  respondedByUserId              String?   @map("responded_by_user_id") @db.Uuid
+  createdAt                      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization                Organization                @relation(fields: [organizationId], references: [id])
+  checklistRun                ChecklistRun                @relation(fields: [checklistRunId], references: [id])
+  checklistRunSectionSnapshot ChecklistRunSectionSnapshot @relation(fields: [checklistRunSectionSnapshotId], references: [id])
+  attachments                 Attachment[]
+
+  @@unique([checklistRunSectionSnapshotId, sortOrder])
+  @@index([organizationId, checklistRunId, result], map: "checklist_run_item_snapshots_org_run_result_idx")
+  @@index([organizationId, checklistRunId, respondedAt], map: "checklist_run_item_snapshots_org_run_resp_at_idx")
+  @@map("checklist_run_item_snapshots")
 }
 
 // ---- Audit ----

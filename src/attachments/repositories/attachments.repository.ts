@@ -12,7 +12,7 @@ export class AttachmentsRepository {
     incidentId?: string | null;
     taskId?: string | null;
     checklistRunId?: string | null;
-    checklistRunResponseId?: string | null;
+    checklistRunItemSnapshotId?: string | null;
     assetId?: string | null;
   }) {
     return this.prisma.attachment.create({
@@ -21,7 +21,7 @@ export class AttachmentsRepository {
         incidentId: data.incidentId ?? null,
         taskId: data.taskId ?? null,
         checklistRunId: data.checklistRunId ?? null,
-        checklistRunResponseId: data.checklistRunResponseId ?? null,
+        checklistRunItemSnapshotId: data.checklistRunItemSnapshotId ?? null,
         assetId: data.assetId ?? null,
       },
       include: { file: true },
@@ -50,7 +50,7 @@ export class AttachmentsRepository {
     if (filters.incidentId != null) where.incidentId = filters.incidentId;
     if (filters.taskId != null) where.taskId = filters.taskId;
     if (filters.checklistRunId != null) where.checklistRunId = filters.checklistRunId;
-    if (filters.checklistRunResponseId != null) where.checklistRunResponseId = filters.checklistRunResponseId;
+    if (filters.checklistRunResponseId != null) where.checklistRunItemSnapshotId = filters.checklistRunResponseId;
     if (filters.assetId != null) where.assetId = filters.assetId;
 
     return this.prisma.attachment.findMany({

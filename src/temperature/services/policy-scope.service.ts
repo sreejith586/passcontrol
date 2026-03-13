@@ -116,7 +116,7 @@ export class PolicyScopeService {
     }
 
     if (dto.checklistRunResponseId) {
-      const resp = await this.prisma.checklistRunResponse.findFirst({
+      const resp = await this.prisma.checklistRunItemSnapshot.findFirst({
         where: { id: dto.checklistRunResponseId, organizationId },
       });
       if (!resp) throw new BadRequestException('Checklist run response not in organization');
