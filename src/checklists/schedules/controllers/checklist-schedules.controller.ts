@@ -20,6 +20,7 @@ import { ChecklistSchedulesService } from '../services/checklist-schedules.servi
 import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
+import { GenerateRunDto } from '../dto/generate-run.dto';
 import { JwtAuthGuard } from '../../../auth/guards/auth.guard';
 import { RbacGuard } from '../../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../../access/rbac/permissions.decorator';
@@ -114,5 +115,19 @@ export class ChecklistSchedulesController {
   ) {
     const schedule = await this.service.deactivate(ctx, id);
     return ApiResponse.ok(schedule);
+  }
+
+  @Post(':id/generate-run')
+  @RequirePermissions('checklist.run.generate')
+  @ApiOperation({ summary: 'Generate a checklist run from schedule (manual)' })
+  @ApiParam({ name: 'id', description: 'Schedule UUID' })
+  @ApiBody({ type: GenerateRunDto, required: false })
+  async generateRun(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto?: GenerateRunDto,
+  ) {
+    const run = await this.service.generateRun(ctx, id, dto);
+    return ApiResponse.created(run);
   }
 }

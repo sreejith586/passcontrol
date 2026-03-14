@@ -9,6 +9,7 @@ import { FilesModule } from './files/files.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ChecklistTemplatesModule } from './checklists/templates/checklist-templates.module';
 import { ChecklistSchedulesModule } from './checklists/schedules/checklist-schedules.module';
+import { ChecklistRunsModule } from './checklists/runs/checklist-runs.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -23,6 +24,7 @@ import { HealthController } from './health.controller';
     AttachmentsModule,
     ChecklistTemplatesModule,
     ChecklistSchedulesModule,
+    ChecklistRunsModule,
   ],
   controllers: [HealthController],
 })

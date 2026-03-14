@@ -3,12 +3,14 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ChecklistSchedulesRepository } from '../repositories/checklist-schedules.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
+import { GenerateRunDto } from '../dto/generate-run.dto';
 
 @Injectable()
 export class ChecklistSchedulesService {
@@ -134,5 +136,145 @@ export class ChecklistSchedulesService {
       );
     }
     return deactivated!;
+  }
+
+  async generateRun(
+    ctx: { organizationId: string; userId?: string },
+    scheduleId: string,
+    dto?: GenerateRunDto,
+  ) {
+    const schedule = await this.repo.findById(ctx.organizationId, scheduleId);
+    if (!schedule) throw new NotFoundException('Checklist schedule not found');
+
+    const template = await this.prisma.checklistTemplate.findFirst({
+      where: {
+        id: schedule.checklistTemplateId,
+        organizationId: ctx.organizationId,
+        status: 'PUBLISHED',
+      },
+      include: {
+        sections: {
+          orderBy: { sortOrder: 'asc' as const },
+          include: {
+            items: { orderBy: { sortOrder: 'asc' as const } },
+          },
+        },
+      },
+    });
+
+    if (!template) {
+      throw new BadRequestException(
+        'Checklist template not found or not published',
+      );
+    }
+
+    const dueAt = dto?.dueAt
+      ? new Date(dto.dueAt)
+      : schedule.nextRunAt ?? new Date();
+
+    const dayStart = new Date(dueAt);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(dueAt);
+    dayEnd.setUTCHours(23, 59, 59, 999);
+
+    const existingRun = await this.prisma.checklistRun.findFirst({
+      where: {
+        organizationId: ctx.organizationId,
+        checklistScheduleId: scheduleId,
+        status: { in: ['PENDING', 'IN_PROGRESS'] },
+        OR: [
+          { dueAt: { gte: dayStart, lte: dayEnd } },
+          {
+            dueAt: null,
+            createdAt: { gte: dayStart, lte: dayEnd },
+          },
+        ],
+      },
+    });
+
+    if (existingRun) {
+      throw new BadRequestException(
+        'A PENDING or IN_PROGRESS run already exists for this schedule on the same day',
+      );
+    }
+
+    const maxRun = await this.prisma.checklistRun.aggregate({
+      where: { organizationId: ctx.organizationId },
+      _max: { runNumber: true },
+    });
+    const runNumber = (maxRun._max.runNumber ?? 0) + 1;
+
+    const run = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.checklistRun.create({
+        data: {
+          organizationId: ctx.organizationId,
+          checklistTemplateId: template.id,
+          checklistScheduleId: scheduleId,
+          brandId: schedule.brandId,
+          locationId: schedule.locationId,
+          zoneId: schedule.zoneId,
+          runSource: 'SCHEDULE',
+          status: 'PENDING',
+          dueAt,
+          runNumber,
+          templateVersion: template.version,
+          templateKeySnapshot: template.templateKey,
+          templateNameSnapshot: template.name,
+        },
+      });
+
+      for (const section of template.sections) {
+        const sectionSnapshot = await tx.checklistRunSectionSnapshot.create({
+          data: {
+            organizationId: ctx.organizationId,
+            checklistRunId: created.id,
+            checklistTemplateSectionId: section.id,
+            titleSnapshot: section.title,
+            descriptionSnapshot: section.description,
+            sortOrder: section.sortOrder,
+          },
+        });
+
+        for (const item of section.items) {
+          await tx.checklistRunItemSnapshot.create({
+            data: {
+              organizationId: ctx.organizationId,
+              checklistRunId: created.id,
+              checklistRunSectionSnapshotId: sectionSnapshot.id,
+              checklistTemplateItemId: item.id,
+              itemTypeSnapshot: item.itemType,
+              labelSnapshot: item.label,
+              helpTextSnapshot: item.helpText,
+              isRequiredSnapshot: item.isRequired,
+              requiresEvidenceOnFailSnapshot: item.requiresEvidenceOnFail,
+              failureCreatesIncidentSnapshot: item.failureCreatesIncident,
+              configSnapshotJson: item.configJson ?? Prisma.JsonNull,
+              sortOrder: item.sortOrder,
+            },
+          });
+        }
+      }
+
+      return tx.checklistRun.findUniqueOrThrow({
+        where: { id: created.id },
+        include: {
+          sectionSnapshots: {
+            orderBy: { sortOrder: 'asc' as const },
+            include: {
+              itemSnapshots: { orderBy: { sortOrder: 'asc' as const } },
+            },
+          },
+        },
+      });
+    });
+
+    await this.audit.recordWrite(
+      'CHECKLIST_RUN_GENERATE',
+      ctx,
+      run.id,
+      { after: run },
+    );
+
+    return run;
   }
 }
