@@ -218,6 +218,7 @@ model Attachment {
   asset                    Asset?                    @relation(fields: [assetId], references: [id])
   checklistRunItemSnapshot ChecklistRunItemSnapshot? @relation(fields: [checklistRunItemSnapshotId], references: [id])
 
+  @@index([checklistRunItemSnapshotId])
   @@map("attachments")
 }
 

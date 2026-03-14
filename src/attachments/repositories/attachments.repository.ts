@@ -68,4 +68,16 @@ export class AttachmentsRepository {
     });
     return { id, deleted: true };
   }
+
+  async updateChecklistRunItemSnapshotId(
+    organizationId: string,
+    attachmentId: string,
+    checklistRunItemSnapshotId: string | null,
+  ) {
+    await this.prisma.attachment.updateMany({
+      where: { id: attachmentId, organizationId },
+      data: { checklistRunItemSnapshotId },
+    });
+    return this.findById(organizationId, attachmentId);
+  }
 }

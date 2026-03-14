@@ -7,8 +7,13 @@ import { Prisma } from '@prisma/client';
 import { ChecklistRunsRepository } from '../repositories/checklist-runs.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
+import { AttachmentsService } from '../../../attachments/services/attachments.service';
+import { TemperatureReadingsService } from '../../../temperature/services/temperature-readings.service';
 import { ListTodayRunsQueryDto } from '../dto/list-today-runs.dto';
 import { UpdateRunItemDto } from '../dto/update-run-item.dto';
+import { LinkAttachmentToRunItemDto } from '../dto/link-attachment-to-run-item.dto';
+import { CreateTemperatureReadingForRunItemDto } from '../dto/create-temperature-reading-for-run-item.dto';
+import { TemperatureSourceType } from '../../../temperature/enums/source-type.enum';
 
 @Injectable()
 export class ChecklistRunsService {
@@ -16,6 +21,8 @@ export class ChecklistRunsService {
     private readonly repo: ChecklistRunsRepository,
     private readonly audit: AuditLogsService,
     private readonly alertEvents: AlertEventsService,
+    private readonly attachments: AttachmentsService,
+    private readonly temperatureReadings: TemperatureReadingsService,
   ) {}
 
   private getDateRange(timezone?: string, dateStr?: string): { start: Date; end: Date } {
@@ -175,5 +182,82 @@ export class ChecklistRunsService {
       { before: run, after: submitted },
     );
     return submitted;
+  }
+
+  async linkAttachmentToRunItem(
+    ctx: { organizationId: string; userId?: string },
+    itemId: string,
+    dto: LinkAttachmentToRunItemDto,
+  ) {
+    const item = await this.repo.findRunItemById(ctx.organizationId, itemId);
+    if (!item) throw new NotFoundException('Checklist run item not found');
+
+    const run = item.checklistRun;
+    if (run.status === 'COMPLETED') {
+      throw new BadRequestException(
+        'Cannot link attachment: run is already completed',
+      );
+    }
+    if (run.status !== 'PENDING' && run.status !== 'IN_PROGRESS') {
+      throw new BadRequestException(
+        `Cannot link attachment: run status is ${run.status}`,
+      );
+    }
+
+    return this.attachments.linkToChecklistRunItem(
+      ctx,
+      dto.attachmentId,
+      itemId,
+    );
+  }
+
+  async createTemperatureReadingForRunItem(
+    ctx: { organizationId: string; userId?: string },
+    itemId: string,
+    dto: CreateTemperatureReadingForRunItemDto,
+  ) {
+    const item = await this.repo.findRunItemById(ctx.organizationId, itemId);
+    if (!item) throw new NotFoundException('Checklist run item not found');
+
+    const run = item.checklistRun;
+    if (run.status === 'COMPLETED') {
+      throw new BadRequestException(
+        'Cannot add temperature reading: run is already completed',
+      );
+    }
+    if (run.status !== 'PENDING' && run.status !== 'IN_PROGRESS') {
+      throw new BadRequestException(
+        `Cannot add temperature reading: run status is ${run.status}`,
+      );
+    }
+
+    if (!run.locationId) {
+      throw new BadRequestException(
+        'Cannot add temperature reading: run has no location (required for scope validation)',
+      );
+    }
+
+    const createAlert = (payload: Parameters<typeof this.alertEvents.createFromPayload>[0]) =>
+      this.alertEvents.createFromPayload(payload);
+
+    return this.temperatureReadings.create(
+      ctx,
+      {
+        organizationId: ctx.organizationId,
+        locationId: run.locationId,
+        brandId: run.brandId ?? undefined,
+        zoneId: dto.zoneId ?? run.zoneId ?? undefined,
+        assetId: dto.assetId,
+        policyId: dto.policyId,
+        checklistRunId: run.id,
+        checklistRunResponseId: itemId,
+        sourceType: dto.sourceType ?? TemperatureSourceType.MANUAL,
+        readingValue: dto.readingValue,
+        unit: dto.unit,
+        recordedAt: dto.recordedAt,
+        rawPayloadJson: dto.rawPayloadJson,
+      },
+      createAlert,
+    );
   }
 }

@@ -80,4 +80,32 @@ export class AttachmentsService {
     });
     return result;
   }
+
+  async linkToChecklistRunItem(
+    ctx: { organizationId: string; userId?: string },
+    attachmentId: string,
+    checklistRunItemSnapshotId: string,
+  ) {
+    const attachment = await this.repo.findById(ctx.organizationId, attachmentId);
+    if (!attachment) {
+      throw new NotFoundException('Attachment not found');
+    }
+    if (
+      attachment.checklistRunItemSnapshotId != null &&
+      attachment.checklistRunItemSnapshotId !== checklistRunItemSnapshotId
+    ) {
+      throw new BadRequestException(
+        'Attachment is already linked to a different checklist run item',
+      );
+    }
+    const updated = await this.repo.updateChecklistRunItemSnapshotId(
+      ctx.organizationId,
+      attachmentId,
+      checklistRunItemSnapshotId,
+    );
+    await this.audit.recordWrite('ATTACHMENT_LINK_CHECKLIST_ITEM', ctx, attachmentId, {
+      after: updated,
+    });
+    return updated;
+  }
 }
