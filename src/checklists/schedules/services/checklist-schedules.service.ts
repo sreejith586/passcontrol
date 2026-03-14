@@ -138,18 +138,24 @@ export class ChecklistSchedulesService {
     return deactivated!;
   }
 
-  async generateRun(
-    ctx: { organizationId: string; userId?: string },
+  /**
+   * Duplicate prevention policy:
+   * - ACTIVE_ONLY: block only if PENDING or IN_PROGRESS run exists for same schedule+day
+   * - ANY_SAME_DAY: block if any run exists for same schedule+day (strict)
+   */
+  async generateRunCore(
+    organizationId: string,
     scheduleId: string,
-    dto?: GenerateRunDto,
+    dueAt?: Date,
+    duplicatePolicy: 'ACTIVE_ONLY' | 'ANY_SAME_DAY' = 'ACTIVE_ONLY',
   ) {
-    const schedule = await this.repo.findById(ctx.organizationId, scheduleId);
-    if (!schedule) throw new NotFoundException('Checklist schedule not found');
+    const schedule = await this.repo.findById(organizationId, scheduleId);
+    if (!schedule) return { skipped: 'template_not_found' };
 
     const template = await this.prisma.checklistTemplate.findFirst({
       where: {
         id: schedule.checklistTemplateId,
-        organizationId: ctx.organizationId,
+        organizationId,
         status: 'PUBLISHED',
       },
       include: {
@@ -162,44 +168,35 @@ export class ChecklistSchedulesService {
       },
     });
 
-    if (!template) {
-      throw new BadRequestException(
-        'Checklist template not found or not published',
-      );
-    }
+    if (!template) return { skipped: 'template_not_found' };
 
-    const dueAt = dto?.dueAt
-      ? new Date(dto.dueAt)
-      : schedule.nextRunAt ?? new Date();
+    const effectiveDueAt = dueAt ?? schedule.nextRunAt ?? new Date();
 
-    const dayStart = new Date(dueAt);
+    const dayStart = new Date(effectiveDueAt);
     dayStart.setUTCHours(0, 0, 0, 0);
-    const dayEnd = new Date(dueAt);
+    const dayEnd = new Date(effectiveDueAt);
     dayEnd.setUTCHours(23, 59, 59, 999);
 
-    const existingRun = await this.prisma.checklistRun.findFirst({
-      where: {
-        organizationId: ctx.organizationId,
-        checklistScheduleId: scheduleId,
-        status: { in: ['PENDING', 'IN_PROGRESS'] },
-        OR: [
-          { dueAt: { gte: dayStart, lte: dayEnd } },
-          {
-            dueAt: null,
-            createdAt: { gte: dayStart, lte: dayEnd },
-          },
-        ],
-      },
-    });
+    const where: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      checklistScheduleId: scheduleId,
+      OR: [
+        { dueAt: { gte: dayStart, lte: dayEnd } },
+        {
+          dueAt: null,
+          createdAt: { gte: dayStart, lte: dayEnd },
+        },
+      ],
+      ...(duplicatePolicy === 'ACTIVE_ONLY' && {
+        status: { in: ['PENDING', 'IN_PROGRESS'] as const },
+      }),
+    };
+    const existingRun = await this.prisma.checklistRun.findFirst({ where });
 
-    if (existingRun) {
-      throw new BadRequestException(
-        'A PENDING or IN_PROGRESS run already exists for this schedule on the same day',
-      );
-    }
+    if (existingRun) return { skipped: 'duplicate' };
 
     const maxRun = await this.prisma.checklistRun.aggregate({
-      where: { organizationId: ctx.organizationId },
+      where: { organizationId },
       _max: { runNumber: true },
     });
     const runNumber = (maxRun._max.runNumber ?? 0) + 1;
@@ -207,7 +204,7 @@ export class ChecklistSchedulesService {
     const run = await this.prisma.$transaction(async (tx) => {
       const created = await tx.checklistRun.create({
         data: {
-          organizationId: ctx.organizationId,
+          organizationId,
           checklistTemplateId: template.id,
           checklistScheduleId: scheduleId,
           brandId: schedule.brandId,
@@ -215,7 +212,7 @@ export class ChecklistSchedulesService {
           zoneId: schedule.zoneId,
           runSource: 'SCHEDULE',
           status: 'PENDING',
-          dueAt,
+          dueAt: effectiveDueAt,
           runNumber,
           templateVersion: template.version,
           templateKeySnapshot: template.templateKey,
@@ -226,7 +223,7 @@ export class ChecklistSchedulesService {
       for (const section of template.sections) {
         const sectionSnapshot = await tx.checklistRunSectionSnapshot.create({
           data: {
-            organizationId: ctx.organizationId,
+            organizationId,
             checklistRunId: created.id,
             checklistTemplateSectionId: section.id,
             titleSnapshot: section.title,
@@ -238,7 +235,7 @@ export class ChecklistSchedulesService {
         for (const item of section.items) {
           await tx.checklistRunItemSnapshot.create({
             data: {
-              organizationId: ctx.organizationId,
+              organizationId,
               checklistRunId: created.id,
               checklistRunSectionSnapshotId: sectionSnapshot.id,
               checklistTemplateItemId: item.id,
@@ -268,6 +265,39 @@ export class ChecklistSchedulesService {
       });
     });
 
+    return { run };
+  }
+
+  async generateRun(
+    ctx: { organizationId: string; userId?: string },
+    scheduleId: string,
+    dto?: GenerateRunDto,
+  ) {
+    const schedule = await this.repo.findById(ctx.organizationId, scheduleId);
+    if (!schedule) throw new NotFoundException('Checklist schedule not found');
+
+    const dueAt = dto?.dueAt
+      ? new Date(dto.dueAt)
+      : schedule.nextRunAt ?? undefined;
+
+    const result = await this.generateRunCore(
+      ctx.organizationId,
+      scheduleId,
+      dueAt,
+    );
+
+    if ('skipped' in result) {
+      if (result.skipped === 'duplicate') {
+        throw new BadRequestException(
+          'A PENDING or IN_PROGRESS run already exists for this schedule on the same day',
+        );
+      }
+      throw new BadRequestException(
+        'Checklist template not found or not published',
+      );
+    }
+
+    const run = result.run!;
     await this.audit.recordWrite(
       'CHECKLIST_RUN_GENERATE',
       ctx,

@@ -131,4 +131,27 @@ export class ChecklistSchedulesRepository {
     });
     return this.findById(organizationId, id);
   }
+
+  async findDueSchedules(now: Date, limit: number) {
+    return this.prisma.checklistSchedule.findMany({
+      where: {
+        isActive: true,
+        nextRunAt: { lte: now, not: null },
+      },
+      orderBy: { nextRunAt: 'asc' },
+      take: limit,
+      include: SCHEDULE_INCLUDE,
+    });
+  }
+
+  async updateNextRunAt(
+    organizationId: string,
+    scheduleId: string,
+    nextRunAt: Date | null,
+  ) {
+    await this.prisma.checklistSchedule.updateMany({
+      where: { id: scheduleId, organizationId },
+      data: { nextRunAt },
+    });
+  }
 }

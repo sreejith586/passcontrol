@@ -434,6 +434,7 @@ model ChecklistSchedule {
 
   @@index([organizationId, isActive, nextRunAt])
   @@index([organizationId, brandId, locationId, zoneId, isActive])
+  @@index([isActive, nextRunAt])
   @@map("checklist_schedules")
 }
 
