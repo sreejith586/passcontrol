@@ -1,20 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChecklistRunItemsRepository } from './checklist-run-items.repository';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
+import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
 
 describe('ChecklistRunItemsRepository', () => {
   let repo: ChecklistRunItemsRepository;
   let prisma: {
     $queryRaw: jest.Mock;
-    checklistRunItemSnapshot: { findMany: jest.Mock };
+    checklistRunItemSnapshot: { findMany: jest.Mock; findFirst: jest.Mock };
+    temperatureReading: { findMany: jest.Mock };
   };
 
   const mockOrgId = 'org-123';
 
+  let mockAlertEventsRepo: { findFirstBySource: jest.Mock };
+
   beforeEach(async () => {
+    mockAlertEventsRepo = {
+      findFirstBySource: jest.fn().mockResolvedValue(null),
+    };
     prisma = {
       $queryRaw: jest.fn(),
-      checklistRunItemSnapshot: { findMany: jest.fn() },
+      checklistRunItemSnapshot: { findMany: jest.fn(), findFirst: jest.fn() },
+      temperatureReading: { findMany: jest.fn() },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -23,6 +31,10 @@ describe('ChecklistRunItemsRepository', () => {
         {
           provide: PrismaService,
           useValue: prisma,
+        },
+        {
+          provide: AlertEventsRepository,
+          useValue: mockAlertEventsRepo,
         },
       ],
     }).compile();
@@ -129,6 +141,95 @@ describe('ChecklistRunItemsRepository', () => {
 
       expect(result).toEqual([]);
       expect(prisma.checklistRunItemSnapshot.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findByIdWithContext', () => {
+    it('returns null when item not found', async () => {
+      prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue(null);
+
+      const result = await repo.findByIdWithContext(mockOrgId, 'item-1');
+
+      expect(result).toBeNull();
+      expect(mockAlertEventsRepo.findFirstBySource).not.toHaveBeenCalled();
+    });
+
+    it('returns item with attachments, temperature readings, and alert', async () => {
+      const mockItem = {
+        id: 'item-1',
+        checklistRunId: 'run-1',
+        labelSnapshot: 'Check temp',
+        helpTextSnapshot: 'Use thermometer',
+        itemTypeSnapshot: 'TEMPERATURE',
+        result: 'FAIL',
+        comment: 'Out of range',
+        sortOrder: 1,
+        requiresEvidenceOnFailSnapshot: true,
+        requiresCommentOnFailSnapshot: true,
+        severitySnapshot: 'HIGH',
+        checklistRunSectionSnapshot: {
+          id: 'sec-1',
+          titleSnapshot: 'Opening',
+          sortOrder: 1,
+        },
+        checklistRun: {
+          id: 'run-1',
+          runNumber: 100,
+          status: 'COMPLETED',
+          templateNameSnapshot: 'Daily',
+          dueAt: new Date(),
+          startedAt: new Date(),
+          completedAt: new Date(),
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          performedByUserId: 'u1',
+        },
+        attachments: [
+          {
+            id: 'att-1',
+            fileId: 'f1',
+            createdAt: new Date(),
+            file: { fileName: 'photo.jpg', mimeType: 'image/jpeg' },
+          },
+        ],
+      };
+      prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue(mockItem);
+      prisma.temperatureReading.findMany.mockResolvedValue([
+        {
+          id: 'tr-1',
+          readingValue: 45,
+          unit: 'C',
+          recordedAt: new Date(),
+          isBreach: true,
+          breachType: 'HIGH',
+          sourceType: 'MANUAL',
+        },
+      ]);
+      mockAlertEventsRepo.findFirstBySource.mockResolvedValue({
+        id: 'alert-1',
+        status: 'OPEN',
+        severity: 'HIGH',
+        acknowledgedAt: null,
+        acknowledgedByUserId: null,
+        resolvedAt: null,
+        resolvedByUserId: null,
+        resolutionNote: null,
+        createdAt: new Date(),
+      });
+
+      const result = await repo.findByIdWithContext(mockOrgId, 'item-1');
+
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('item-1');
+      expect(result!.attachments).toHaveLength(1);
+      expect(result!.temperatureReadings).toHaveLength(1);
+      expect(result!.alertEvent).not.toBeNull();
+      expect(mockAlertEventsRepo.findFirstBySource).toHaveBeenCalledWith(
+        mockOrgId,
+        'CHECKLIST_RUN_ITEM',
+        'item-1',
+      );
     });
   });
 });

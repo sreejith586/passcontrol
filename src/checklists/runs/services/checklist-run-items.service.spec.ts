@@ -34,6 +34,7 @@ describe('ChecklistRunItemsService', () => {
       findByIdsWithRunAndAttachmentCount: jest
         .fn()
         .mockResolvedValue([mockHydratedRow]),
+      findByIdWithContext: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -178,6 +179,141 @@ describe('ChecklistRunItemsService', () => {
 
       expect(result.items).toEqual([]);
       expect(result.total).toBe(1);
+    });
+  });
+
+  describe('getById', () => {
+    it('throws NotFoundException when item not found', async () => {
+      repo.findByIdWithContext.mockResolvedValue(null);
+
+      await expect(
+        service.getById({ organizationId: mockOrgId }, 'item-1'),
+      ).rejects.toThrow('Checklist run item snapshot not found');
+    });
+
+    it('returns mapped item with full context', async () => {
+      const mockRow = {
+        id: 'item-1',
+        checklistRunId: 'run-1',
+        labelSnapshot: 'Check temperature',
+        helpTextSnapshot: 'Use thermometer',
+        itemTypeSnapshot: 'TEMPERATURE',
+        result: 'FAIL',
+        comment: 'Out of range',
+        sortOrder: 1,
+        requiresEvidenceOnFailSnapshot: true,
+        requiresCommentOnFailSnapshot: true,
+        severitySnapshot: 'CRITICAL',
+        checklistRunSectionSnapshot: {
+          id: 'sec-1',
+          titleSnapshot: 'Opening',
+          sortOrder: 1,
+        },
+        checklistRun: {
+          id: 'run-1',
+          runNumber: 100,
+          status: 'COMPLETED',
+          templateNameSnapshot: 'Daily',
+          dueAt: new Date('2025-03-15T10:00:00Z'),
+          startedAt: new Date('2025-03-15T10:05:00Z'),
+          completedAt: new Date('2025-03-15T10:30:00Z'),
+          brandId: 'brand-1',
+          locationId: 'loc-1',
+          zoneId: 'zone-1',
+          performedByUserId: 'user-1',
+        },
+        attachments: [
+          {
+            id: 'att-1',
+            fileId: 'file-1',
+            createdAt: new Date(),
+            file: { fileName: 'photo.jpg', mimeType: 'image/jpeg' },
+          },
+        ],
+        temperatureReadings: [
+          {
+            id: 'tr-1',
+            readingValue: 45,
+            unit: 'C',
+            recordedAt: new Date(),
+            isBreach: true,
+            breachType: 'HIGH',
+            sourceType: 'MANUAL',
+          },
+        ],
+        alertEvent: {
+          id: 'alert-1',
+          status: 'OPEN',
+          severity: 'CRITICAL',
+          acknowledgedAt: null,
+          acknowledgedByUserId: null,
+          resolvedAt: null,
+          resolvedByUserId: null,
+          resolutionNote: null,
+          createdAt: new Date(),
+        },
+      };
+      repo.findByIdWithContext.mockResolvedValue(mockRow as never);
+
+      const result = await service.getById(
+        { organizationId: mockOrgId },
+        'item-1',
+      );
+
+      expect(result.label).toBe('Check temperature');
+      expect(result.description).toBe('Use thermometer');
+      expect(result.itemType).toBe('TEMPERATURE');
+      expect(result.sectionSnapshot.title).toBe('Opening');
+      expect(result.attachments).toHaveLength(1);
+      expect(result.attachments[0].fileName).toBe('photo.jpg');
+      expect(result.temperatureReadings).toHaveLength(1);
+      expect(result.alertEvent).not.toBeNull();
+      expect(result.alertEvent!.status).toBe('OPEN');
+    });
+
+    it('returns alertEvent null when no related alert', async () => {
+      const mockRow = {
+        id: 'item-1',
+        checklistRunId: 'run-1',
+        labelSnapshot: 'Check',
+        helpTextSnapshot: null,
+        itemTypeSnapshot: 'CHECKBOX',
+        result: 'FAIL',
+        comment: null,
+        sortOrder: 1,
+        requiresEvidenceOnFailSnapshot: false,
+        requiresCommentOnFailSnapshot: false,
+        severitySnapshot: 'MEDIUM',
+        checklistRunSectionSnapshot: {
+          id: 'sec-1',
+          titleSnapshot: 'Section',
+          sortOrder: 1,
+        },
+        checklistRun: {
+          id: 'run-1',
+          runNumber: 1,
+          status: 'PENDING',
+          templateNameSnapshot: 'Daily',
+          dueAt: null,
+          startedAt: null,
+          completedAt: null,
+          brandId: null,
+          locationId: null,
+          zoneId: null,
+          performedByUserId: null,
+        },
+        attachments: [],
+        temperatureReadings: [],
+        alertEvent: null,
+      };
+      repo.findByIdWithContext.mockResolvedValue(mockRow as never);
+
+      const result = await service.getById(
+        { organizationId: mockOrgId },
+        'item-1',
+      );
+
+      expect(result.alertEvent).toBeNull();
     });
   });
 });

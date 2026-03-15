@@ -123,6 +123,32 @@ export class AlertEventsRepository {
     return this.prisma.alertEvent.count({ where });
   }
 
+  /**
+   * Find first alert event by source (e.g. CHECKLIST_RUN_ITEM + sourceId).
+   * Used for supervisor drilldown to link item snapshot to its fail alert.
+   */
+  async findFirstBySource(
+    organizationId: string,
+    sourceType: string,
+    sourceId: string,
+  ) {
+    return this.prisma.alertEvent.findFirst({
+      where: { organizationId, sourceType, sourceId },
+      select: {
+        id: true,
+        status: true,
+        severity: true,
+        acknowledgedAt: true,
+        acknowledgedByUserId: true,
+        resolvedAt: true,
+        resolvedByUserId: true,
+        resolutionNote: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async update(
     organizationId: string,
     id: string,

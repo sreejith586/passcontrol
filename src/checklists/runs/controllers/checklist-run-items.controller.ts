@@ -15,6 +15,7 @@ import {
   ApiParam,
   ApiBody,
   ApiQuery,
+  ApiResponse as ApiResponseDecorator,
 } from '@nestjs/swagger';
 import { ChecklistRunsService } from '../services/checklist-runs.service';
 import { ChecklistRunItemsService } from '../services/checklist-run-items.service';
@@ -73,6 +74,23 @@ export class ChecklistRunItemsController {
   ) {
     const list = await this.runItemsService.getFailedItems(ctx, query);
     return ApiResponse.ok(list);
+  }
+
+  @Get(':id')
+  @RequirePermissions('checklist.run.view')
+  @ApiOperation({
+    summary: 'Get run item snapshot by ID with supervisor context',
+    description:
+      'Returns a single ChecklistRunItemSnapshot with attachments, temperature readings, and related alert event. Use for supervisor drilldown and investigation.',
+  })
+  @ApiParam({ name: 'id', description: 'Run item snapshot UUID (ChecklistRunItemSnapshot.id)' })
+  @ApiResponseDecorator({ status: 200, description: 'Run item snapshot with full context' })
+  async getById(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const item = await this.runItemsService.getById(ctx, id);
+    return ApiResponse.ok(item);
   }
 
   @Patch(':id')

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
+import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
 
 export interface FailedItemFilters {
   brandId?: string;
@@ -14,7 +15,10 @@ export interface FailedItemFilters {
 
 @Injectable()
 export class ChecklistRunItemsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly alertEventsRepo: AlertEventsRepository,
+  ) {}
 
   /**
    * Find failed ChecklistRunItemSnapshot IDs in correct sort order using raw SQL.
@@ -173,5 +177,95 @@ export class ChecklistRunItemsRepository {
     }
 
     return conditions;
+  }
+
+  /**
+   * Find a single ChecklistRunItemSnapshot by id with full supervisor context.
+   * Includes section snapshot, run, attachments (with file metadata), temperature readings, and related alert.
+   */
+  async findByIdWithContext(organizationId: string, id: string) {
+    const item = await this.prisma.checklistRunItemSnapshot.findFirst({
+      where: { id, organizationId },
+      select: {
+        id: true,
+        checklistRunId: true,
+        labelSnapshot: true,
+        helpTextSnapshot: true,
+        itemTypeSnapshot: true,
+        result: true,
+        comment: true,
+        sortOrder: true,
+        requiresEvidenceOnFailSnapshot: true,
+        requiresCommentOnFailSnapshot: true,
+        severitySnapshot: true,
+        checklistRunSectionSnapshot: {
+          select: {
+            id: true,
+            titleSnapshot: true,
+            sortOrder: true,
+          },
+        },
+        checklistRun: {
+          select: {
+            id: true,
+            runNumber: true,
+            status: true,
+            templateNameSnapshot: true,
+            dueAt: true,
+            startedAt: true,
+            completedAt: true,
+            brandId: true,
+            locationId: true,
+            zoneId: true,
+            performedByUserId: true,
+          },
+        },
+        attachments: {
+          select: {
+            id: true,
+            fileId: true,
+            createdAt: true,
+            file: {
+              select: {
+                fileName: true,
+                mimeType: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!item) return null;
+
+    const [temperatureReadings, alertEvent] = await Promise.all([
+      this.prisma.temperatureReading.findMany({
+        where: {
+          organizationId,
+          checklistRunItemSnapshotId: id,
+        },
+        select: {
+          id: true,
+          readingValue: true,
+          unit: true,
+          recordedAt: true,
+          isBreach: true,
+          breachType: true,
+          sourceType: true,
+        },
+        orderBy: { recordedAt: 'desc' },
+      }),
+      this.alertEventsRepo.findFirstBySource(
+        organizationId,
+        'CHECKLIST_RUN_ITEM',
+        id,
+      ),
+    ]);
+
+    return {
+      ...item,
+      temperatureReadings,
+      alertEvent,
+    };
   }
 }

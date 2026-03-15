@@ -10,6 +10,6 @@ import { AlertEventsRepository } from './repositories/alert-events.repository';
   imports: [InfraModule, AccessModule, AuditModule],
   controllers: [AlertEventsController],
   providers: [AlertEventsService, AlertEventsRepository],
-  exports: [AlertEventsService],
+  exports: [AlertEventsService, AlertEventsRepository],
 })
 export class AlertEventsModule {}
