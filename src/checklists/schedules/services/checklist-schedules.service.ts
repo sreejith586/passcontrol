@@ -5,17 +5,24 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ChecklistSchedulesRepository } from '../repositories/checklist-schedules.repository';
+import { ChecklistScheduleRecurrenceService } from './checklist-schedule-recurrence.service';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
 import { GenerateRunDto } from '../dto/generate-run.dto';
+import {
+  validateRrule,
+  validateTimezone,
+  validateStartsAtEndsAt,
+} from '../validators/schedule-recurrence.validator';
 
 @Injectable()
 export class ChecklistSchedulesService {
   constructor(
     private readonly repo: ChecklistSchedulesRepository,
+    private readonly recurrence: ChecklistScheduleRecurrenceService,
     private readonly audit: AuditLogsService,
     private readonly prisma: PrismaService,
   ) {}
@@ -24,6 +31,12 @@ export class ChecklistSchedulesService {
     ctx: { organizationId: string; userId?: string },
     dto: CreateScheduleDto,
   ) {
+    validateRrule(dto.rrule);
+    validateTimezone(dto.timezone);
+    const startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+    const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+    validateStartsAtEndsAt(startsAt, endsAt);
+
     const template = await this.prisma.checklistTemplate.findFirst({
       where: {
         id: dto.checklistTemplateId,
@@ -45,17 +58,33 @@ export class ChecklistSchedulesService {
       brandId: dto.brandId ?? null,
       locationId: dto.locationId ?? null,
       zoneId: dto.zoneId ?? null,
-      startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
-      endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+      startsAt,
+      endsAt,
     });
 
+    const nextRunAt = this.recurrence.computeNextRunAt(
+      {
+        rrule: created.rrule,
+        timezone: created.timezone,
+        startsAt: created.startsAt,
+        endsAt: created.endsAt,
+      },
+      new Date(),
+    );
+    await this.repo.updateNextRunAt(
+      ctx.organizationId,
+      created.id,
+      nextRunAt,
+    );
+
+    const final = await this.repo.findById(ctx.organizationId, created.id);
     await this.audit.recordWrite(
       'CHECKLIST_SCHEDULE_CREATE',
       ctx,
       created.id,
-      { after: created },
+      { after: final ?? created },
     );
-    return created;
+    return final ?? created;
   }
 
   async getById(ctx: { organizationId: string }, id: string) {
@@ -85,6 +114,19 @@ export class ChecklistSchedulesService {
     dto: UpdateScheduleDto,
   ) {
     const existing = await this.getById(ctx, id);
+
+    if (dto.rrule !== undefined) validateRrule(dto.rrule);
+    if (dto.timezone !== undefined) validateTimezone(dto.timezone);
+    const effectiveStartsAt =
+      dto.startsAt !== undefined
+        ? (dto.startsAt ? new Date(dto.startsAt) : null)
+        : existing.startsAt;
+    const effectiveEndsAt =
+      dto.endsAt !== undefined
+        ? (dto.endsAt ? new Date(dto.endsAt) : null)
+        : existing.endsAt;
+    validateStartsAtEndsAt(effectiveStartsAt, effectiveEndsAt);
+
     const updated = await this.repo.update(ctx.organizationId, id, {
       name: dto.name,
       timezone: dto.timezone,
@@ -95,6 +137,32 @@ export class ChecklistSchedulesService {
       startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
       endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
     });
+
+    const recurrenceFieldsChanged =
+      dto.rrule !== undefined ||
+      dto.timezone !== undefined ||
+      dto.startsAt !== undefined ||
+      dto.endsAt !== undefined;
+    if (updated && recurrenceFieldsChanged) {
+      const nextRunAt = this.recurrence.computeNextRunAt(
+        {
+          rrule: updated.rrule,
+          timezone: updated.timezone,
+          startsAt: updated.startsAt,
+          endsAt: updated.endsAt,
+        },
+        new Date(),
+      );
+      await this.repo.updateNextRunAt(ctx.organizationId, id, nextRunAt);
+      const final = await this.repo.findById(ctx.organizationId, id);
+      await this.audit.recordWrite(
+        'CHECKLIST_SCHEDULE_UPDATE',
+        ctx,
+        id,
+        { before: existing, after: final ?? updated },
+      );
+      return final ?? updated;
+    }
 
     if (updated) {
       await this.audit.recordWrite(
@@ -111,12 +179,24 @@ export class ChecklistSchedulesService {
     const existing = await this.getById(ctx, id);
     const activated = await this.repo.activate(ctx.organizationId, id);
     if (activated) {
+      const nextRunAt = this.recurrence.computeNextRunAt(
+        {
+          rrule: activated.rrule,
+          timezone: activated.timezone,
+          startsAt: activated.startsAt,
+          endsAt: activated.endsAt,
+        },
+        new Date(),
+      );
+      await this.repo.updateNextRunAt(ctx.organizationId, id, nextRunAt);
+      const final = await this.repo.findById(ctx.organizationId, id);
       await this.audit.recordWrite(
         'CHECKLIST_SCHEDULE_ACTIVATE',
         ctx,
         id,
-        { before: existing, after: activated },
+        { before: existing, after: final ?? activated },
       );
+      return final ?? activated;
     }
     return activated!;
   }
@@ -298,6 +378,19 @@ export class ChecklistSchedulesService {
     }
 
     const run = result.run!;
+    const referenceDate = run.dueAt ?? schedule.nextRunAt ?? new Date();
+    const nextRunAt = this.recurrence.computeNextRunAt(
+      {
+        rrule: schedule.rrule,
+        timezone: schedule.timezone,
+        startsAt: schedule.startsAt,
+        endsAt: schedule.endsAt,
+      },
+      referenceDate,
+      { inclusive: false },
+    );
+    await this.repo.updateNextRunAt(ctx.organizationId, scheduleId, nextRunAt);
+
     await this.audit.recordWrite(
       'CHECKLIST_RUN_GENERATE',
       ctx,

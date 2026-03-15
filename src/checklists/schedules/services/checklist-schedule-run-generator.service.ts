@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChecklistSchedulesRepository } from '../repositories/checklist-schedules.repository';
 import { ChecklistSchedulesService } from './checklist-schedules.service';
+import { ChecklistScheduleRecurrenceService } from './checklist-schedule-recurrence.service';
 
 const BATCH_LIMIT = 100;
 
@@ -12,6 +13,7 @@ export class ChecklistScheduleRunGeneratorService {
   constructor(
     private readonly repo: ChecklistSchedulesRepository,
     private readonly schedulesService: ChecklistSchedulesService,
+    private readonly recurrence: ChecklistScheduleRecurrenceService,
   ) {}
 
   /**
@@ -59,8 +61,16 @@ export class ChecklistScheduleRunGeneratorService {
             `Generated run ${run.id} for schedule ${schedule.id} (${schedule.name})`,
           );
 
-          const nextRunAt = this.computeNextRunAt(
-            schedule.nextRunAt ?? run.dueAt ?? now,
+          const referenceDate = run.dueAt ?? schedule.nextRunAt ?? now;
+          const nextRunAt = this.recurrence.computeNextRunAt(
+            {
+              rrule: schedule.rrule,
+              timezone: schedule.timezone,
+              startsAt: schedule.startsAt,
+              endsAt: schedule.endsAt,
+            },
+            referenceDate,
+            { inclusive: false },
           );
           await this.repo.updateNextRunAt(
             schedule.organizationId,
@@ -77,15 +87,5 @@ export class ChecklistScheduleRunGeneratorService {
     } finally {
       this.isProcessing = false;
     }
-  }
-
-  /**
-   * Compute next run time. Simple daily increment for now.
-   * TODO: Use RRULE (e.g. rrule.js) with schedule.timezone for proper recurrence.
-   */
-  private computeNextRunAt(from: Date): Date {
-    const next = new Date(from);
-    next.setUTCDate(next.getUTCDate() + 1);
-    return next;
   }
 }

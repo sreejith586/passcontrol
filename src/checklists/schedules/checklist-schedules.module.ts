@@ -4,6 +4,7 @@ import { AccessModule } from '../../access/access.module';
 import { AuditModule } from '../../audit/audit.module';
 import { ChecklistSchedulesController } from './controllers/checklist-schedules.controller';
 import { ChecklistSchedulesService } from './services/checklist-schedules.service';
+import { ChecklistScheduleRecurrenceService } from './services/checklist-schedule-recurrence.service';
 import { ChecklistSchedulesRepository } from './repositories/checklist-schedules.repository';
 import { ChecklistScheduleRunGeneratorService } from './services/checklist-schedule-run-generator.service';
 import { ChecklistScheduleCronService } from './services/checklist-schedule-cron.service';
@@ -13,6 +14,7 @@ import { ChecklistScheduleCronService } from './services/checklist-schedule-cron
   controllers: [ChecklistSchedulesController],
   providers: [
     ChecklistSchedulesService,
+    ChecklistScheduleRecurrenceService,
     ChecklistSchedulesRepository,
     ChecklistScheduleRunGeneratorService,
     ChecklistScheduleCronService,
