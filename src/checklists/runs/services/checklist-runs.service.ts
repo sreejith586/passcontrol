@@ -126,6 +126,7 @@ export class ChecklistRunsService {
         sourceType: 'CHECKLIST_RUN_ITEM',
         sourceId: updated.id,
         type: 'CHECKLIST_ITEM_FAIL',
+        severity: updated.severitySnapshot,
         scope: {
           brandId: updated.checklistRun.brandId ?? undefined,
           locationId: updated.checklistRun.locationId ?? undefined,
@@ -139,6 +140,7 @@ export class ChecklistRunsService {
           label: updated.labelSnapshot,
           result: updated.result,
           comment: updated.comment ?? undefined,
+          severity: updated.severitySnapshot,
         },
       });
     }

@@ -334,6 +334,7 @@ export class ChecklistSchedulesService {
               isRequiredSnapshot: item.isRequired,
               requiresEvidenceOnFailSnapshot: item.requiresEvidenceOnFail,
               requiresCommentOnFailSnapshot: item.requiresCommentOnFail,
+              severitySnapshot: item.severity,
               failureCreatesIncidentSnapshot: item.failureCreatesIncident,
               configSnapshotJson: item.configJson ?? Prisma.JsonNull,
               sortOrder: item.sortOrder,

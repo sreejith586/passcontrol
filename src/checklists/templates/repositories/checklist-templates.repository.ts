@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, ChecklistItemSeverity } from '@prisma/client';
 
 const TEMPLATE_INCLUDE = {
   sections: {
@@ -38,6 +38,7 @@ export class ChecklistTemplatesRepository {
           isRequired: boolean;
           requiresEvidenceOnFail: boolean;
           requiresCommentOnFail: boolean;
+          severity?: string;
           failureCreatesIncident: boolean;
           configJson?: Prisma.JsonValue;
           sortOrder: number;
@@ -83,6 +84,7 @@ export class ChecklistTemplatesRepository {
               isRequired: i.isRequired ?? true,
               requiresEvidenceOnFail: i.requiresEvidenceOnFail ?? false,
               requiresCommentOnFail: i.requiresCommentOnFail ?? false,
+              severity: (i.severity as ChecklistItemSeverity) ?? ChecklistItemSeverity.MEDIUM,
               failureCreatesIncident: i.failureCreatesIncident ?? false,
               configJson: i.configJson ?? Prisma.JsonNull,
               sortOrder: i.sortOrder,
@@ -156,6 +158,7 @@ export class ChecklistTemplatesRepository {
           isRequired: boolean;
           requiresEvidenceOnFail: boolean;
           requiresCommentOnFail: boolean;
+          severity?: string;
           failureCreatesIncident: boolean;
           configJson?: Prisma.JsonValue;
           sortOrder: number;
@@ -199,6 +202,7 @@ export class ChecklistTemplatesRepository {
                 isRequired: item.isRequired ?? true,
                 requiresEvidenceOnFail: item.requiresEvidenceOnFail ?? false,
                 requiresCommentOnFail: item.requiresCommentOnFail ?? false,
+                severity: (item.severity as ChecklistItemSeverity) ?? ChecklistItemSeverity.MEDIUM,
                 failureCreatesIncident: item.failureCreatesIncident ?? false,
                 configJson: item.configJson ?? Prisma.JsonNull,
                 sortOrder: item.sortOrder,

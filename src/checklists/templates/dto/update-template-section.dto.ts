@@ -5,9 +5,11 @@ import {
   Min,
   IsArray,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ChecklistItemSeverity } from '../../enums/checklist-item-severity.enum';
 
 export class UpdateTemplateItemDto {
   @ApiPropertyOptional({ example: 'BOOLEAN' })
@@ -36,6 +38,11 @@ export class UpdateTemplateItemDto {
   @ApiPropertyOptional()
   @IsOptional()
   requiresCommentOnFail?: boolean;
+
+  @ApiPropertyOptional({ enum: ChecklistItemSeverity })
+  @IsOptional()
+  @IsEnum(ChecklistItemSeverity)
+  severity?: ChecklistItemSeverity;
 
   @ApiPropertyOptional()
   @IsOptional()

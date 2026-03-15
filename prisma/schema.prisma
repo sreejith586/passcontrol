@@ -10,6 +10,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ChecklistItemSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 // ---- Identity & RBAC ----
 model User {
   id           String    @id @default(uuid()) @db.Uuid
@@ -399,6 +406,7 @@ model ChecklistTemplateItem {
   isRequired                 Boolean  @default(true) @map("is_required")
   requiresEvidenceOnFail     Boolean  @default(false) @map("requires_evidence_on_fail")
   requiresCommentOnFail     Boolean  @default(false) @map("requires_comment_on_fail")
+  severity                   ChecklistItemSeverity @default(MEDIUM)
   failureCreatesIncident     Boolean  @default(false) @map("failure_creates_incident")
   configJson                 Json?    @map("config_json")
   sortOrder                  Int      @map("sort_order")
@@ -507,6 +515,7 @@ model ChecklistRunItemSnapshot {
   isRequiredSnapshot             Boolean   @map("is_required_snapshot")
   requiresEvidenceOnFailSnapshot Boolean   @map("requires_evidence_on_fail_snapshot")
   requiresCommentOnFailSnapshot  Boolean   @map("requires_comment_on_fail_snapshot")
+  severitySnapshot               ChecklistItemSeverity @map("severity_snapshot")
   failureCreatesIncidentSnapshot Boolean   @map("failure_creates_incident_snapshot")
   configSnapshotJson             Json?     @map("config_snapshot_json")
   sortOrder                      Int       @map("sort_order")
