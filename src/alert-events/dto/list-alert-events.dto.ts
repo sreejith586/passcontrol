@@ -3,7 +3,9 @@ import {
   IsOptional,
   IsEnum,
   IsInt,
+  IsString,
   Min,
+  Max,
   IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -36,6 +38,10 @@ export class ListAlertEventsQueryDto {
   status?: AlertEventStatus;
 
   @IsOptional()
+  @IsString()
+  severity?: string;
+
+  @IsOptional()
   sourceType?: string;
 
   @IsOptional()
@@ -56,6 +62,7 @@ export class ListAlertEventsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100)
   limit?: number = 25;
 
   @IsOptional()

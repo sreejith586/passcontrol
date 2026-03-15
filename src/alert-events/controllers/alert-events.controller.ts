@@ -1,6 +1,8 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
+import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
@@ -17,6 +19,7 @@ export class AlertEventsController {
 
   @Get()
   @RequirePermissions('alert.view')
+  @ApiOperation({ summary: 'List alert events (paginated)' })
   async list(
     @CurrentTenantContext() ctx: TenantContext,
     @Query() query: ListAlertEventsQueryDto,
@@ -27,6 +30,8 @@ export class AlertEventsController {
 
   @Get(':id')
   @RequirePermissions('alert.view')
+  @ApiOperation({ summary: 'Get alert event by ID' })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
   async get(
     @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
@@ -37,6 +42,8 @@ export class AlertEventsController {
 
   @Post(':id/acknowledge')
   @RequirePermissions('alert.acknowledge')
+  @ApiOperation({ summary: 'Acknowledge an OPEN alert' })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
   async acknowledge(
     @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
@@ -47,11 +54,15 @@ export class AlertEventsController {
 
   @Post(':id/resolve')
   @RequirePermissions('alert.resolve')
+  @ApiOperation({ summary: 'Resolve an OPEN or ACKNOWLEDGED alert' })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  @ApiBody({ type: ResolveAlertDto, required: false })
   async resolve(
     @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
+    @Body() dto?: ResolveAlertDto,
   ) {
-    const updated = await this.service.resolve(ctx, id);
+    const updated = await this.service.resolve(ctx, id, dto?.resolutionNote);
     return ApiResponse.ok(updated);
   }
 }

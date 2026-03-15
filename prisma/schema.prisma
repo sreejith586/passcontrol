@@ -278,23 +278,32 @@ model TemperatureReading {
 }
 
 // ---- Alert Events ----
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
 model AlertEvent {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @map("organization_id") @db.Uuid
-  brandId        String?   @map("brand_id") @db.Uuid
-  locationId     String?   @map("location_id") @db.Uuid
-  zoneId         String?   @map("zone_id") @db.Uuid
-  assetId        String?   @map("asset_id") @db.Uuid
-  sourceType     String    @map("source_type")
-  sourceId       String    @map("source_id")
-  type           String
-  status         String    @default("OPEN")
-  severity       String?
-  payloadJson    Json?     @map("payload_json")
-  triggeredAt    DateTime  @default(now()) @map("triggered_at") @db.Timestamptz
-  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz
-  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  id                  String    @id @default(uuid()) @db.Uuid
+  organizationId      String    @map("organization_id") @db.Uuid
+  brandId             String?   @map("brand_id") @db.Uuid
+  locationId          String?   @map("location_id") @db.Uuid
+  zoneId              String?   @map("zone_id") @db.Uuid
+  assetId             String?   @map("asset_id") @db.Uuid
+  sourceType          String    @map("source_type")
+  sourceId            String    @map("source_id")
+  type                String
+  status              AlertStatus @default(OPEN)
+  severity            String?
+  payloadJson         Json?     @map("payload_json")
+  triggeredAt         DateTime  @default(now()) @map("triggered_at") @db.Timestamptz
+  acknowledgedAt      DateTime? @map("acknowledged_at") @db.Timestamptz
+  acknowledgedByUserId String?  @map("acknowledged_by_user_id") @db.Uuid
+  resolvedAt          DateTime? @map("resolved_at") @db.Timestamptz
+  resolvedByUserId    String?   @map("resolved_by_user_id") @db.Uuid
+  resolutionNote      String?   @map("resolution_note")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id])
 

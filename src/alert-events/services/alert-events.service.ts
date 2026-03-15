@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AlertEventStatus } from '../enums/alert-status.enum';
@@ -49,7 +50,9 @@ export class AlertEventsService {
   }
 
   async list(ctx: { organizationId: string }, query: ListAlertEventsQueryDto) {
-    const pagination = { page: query.page ?? 1, limit: query.limit ?? 25 };
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 25, 100);
+    const pagination = { page, limit };
     const sort =
       query.sort === 'triggered_at_asc'
         ? { triggeredAt: 'asc' as const }
@@ -57,7 +60,7 @@ export class AlertEventsService {
         ? { triggeredAt: 'desc' as const }
         : { createdAt: 'desc' as const };
 
-    return this.repo.list(
+    const { items, total } = await this.repo.list(
       ctx.organizationId,
       {
         brandId: query.brandId,
@@ -66,6 +69,7 @@ export class AlertEventsService {
         assetId: query.assetId,
         type: query.type,
         status: query.status,
+        severity: query.severity,
         sourceType: query.sourceType,
         from: query.from,
         to: query.to,
@@ -73,6 +77,8 @@ export class AlertEventsService {
       pagination,
       sort,
     );
+
+    return { items, total, page, limit };
   }
 
   async acknowledge(ctx: { organizationId: string; userId?: string }, id: string) {
@@ -81,8 +87,9 @@ export class AlertEventsService {
       throw new BadRequestException('Only OPEN alerts can be acknowledged');
     }
     const updated = await this.repo.update(ctx.organizationId, id, {
-      status: AlertEventStatus.ACKNOWLEDGED,
+      status: AlertStatus.ACKNOWLEDGED,
       acknowledgedAt: new Date(),
+      acknowledgedByUserId: ctx.userId ?? null,
     });
     await this.audit.recordWrite('ALERT_ACKNOWLEDGE', ctx, id, {
       before: existing,
@@ -91,11 +98,20 @@ export class AlertEventsService {
     return updated;
   }
 
-  async resolve(ctx: { organizationId: string; userId?: string }, id: string) {
+  async resolve(
+    ctx: { organizationId: string; userId?: string },
+    id: string,
+    resolutionNote?: string,
+  ) {
     const existing = await this.getById(ctx, id);
+    if (existing.status === AlertEventStatus.RESOLVED) {
+      throw new BadRequestException('Alert is already resolved');
+    }
     const updated = await this.repo.update(ctx.organizationId, id, {
-      status: AlertEventStatus.RESOLVED,
+      status: AlertStatus.RESOLVED,
       resolvedAt: new Date(),
+      resolvedByUserId: ctx.userId ?? null,
+      resolutionNote: resolutionNote?.trim() || null,
     });
     await this.audit.recordWrite('ALERT_RESOLVE', ctx, id, {
       before: existing,

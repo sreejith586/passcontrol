@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, AlertStatus } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class AlertEventsRepository {
     sourceType: string;
     sourceId: string;
     type: string;
-    status: string;
+    status: AlertStatus | string;
     severity?: string | null;
     payloadJson?: Record<string, unknown> | null;
     triggeredAt: Date;
@@ -23,6 +23,7 @@ export class AlertEventsRepository {
     return this.prisma.alertEvent.create({
       data: {
         ...data,
+        status: (data.status as AlertStatus) ?? AlertStatus.OPEN,
         payloadJson:
           data.payloadJson === undefined
             ? undefined
@@ -48,6 +49,7 @@ export class AlertEventsRepository {
       assetId?: string;
       type?: string;
       status?: string;
+      severity?: string;
       sourceType?: string;
       from?: string;
       to?: string;
@@ -55,39 +57,48 @@ export class AlertEventsRepository {
     pagination: { page: number; limit: number },
     sort: { triggeredAt?: 'asc' | 'desc'; createdAt?: 'desc' },
   ) {
-    const where: Record<string, unknown> = { organizationId };
+    const where: Prisma.AlertEventWhereInput = { organizationId };
     if (filters.brandId != null) where.brandId = filters.brandId;
     if (filters.locationId != null) where.locationId = filters.locationId;
     if (filters.zoneId != null) where.zoneId = filters.zoneId;
     if (filters.assetId != null) where.assetId = filters.assetId;
     if (filters.type != null) where.type = filters.type;
-    if (filters.status != null) where.status = filters.status;
+    if (filters.status != null) where.status = filters.status as AlertStatus;
+    if (filters.severity != null) where.severity = filters.severity;
     if (filters.sourceType != null) where.sourceType = filters.sourceType;
     if (filters.from || filters.to) {
       where.triggeredAt = {};
-      if (filters.from) (where.triggeredAt as Record<string, Date>).gte = new Date(filters.from);
-      if (filters.to) (where.triggeredAt as Record<string, Date>).lte = new Date(filters.to);
+      if (filters.from) (where.triggeredAt as Prisma.DateTimeFilter).gte = new Date(filters.from);
+      if (filters.to) (where.triggeredAt as Prisma.DateTimeFilter).lte = new Date(filters.to);
     }
 
     const orderBy = sort.triggeredAt
       ? { triggeredAt: sort.triggeredAt }
       : { createdAt: 'desc' as const };
 
-    return this.prisma.alertEvent.findMany({
-      where,
-      skip: (pagination.page - 1) * pagination.limit,
-      take: pagination.limit,
-      orderBy,
-    });
+    const [items, total] = await Promise.all([
+      this.prisma.alertEvent.findMany({
+        where,
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+        orderBy,
+      }),
+      this.prisma.alertEvent.count({ where }),
+    ]);
+
+    return { items, total };
   }
 
   async update(
     organizationId: string,
     id: string,
     data: {
-      status?: string;
+      status?: AlertStatus;
       acknowledgedAt?: Date | null;
+      acknowledgedByUserId?: string | null;
       resolvedAt?: Date | null;
+      resolvedByUserId?: string | null;
+      resolutionNote?: string | null;
     },
   ) {
     await this.prisma.alertEvent.updateMany({
