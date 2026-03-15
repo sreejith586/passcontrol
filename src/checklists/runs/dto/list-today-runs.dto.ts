@@ -3,7 +3,11 @@ import {
   IsOptional,
   IsIn,
   IsString,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ListTodayRunsQueryDto {
@@ -36,4 +40,29 @@ export class ListTodayRunsQueryDto {
   @IsOptional()
   @IsString()
   date?: string;
+
+  @ApiPropertyOptional({ type: Number, example: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({ type: Number, example: 25, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 25;
+
+  @ApiPropertyOptional({
+    enum: ['full', 'summary'],
+    default: 'full',
+    description:
+      'View mode: "full" returns runs with sectionSnapshots and itemSnapshots; "summary" returns run-level fields only for lighter payloads',
+  })
+  @IsOptional()
+  @IsIn(['full', 'summary'])
+  view?: 'full' | 'summary' = 'full';
 }

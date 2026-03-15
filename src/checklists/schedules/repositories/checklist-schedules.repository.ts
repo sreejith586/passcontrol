@@ -137,10 +137,25 @@ export class ChecklistSchedulesRepository {
       where: {
         isActive: true,
         nextRunAt: { lte: now, not: null },
+        OR: [
+          { nextGenerationAttemptAt: null },
+          { nextGenerationAttemptAt: { lte: now } },
+        ],
       },
       orderBy: { nextRunAt: 'asc' },
       take: limit,
       include: SCHEDULE_INCLUDE,
+    });
+  }
+
+  async updateNextGenerationAttemptAt(
+    organizationId: string,
+    scheduleId: string,
+    nextGenerationAttemptAt: Date | null,
+  ) {
+    await this.prisma.checklistSchedule.updateMany({
+      where: { id: scheduleId, organizationId },
+      data: { nextGenerationAttemptAt },
     });
   }
 
@@ -152,6 +167,23 @@ export class ChecklistSchedulesRepository {
     await this.prisma.checklistSchedule.updateMany({
       where: { id: scheduleId, organizationId },
       data: { nextRunAt },
+    });
+  }
+
+  async updateGenerationStatus(
+    organizationId: string,
+    scheduleId: string,
+    status: string,
+    error?: string,
+  ) {
+    const now = new Date();
+    await this.prisma.checklistSchedule.updateMany({
+      where: { id: scheduleId, organizationId },
+      data: {
+        lastGenerationAttemptAt: now,
+        lastGenerationStatus: status,
+        lastGenerationError: error ?? null,
+      },
     });
   }
 }

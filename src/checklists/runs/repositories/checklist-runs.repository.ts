@@ -13,6 +13,29 @@ const RUN_INCLUDE = {
   },
 } as const;
 
+/** Run-level fields only; used for summary view to avoid loading sections/items */
+const RUN_SUMMARY_SELECT = {
+  id: true,
+  organizationId: true,
+  checklistTemplateId: true,
+  checklistScheduleId: true,
+  brandId: true,
+  locationId: true,
+  zoneId: true,
+  runSource: true,
+  status: true,
+  dueAt: true,
+  startedAt: true,
+  completedAt: true,
+  performedByUserId: true,
+  runNumber: true,
+  templateVersion: true,
+  templateKeySnapshot: true,
+  templateNameSnapshot: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 @Injectable()
 export class ChecklistRunsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,6 +49,8 @@ export class ChecklistRunsRepository {
       zoneId?: string;
     },
     dateRange: { start: Date; end: Date },
+    pagination: { page: number; limit: number },
+    options?: { view?: 'full' | 'summary' },
   ) {
     const where: Prisma.ChecklistRunWhereInput = {
       organizationId,
@@ -44,11 +69,31 @@ export class ChecklistRunsRepository {
     if (filters.locationId != null) where.locationId = filters.locationId;
     if (filters.zoneId != null) where.zoneId = filters.zoneId;
 
-    return this.prisma.checklistRun.findMany({
-      where,
-      orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
-      include: RUN_INCLUDE,
-    });
+    const useSummary = options?.view === 'summary';
+    const skip = (pagination.page - 1) * pagination.limit;
+    const take = pagination.limit;
+    const orderBy = [{ dueAt: 'asc' as const }, { createdAt: 'asc' as const }];
+
+    const [items, total] = await Promise.all([
+      useSummary
+        ? this.prisma.checklistRun.findMany({
+            where,
+            orderBy,
+            skip,
+            take,
+            select: RUN_SUMMARY_SELECT,
+          })
+        : this.prisma.checklistRun.findMany({
+            where,
+            orderBy,
+            skip,
+            take,
+            include: RUN_INCLUDE,
+          }),
+      this.prisma.checklistRun.count({ where }),
+    ]);
+
+    return { items, total };
   }
 
   async findRunById(organizationId: string, id: string) {

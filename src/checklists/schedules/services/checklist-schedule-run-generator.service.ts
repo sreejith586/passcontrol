@@ -4,6 +4,8 @@ import { ChecklistSchedulesService } from './checklist-schedules.service';
 import { ChecklistScheduleRecurrenceService } from './checklist-schedule-recurrence.service';
 
 const BATCH_LIMIT = 100;
+const TRANSIENT_ERROR_BACKOFF_MINUTES = 5;
+const TEMPLATE_NOT_PUBLISHED_BACKOFF_MINUTES = 15;
 
 @Injectable()
 export class ChecklistScheduleRunGeneratorService {
@@ -18,21 +20,34 @@ export class ChecklistScheduleRunGeneratorService {
 
   /**
    * Process due schedules and generate runs. Called by cron.
+   *
+   * Generation status tracking:
+   * - SUCCESS: run created, nextRunAt updated
+   * - DUPLICATE_SKIPPED: run exists for same day, nextRunAt advanced
+   * - TEMPLATE_NOT_FOUND: template missing, schedule deactivated
+   * - TEMPLATE_NOT_PUBLISHED: template not published, retried next tick
+   * - SCHEDULE_ENDED: endsAt passed or recurrence returned null, schedule deactivated
+   * - TRANSIENT_ERROR: unexpected error, schedule stays active for retry
    */
   async processDueSchedules(): Promise<void> {
     if (this.isProcessing) {
-      this.logger.warn(
-        'Skipping overlapping cron tick: previous processDueSchedules still running',
-      );
+      this.logger.warn({
+        msg: 'Skipping overlapping cron tick',
+        reason: 'previous processDueSchedules still running',
+      });
       return;
     }
 
     this.isProcessing = true;
+    const now = new Date();
     try {
-      const now = new Date();
       const dueSchedules = await this.repo.findDueSchedules(now, BATCH_LIMIT);
 
-      this.logger.log(`Found ${dueSchedules.length} due schedule(s) to process`);
+      this.logger.log({
+        msg: 'Cron tick started',
+        dueCount: dueSchedules.length,
+        batchLimit: BATCH_LIMIT,
+      });
 
       for (const schedule of dueSchedules) {
         try {
@@ -44,23 +59,16 @@ export class ChecklistScheduleRunGeneratorService {
           );
 
           if ('skipped' in result) {
-            if (result.skipped === 'duplicate') {
-              this.logger.debug(
-                `Skipped schedule ${schedule.id} (${schedule.name}): duplicate run exists for same day`,
-              );
-            } else if (result.skipped === 'template_not_found') {
-              this.logger.warn(
-                `Skipped schedule ${schedule.id} (${schedule.name}): template not found or not published`,
-              );
-            }
+            const reason = result.skipped as
+              | 'duplicate'
+              | 'template_not_found'
+              | 'template_not_published'
+              | 'schedule_ended';
+            await this.handleSkipped(schedule, reason, now);
             continue;
           }
 
           const run = result.run!;
-          this.logger.log(
-            `Generated run ${run.id} for schedule ${schedule.id} (${schedule.name})`,
-          );
-
           const referenceDate = run.dueAt ?? schedule.nextRunAt ?? now;
           const nextRunAt = this.recurrence.computeNextRunAt(
             {
@@ -72,20 +80,217 @@ export class ChecklistScheduleRunGeneratorService {
             referenceDate,
             { inclusive: false },
           );
-          await this.repo.updateNextRunAt(
+
+          if (nextRunAt === null) {
+            await this.repo.updateGenerationStatus(
+              schedule.organizationId,
+              schedule.id,
+              'SCHEDULE_ENDED',
+            );
+            await this.repo.updateNextGenerationAttemptAt(
+              schedule.organizationId,
+              schedule.id,
+              null,
+            );
+            await this.repo.deactivate(schedule.organizationId, schedule.id);
+            this.logger.log({
+              msg: 'Schedule ended',
+              scheduleId: schedule.id,
+              scheduleName: schedule.name,
+              organizationId: schedule.organizationId,
+              runId: run.id,
+            });
+          } else {
+            await this.repo.updateNextRunAt(
+              schedule.organizationId,
+              schedule.id,
+              nextRunAt,
+            );
+            await this.repo.updateGenerationStatus(
+              schedule.organizationId,
+              schedule.id,
+              'SUCCESS',
+            );
+            await this.repo.updateNextGenerationAttemptAt(
+              schedule.organizationId,
+              schedule.id,
+              null,
+            );
+            this.logger.log({
+              msg: 'Run generated',
+              runId: run.id,
+              scheduleId: schedule.id,
+              scheduleName: schedule.name,
+              organizationId: schedule.organizationId,
+            });
+          }
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          await this.repo.updateGenerationStatus(
             schedule.organizationId,
             schedule.id,
-            nextRunAt,
+            'TRANSIENT_ERROR',
+            errorMsg,
           );
-        } catch (err) {
-          this.logger.error(
-            `Failed to generate run for schedule ${schedule.id} (${schedule.name}): ${err instanceof Error ? err.message : String(err)}`,
-            err instanceof Error ? err.stack : undefined,
+          const backoffUntil = new Date(
+            now.getTime() + TRANSIENT_ERROR_BACKOFF_MINUTES * 60 * 1000,
           );
+          await this.repo.updateNextGenerationAttemptAt(
+            schedule.organizationId,
+            schedule.id,
+            backoffUntil,
+          );
+          this.logger.error({
+            msg: 'Transient error',
+            scheduleId: schedule.id,
+            scheduleName: schedule.name,
+            organizationId: schedule.organizationId,
+            error: errorMsg,
+          });
+          if (err instanceof Error && err.stack) {
+            this.logger.debug(err.stack);
+          }
         }
       }
+
+      this.logger.log({
+        msg: 'Cron tick completed',
+        processedCount: dueSchedules.length,
+      });
     } finally {
       this.isProcessing = false;
     }
+  }
+
+  private async handleSkipped(
+    schedule: {
+      id: string;
+      organizationId: string;
+      name: string;
+      rrule: string;
+      timezone: string;
+      startsAt: Date | null;
+      endsAt: Date | null;
+      nextRunAt: Date | null;
+    },
+    reason:
+      | 'duplicate'
+      | 'template_not_found'
+      | 'template_not_published'
+      | 'schedule_ended',
+    now: Date,
+  ): Promise<void> {
+    const ctx = {
+      scheduleId: schedule.id,
+      scheduleName: schedule.name,
+      organizationId: schedule.organizationId,
+    };
+
+    switch (reason) {
+      case 'duplicate':
+        await this.repo.updateGenerationStatus(
+          schedule.organizationId,
+          schedule.id,
+          'DUPLICATE_SKIPPED',
+        );
+        await this.repo.updateNextGenerationAttemptAt(
+          schedule.organizationId,
+          schedule.id,
+          null,
+        );
+        await this.advanceNextRunAt(schedule, now);
+        this.logger.debug({
+          msg: 'Duplicate skipped',
+          ...ctx,
+        });
+        break;
+
+      case 'template_not_found':
+        await this.repo.updateGenerationStatus(
+          schedule.organizationId,
+          schedule.id,
+          'TEMPLATE_NOT_FOUND',
+        );
+        await this.repo.updateNextGenerationAttemptAt(
+          schedule.organizationId,
+          schedule.id,
+          null,
+        );
+        await this.repo.deactivate(schedule.organizationId, schedule.id);
+        this.logger.error({
+          msg: 'Template missing',
+          ...ctx,
+        });
+        break;
+
+      case 'template_not_published':
+        await this.repo.updateGenerationStatus(
+          schedule.organizationId,
+          schedule.id,
+          'TEMPLATE_NOT_PUBLISHED',
+        );
+        const templateBackoffUntil = new Date(
+          now.getTime() +
+            TEMPLATE_NOT_PUBLISHED_BACKOFF_MINUTES * 60 * 1000,
+        );
+        await this.repo.updateNextGenerationAttemptAt(
+          schedule.organizationId,
+          schedule.id,
+          templateBackoffUntil,
+        );
+        this.logger.warn({
+          msg: 'Skipped: template unpublished, will retry',
+          ...ctx,
+        });
+        break;
+
+      case 'schedule_ended':
+        await this.repo.updateGenerationStatus(
+          schedule.organizationId,
+          schedule.id,
+          'SCHEDULE_ENDED',
+        );
+        await this.repo.updateNextGenerationAttemptAt(
+          schedule.organizationId,
+          schedule.id,
+          null,
+        );
+        await this.repo.deactivate(schedule.organizationId, schedule.id);
+        this.logger.log({
+          msg: 'Schedule ended',
+          ...ctx,
+        });
+        break;
+    }
+  }
+
+  private async advanceNextRunAt(
+    schedule: {
+      id: string;
+      organizationId: string;
+      rrule: string;
+      timezone: string;
+      startsAt: Date | null;
+      endsAt: Date | null;
+      nextRunAt: Date | null;
+    },
+    now: Date,
+  ): Promise<void> {
+    const referenceDate = schedule.nextRunAt ?? now;
+    const nextRunAt = this.recurrence.computeNextRunAt(
+      {
+        rrule: schedule.rrule,
+        timezone: schedule.timezone,
+        startsAt: schedule.startsAt,
+        endsAt: schedule.endsAt,
+      },
+      referenceDate,
+      { inclusive: false },
+    );
+    await this.repo.updateNextRunAt(
+      schedule.organizationId,
+      schedule.id,
+      nextRunAt,
+    );
   }
 }

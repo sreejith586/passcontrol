@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { DateTime } from 'luxon';
 import { Prisma } from '@prisma/client';
 import { ChecklistRunsRepository } from '../repositories/checklist-runs.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
@@ -26,20 +27,16 @@ export class ChecklistRunsService {
   ) {}
 
   private getDateRange(timezone?: string, dateStr?: string): { start: Date; end: Date } {
-    let date: Date;
+    const zone = timezone ?? 'UTC';
+    let dt: DateTime;
     if (dateStr) {
-      date = new Date(dateStr + 'T00:00:00.000Z');
-      if (isNaN(date.getTime())) {
-        date = new Date();
-      }
+      const parsed = DateTime.fromISO(dateStr, { zone });
+      dt = parsed.isValid ? parsed : DateTime.now().setZone(zone);
     } else {
-      date = new Date();
+      dt = DateTime.now().setZone(zone);
     }
-    const y = date.getUTCFullYear();
-    const m = date.getUTCMonth();
-    const d = date.getUTCDate();
-    const start = new Date(Date.UTC(y, m, d, 0, 0, 0, 0));
-    const end = new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
+    const start = dt.startOf('day').toUTC().toJSDate();
+    const end = dt.endOf('day').toUTC().toJSDate();
     return { start, end };
   }
 
@@ -48,7 +45,9 @@ export class ChecklistRunsService {
     query: ListTodayRunsQueryDto,
   ) {
     const { start, end } = this.getDateRange(query.timezone, query.date);
-    return this.repo.findTodayRuns(
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 25, 100);
+    const { items, total } = await this.repo.findTodayRuns(
       ctx.organizationId,
       {
         status: query.status,
@@ -57,7 +56,10 @@ export class ChecklistRunsService {
         zoneId: query.zoneId,
       },
       { start, end },
+      { page, limit },
+      { view: query.view ?? 'full' },
     );
+    return { items, total, page, limit };
   }
 
   async getRunById(ctx: { organizationId: string }, id: string) {

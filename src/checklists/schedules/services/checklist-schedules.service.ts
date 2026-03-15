@@ -219,9 +219,12 @@ export class ChecklistSchedulesService {
   }
 
   /**
-   * Duplicate prevention policy:
-   * - ACTIVE_ONLY: block only if PENDING or IN_PROGRESS run exists for same schedule+day
-   * - ANY_SAME_DAY: block if any run exists for same schedule+day (strict)
+   * Skip reasons for generateRunCore (used by cron for failure classification):
+   * - duplicate: run already exists for same schedule+day
+   * - template_not_found: schedule or template missing/deleted
+   * - template_not_published: template exists but status != PUBLISHED
+   * - schedule_ended: schedule.endsAt has passed
+   * - transient_error: thrown (not returned); cron retries next tick
    */
   async generateRunCore(
     organizationId: string,
@@ -232,11 +235,16 @@ export class ChecklistSchedulesService {
     const schedule = await this.repo.findById(organizationId, scheduleId);
     if (!schedule) return { skipped: 'template_not_found' };
 
+    const effectiveDueAt = dueAt ?? schedule.nextRunAt ?? new Date();
+
+    if (schedule.endsAt && schedule.endsAt < effectiveDueAt) {
+      return { skipped: 'schedule_ended' };
+    }
+
     const template = await this.prisma.checklistTemplate.findFirst({
       where: {
         id: schedule.checklistTemplateId,
         organizationId,
-        status: 'PUBLISHED',
       },
       include: {
         sections: {
@@ -249,8 +257,9 @@ export class ChecklistSchedulesService {
     });
 
     if (!template) return { skipped: 'template_not_found' };
-
-    const effectiveDueAt = dueAt ?? schedule.nextRunAt ?? new Date();
+    if (template.status !== 'PUBLISHED') {
+      return { skipped: 'template_not_published' };
+    }
 
     const dayStart = new Date(effectiveDueAt);
     dayStart.setUTCHours(0, 0, 0, 0);
@@ -371,6 +380,9 @@ export class ChecklistSchedulesService {
         throw new BadRequestException(
           'A PENDING or IN_PROGRESS run already exists for this schedule on the same day',
         );
+      }
+      if (result.skipped === 'schedule_ended') {
+        throw new BadRequestException('Schedule has ended');
       }
       throw new BadRequestException(
         'Checklist template not found or not published',

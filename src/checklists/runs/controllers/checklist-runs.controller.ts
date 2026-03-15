@@ -33,13 +33,22 @@ export class ChecklistRunsController {
 
   @Get('today')
   @RequirePermissions('checklist.run.view')
-  @ApiOperation({ summary: 'List runs for today' })
+  @ApiOperation({ summary: 'List runs for today (paginated)' })
   @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED'] })
   @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
   @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
   @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
   @ApiQuery({ name: 'timezone', required: false, example: 'America/New_York' })
   @ApiQuery({ name: 'date', required: false, example: '2025-03-14' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 25 })
+  @ApiQuery({
+    name: 'view',
+    required: false,
+    enum: ['full', 'summary'],
+    description:
+      'View mode: "full" (default) includes sectionSnapshots and itemSnapshots; "summary" returns run-level fields only for lighter payloads',
+  })
   async getToday(
     @CurrentTenantContext() ctx: TenantContext,
     @Query() query: ListTodayRunsQueryDto,

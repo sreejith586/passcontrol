@@ -90,13 +90,15 @@ export class ChecklistScheduleRecurrenceService {
   }
 
   /**
-   * Build dtstart in the schedule timezone. Uses Luxon so BYHOUR/BYMINUTE are
-   * interpreted as local time in that zone (handles DST correctly).
+   * Build dtstart for rrule with tzid. rrule's iterator compares res (naive UTC
+   * with BYHOUR/BYMINUTE as UTC components) against dtstart before rezone.
+   * So dtstart must use the same naive format: (year, month, day) from anchor
+   * in schedule timezone, (hour, minute) from rule, stored as UTC components.
+   * The rezone step then converts to true UTC for the returned occurrence.
    *
    * Assumption: Schedules use a single run time per day. When BYHOUR/BYMINUTE
    * are arrays (RFC 5545 allows multiple values, e.g. BYHOUR=6,12), we use the
-   * first element for dtstart. This is correct for single-value rules and
-   * acceptable for our product; multi-time-per-day rules are not supported.
+   * first element for dtstart.
    */
   private buildDtstartInTimezone(
     parsed: Partial<Options>,
@@ -116,19 +118,9 @@ export class ChecklistScheduleRecurrenceService {
           ? parsed.byminute[0]
           : parsed.byminute
         : 0;
-    const dt = DateTime.fromObject(
-      {
-        year: anchor.year,
-        month: anchor.month,
-        day: anchor.day,
-        hour,
-        minute,
-        second: 0,
-        millisecond: 0,
-      },
-      { zone: timezone },
+    return new Date(
+      Date.UTC(anchor.year, anchor.month - 1, anchor.day, hour, minute, 0, 0),
     );
-    return dt.toJSDate();
   }
 
   /**

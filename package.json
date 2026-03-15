@@ -2,8 +2,8 @@
   "name": "re-checklist",
   "version": "0.1.0",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "TZ=UTC jest",
+    "test:watch": "TZ=UTC jest --watch",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
