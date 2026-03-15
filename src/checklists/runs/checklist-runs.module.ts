@@ -9,11 +9,18 @@ import { ChecklistRunsController } from './controllers/checklist-runs.controller
 import { ChecklistRunItemsController } from './controllers/checklist-run-items.controller';
 import { ChecklistRunsService } from './services/checklist-runs.service';
 import { ChecklistRunsRepository } from './repositories/checklist-runs.repository';
+import { ChecklistRunItemsService } from './services/checklist-run-items.service';
+import { ChecklistRunItemsRepository } from './repositories/checklist-run-items.repository';
 
 @Module({
   imports: [InfraModule, AccessModule, AuditModule, AlertEventsModule, AttachmentsModule, TemperatureModule],
   controllers: [ChecklistRunsController, ChecklistRunItemsController],
-  providers: [ChecklistRunsService, ChecklistRunsRepository],
+  providers: [
+    ChecklistRunsService,
+    ChecklistRunsRepository,
+    ChecklistRunItemsService,
+    ChecklistRunItemsRepository,
+  ],
   exports: [ChecklistRunsService],
 })
 export class ChecklistRunsModule {}
