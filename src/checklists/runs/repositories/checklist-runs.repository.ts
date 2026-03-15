@@ -186,4 +186,50 @@ export class ChecklistRunsRepository {
     });
     return items;
   }
+
+  /**
+   * Returns FAIL items that have compliance rules (requiresEvidenceOnFailSnapshot or requiresCommentOnFailSnapshot)
+   * with attachment count for evidence validation.
+   */
+  async listFailedItemsWithComplianceRequirements(
+    organizationId: string,
+    runId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      labelSnapshot: string;
+      requiresEvidenceOnFailSnapshot: boolean;
+      requiresCommentOnFailSnapshot: boolean;
+      comment: string | null;
+      attachmentCount: number;
+    }>
+  > {
+    const items = await this.prisma.checklistRunItemSnapshot.findMany({
+      where: {
+        organizationId,
+        checklistRunId: runId,
+        result: 'FAIL',
+        OR: [
+          { requiresEvidenceOnFailSnapshot: true },
+          { requiresCommentOnFailSnapshot: true },
+        ],
+      },
+      select: {
+        id: true,
+        labelSnapshot: true,
+        requiresEvidenceOnFailSnapshot: true,
+        requiresCommentOnFailSnapshot: true,
+        comment: true,
+        _count: { select: { attachments: true } },
+      },
+    });
+    return items.map((i) => ({
+      id: i.id,
+      labelSnapshot: i.labelSnapshot,
+      requiresEvidenceOnFailSnapshot: i.requiresEvidenceOnFailSnapshot,
+      requiresCommentOnFailSnapshot: i.requiresCommentOnFailSnapshot,
+      comment: i.comment,
+      attachmentCount: i._count.attachments,
+    }));
+  }
 }

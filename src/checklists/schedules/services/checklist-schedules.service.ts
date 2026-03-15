@@ -333,6 +333,7 @@ export class ChecklistSchedulesService {
               helpTextSnapshot: item.helpText,
               isRequiredSnapshot: item.isRequired,
               requiresEvidenceOnFailSnapshot: item.requiresEvidenceOnFail,
+              requiresCommentOnFailSnapshot: item.requiresCommentOnFail,
               failureCreatesIncidentSnapshot: item.failureCreatesIncident,
               configSnapshotJson: item.configJson ?? Prisma.JsonNull,
               sortOrder: item.sortOrder,

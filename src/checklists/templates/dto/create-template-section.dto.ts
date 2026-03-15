@@ -33,6 +33,10 @@ export class CreateTemplateItemDto {
 
   @ApiPropertyOptional({ default: false })
   @IsOptional()
+  requiresCommentOnFail?: boolean = false;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
   failureCreatesIncident?: boolean = false;
 
   @ApiPropertyOptional({ description: 'Type-specific config (e.g. options for CHOICE)' })

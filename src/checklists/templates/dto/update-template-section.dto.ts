@@ -35,6 +35,10 @@ export class UpdateTemplateItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  requiresCommentOnFail?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   failureCreatesIncident?: boolean;
 
   @ApiPropertyOptional()

@@ -171,6 +171,35 @@ export class ChecklistRunsService {
       );
     }
 
+    const failedWithCompliance = await this.repo.listFailedItemsWithComplianceRequirements(
+      ctx.organizationId,
+      runId,
+    );
+    const violations: string[] = [];
+    for (const item of failedWithCompliance) {
+      if (
+        item.requiresEvidenceOnFailSnapshot &&
+        item.attachmentCount === 0
+      ) {
+        violations.push(
+          `"${item.labelSnapshot}": requires evidence (attachment) when result is FAIL`,
+        );
+      }
+      if (
+        item.requiresCommentOnFailSnapshot &&
+        !(item.comment?.trim())
+      ) {
+        violations.push(
+          `"${item.labelSnapshot}": requires comment when result is FAIL`,
+        );
+      }
+    }
+    if (violations.length > 0) {
+      throw new BadRequestException(
+        `Cannot submit: compliance rules not met for failed item(s): ${violations.join('; ')}`,
+      );
+    }
+
     const submitted = await this.repo.submitRun(
       ctx.organizationId,
       runId,

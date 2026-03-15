@@ -37,6 +37,7 @@ export class ChecklistTemplatesRepository {
           helpText?: string | null;
           isRequired: boolean;
           requiresEvidenceOnFail: boolean;
+          requiresCommentOnFail: boolean;
           failureCreatesIncident: boolean;
           configJson?: Prisma.JsonValue;
           sortOrder: number;
@@ -81,6 +82,7 @@ export class ChecklistTemplatesRepository {
               helpText: i.helpText ?? null,
               isRequired: i.isRequired ?? true,
               requiresEvidenceOnFail: i.requiresEvidenceOnFail ?? false,
+              requiresCommentOnFail: i.requiresCommentOnFail ?? false,
               failureCreatesIncident: i.failureCreatesIncident ?? false,
               configJson: i.configJson ?? Prisma.JsonNull,
               sortOrder: i.sortOrder,
@@ -153,6 +155,7 @@ export class ChecklistTemplatesRepository {
           helpText?: string | null;
           isRequired: boolean;
           requiresEvidenceOnFail: boolean;
+          requiresCommentOnFail: boolean;
           failureCreatesIncident: boolean;
           configJson?: Prisma.JsonValue;
           sortOrder: number;
@@ -195,6 +198,7 @@ export class ChecklistTemplatesRepository {
                 helpText: item.helpText ?? null,
                 isRequired: item.isRequired ?? true,
                 requiresEvidenceOnFail: item.requiresEvidenceOnFail ?? false,
+                requiresCommentOnFail: item.requiresCommentOnFail ?? false,
                 failureCreatesIncident: item.failureCreatesIncident ?? false,
                 configJson: item.configJson ?? Prisma.JsonNull,
                 sortOrder: item.sortOrder,
