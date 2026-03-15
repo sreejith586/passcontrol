@@ -59,6 +59,85 @@ export class ChecklistRunItemsRepository {
   }
 
   /**
+   * Get dashboard summary for failed checklist run items.
+   * Counts only the latest related alert per item for alert status buckets.
+   */
+  async getFailedItemsSummary(
+    organizationId: string,
+    filters: FailedItemFilters,
+  ): Promise<{
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    unknown: number;
+    affectedRuns: number;
+    openAlerts: number;
+    acknowledgedAlerts: number;
+    resolvedAlerts: number;
+  }> {
+    const conditions = this.buildWhereConditions(organizationId, filters);
+    const whereClause =
+      conditions.length > 0 ? Prisma.join(conditions, ' AND ') : Prisma.empty;
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        total: bigint;
+        critical: bigint;
+        high: bigint;
+        medium: bigint;
+        low: bigint;
+        unknown: bigint;
+        affected_runs: bigint;
+        open_alerts: bigint;
+        acknowledged_alerts: bigint;
+        resolved_alerts: bigint;
+      }>
+    >(Prisma.sql`
+      WITH filtered_failed_items AS (
+        SELECT cri.id, cri.severity_snapshot, cri.checklist_run_id
+        FROM checklist_run_item_snapshots cri
+        INNER JOIN checklist_runs cr ON cr.id = cri.checklist_run_id
+        WHERE ${whereClause}
+      ),
+      latest_alerts AS (
+        SELECT DISTINCT ON (ae.source_id) ae.source_id, ae.status
+        FROM alert_events ae
+        WHERE ae.organization_id = ${organizationId}
+          AND ae.source_type = 'CHECKLIST_RUN_ITEM'
+          AND ae.source_id IN (SELECT id FROM filtered_failed_items)
+        ORDER BY ae.source_id, ae.created_at DESC
+      )
+      SELECT
+        (SELECT COUNT(*) FROM filtered_failed_items)::bigint AS total,
+        (SELECT COUNT(*) FROM filtered_failed_items WHERE severity_snapshot = 'CRITICAL')::bigint AS critical,
+        (SELECT COUNT(*) FROM filtered_failed_items WHERE severity_snapshot = 'HIGH')::bigint AS high,
+        (SELECT COUNT(*) FROM filtered_failed_items WHERE severity_snapshot = 'MEDIUM')::bigint AS medium,
+        (SELECT COUNT(*) FROM filtered_failed_items WHERE severity_snapshot = 'LOW')::bigint AS low,
+        (SELECT COUNT(*) FROM filtered_failed_items WHERE severity_snapshot IS NULL OR severity_snapshot NOT IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW'))::bigint AS unknown,
+        (SELECT COUNT(DISTINCT checklist_run_id) FROM filtered_failed_items)::bigint AS affected_runs,
+        (SELECT COUNT(*) FROM latest_alerts WHERE status = 'OPEN')::bigint AS open_alerts,
+        (SELECT COUNT(*) FROM latest_alerts WHERE status = 'ACKNOWLEDGED')::bigint AS acknowledged_alerts,
+        (SELECT COUNT(*) FROM latest_alerts WHERE status = 'RESOLVED')::bigint AS resolved_alerts
+    `);
+
+    const r = rows[0];
+    return {
+      total: Number(r?.total ?? 0),
+      critical: Number(r?.critical ?? 0),
+      high: Number(r?.high ?? 0),
+      medium: Number(r?.medium ?? 0),
+      low: Number(r?.low ?? 0),
+      unknown: Number(r?.unknown ?? 0),
+      affectedRuns: Number(r?.affected_runs ?? 0),
+      openAlerts: Number(r?.open_alerts ?? 0),
+      acknowledgedAlerts: Number(r?.acknowledged_alerts ?? 0),
+      resolvedAlerts: Number(r?.resolved_alerts ?? 0),
+    };
+  }
+
+  /**
    * Count failed ChecklistRunItemSnapshot rows matching filters.
    */
   async countFailedItems(

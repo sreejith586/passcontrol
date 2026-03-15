@@ -4,6 +4,7 @@ import { ChecklistRunItemsRepository } from '../repositories/checklist-run-items
 import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 import { ListFailedChecklistRunItemsQueryDto } from '../dto/list-failed-checklist-run-items.dto';
+import { ListFailedChecklistRunItemsSummaryQueryDto } from '../dto/list-failed-checklist-run-items-summary.dto';
 
 export interface RunItemDetailResponse {
   id: string;
@@ -152,6 +153,49 @@ export class ChecklistRunItemsService {
       );
     }
     return this.alertEventsService.resolve(ctx, alert.id, resolutionNote);
+  }
+
+  /**
+   * Get dashboard summary for failed checklist run items.
+   * Returns compact counts: failed items by severity, latest alert status, affected runs.
+   */
+  async getSummary(
+    ctx: { organizationId: string },
+    query: ListFailedChecklistRunItemsSummaryQueryDto,
+  ) {
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      checklistTemplateId: query.checklistTemplateId,
+      severity: query.severity,
+      from: query.from,
+      to: query.to,
+    };
+    const raw = await this.repo.getFailedItemsSummary(
+      ctx.organizationId,
+      filters,
+    );
+    return {
+      failedItems: {
+        total: raw.total,
+        bySeverity: {
+          critical: raw.critical,
+          high: raw.high,
+          medium: raw.medium,
+          low: raw.low,
+          unknown: raw.unknown,
+        },
+      },
+      alerts: {
+        open: raw.openAlerts,
+        acknowledged: raw.acknowledgedAlerts,
+        resolved: raw.resolvedAlerts,
+      },
+      runs: {
+        affectedRuns: raw.affectedRuns,
+      },
+    };
   }
 
   async getFailedItems(

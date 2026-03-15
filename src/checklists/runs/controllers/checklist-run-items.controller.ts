@@ -23,6 +23,7 @@ import { UpdateRunItemDto } from '../dto/update-run-item.dto';
 import { LinkAttachmentToRunItemDto } from '../dto/link-attachment-to-run-item.dto';
 import { CreateTemperatureReadingForRunItemDto } from '../dto/create-temperature-reading-for-run-item.dto';
 import { ListFailedChecklistRunItemsQueryDto } from '../dto/list-failed-checklist-run-items.dto';
+import { ListFailedChecklistRunItemsSummaryQueryDto } from '../dto/list-failed-checklist-run-items-summary.dto';
 import { ResolveAlertDto } from '../../../alert-events/dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../../auth/guards/auth.guard';
 import { RbacGuard } from '../../../access/rbac/rbac.guard';
@@ -42,6 +43,38 @@ export class ChecklistRunItemsController {
     private readonly service: ChecklistRunsService,
     private readonly runItemsService: ChecklistRunItemsService,
   ) {}
+
+  @Get('summary')
+  @RequirePermissions('checklist.run.view')
+  @ApiOperation({
+    summary: 'Failed run items dashboard summary',
+    description:
+      'Returns compact counts: failed items by severity, latest alert status per item, affected runs. Uses same date semantics as failed list.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'checklistTemplateId', required: false, description: 'Filter by checklist template UUID' })
+  @ApiQuery({ name: 'severity', required: false, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    example: '2025-03-01',
+    description: 'Filter from date (inclusive). Uses run dueAt when present, otherwise createdAt.',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    example: '2025-03-15',
+    description: 'Filter to date (inclusive). Uses run dueAt when present, otherwise createdAt.',
+  })
+  async getSummary(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: ListFailedChecklistRunItemsSummaryQueryDto,
+  ) {
+    const summary = await this.runItemsService.getSummary(ctx, query);
+    return ApiResponse.ok(summary);
+  }
 
   @Get('failed')
   @RequirePermissions('checklist.run.view')

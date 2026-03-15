@@ -144,6 +144,132 @@ describe('ChecklistRunItemsRepository', () => {
     });
   });
 
+  describe('getFailedItemsSummary', () => {
+    it('returns zero/default response when no rows', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          total: BigInt(0),
+          critical: BigInt(0),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(0),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummary(mockOrgId, {});
+
+      expect(result).toEqual({
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        unknown: 0,
+        affectedRuns: 0,
+        openAlerts: 0,
+        acknowledgedAlerts: 0,
+        resolvedAlerts: 0,
+      });
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns severity counts and affected runs correctly', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          total: BigInt(10),
+          critical: BigInt(2),
+          high: BigInt(3),
+          medium: BigInt(2),
+          low: BigInt(1),
+          unknown: BigInt(2),
+          affected_runs: BigInt(5),
+          open_alerts: BigInt(3),
+          acknowledged_alerts: BigInt(2),
+          resolved_alerts: BigInt(2),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummary(mockOrgId, {});
+
+      expect(result.total).toBe(10);
+      expect(result.critical).toBe(2);
+      expect(result.high).toBe(3);
+      expect(result.medium).toBe(2);
+      expect(result.low).toBe(1);
+      expect(result.unknown).toBe(2);
+      expect(result.affectedRuns).toBe(5);
+      expect(result.openAlerts).toBe(3);
+      expect(result.acknowledgedAlerts).toBe(2);
+      expect(result.resolvedAlerts).toBe(2);
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          total: BigInt(0),
+          critical: BigInt(0),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(0),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      await repo.getFailedItemsSummary(mockOrgId, {
+        brandId: 'brand-1',
+        locationId: 'loc-1',
+        checklistTemplateId: 'tpl-1',
+        severity: 'CRITICAL',
+        from: '2025-03-01',
+        to: '2025-03-15',
+      });
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('filtered_failed_items');
+      expect(queryStr).toContain('latest_alerts');
+      expect(queryStr).toContain('DISTINCT ON');
+      expect(queryStr).toContain('source_type');
+      expect(queryStr).toContain('CHECKLIST_RUN_ITEM');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          total: BigInt(0),
+          critical: BigInt(0),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(0),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      await repo.getFailedItemsSummary('org-tenant-1', {});
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+      const fullQuery = Array.isArray(sqlArg?.strings)
+        ? sqlArg.strings.join(' ')
+        : String(sqlArg);
+      expect(fullQuery).toMatch(/organization_id|organization\.id/i);
+    });
+  });
+
   describe('findById', () => {
     it('returns item id when found within organization', async () => {
       prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue({

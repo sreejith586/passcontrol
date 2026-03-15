@@ -38,6 +38,18 @@ describe('ChecklistRunItemsService', () => {
         .mockResolvedValue([mockHydratedRow]),
       findByIdWithContext: jest.fn().mockResolvedValue(null),
       findById: jest.fn().mockResolvedValue(null),
+      getFailedItemsSummary: jest.fn().mockResolvedValue({
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        unknown: 0,
+        affectedRuns: 0,
+        openAlerts: 0,
+        acknowledgedAlerts: 0,
+        resolvedAlerts: 0,
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,6 +76,105 @@ describe('ChecklistRunItemsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getSummary', () => {
+    it('returns normalized response shape with zero defaults when no data', async () => {
+      repo.getFailedItemsSummary.mockResolvedValue({
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        unknown: 0,
+        affectedRuns: 0,
+        openAlerts: 0,
+        acknowledgedAlerts: 0,
+        resolvedAlerts: 0,
+      });
+
+      const result = await service.getSummary(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual({
+        failedItems: {
+          total: 0,
+          bySeverity: {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+            unknown: 0,
+          },
+        },
+        alerts: {
+          open: 0,
+          acknowledged: 0,
+          resolved: 0,
+        },
+        runs: {
+          affectedRuns: 0,
+        },
+      });
+      expect(repo.getFailedItemsSummary).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.objectContaining({
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          checklistTemplateId: undefined,
+          severity: undefined,
+          from: undefined,
+          to: undefined,
+        }),
+      );
+    });
+
+    it('maps repository response to normalized shape', async () => {
+      repo.getFailedItemsSummary.mockResolvedValue({
+        total: 10,
+        critical: 2,
+        high: 3,
+        medium: 2,
+        low: 1,
+        unknown: 2,
+        affectedRuns: 5,
+        openAlerts: 3,
+        acknowledgedAlerts: 2,
+        resolvedAlerts: 2,
+      });
+
+      const result = await service.getSummary(
+        { organizationId: mockOrgId },
+        { brandId: 'brand-1', from: '2025-03-01' },
+      );
+
+      expect(result.failedItems.total).toBe(10);
+      expect(result.failedItems.bySeverity).toEqual({
+        critical: 2,
+        high: 3,
+        medium: 2,
+        low: 1,
+        unknown: 2,
+      });
+      expect(result.alerts).toEqual({
+        open: 3,
+        acknowledged: 2,
+        resolved: 2,
+      });
+      expect(result.runs.affectedRuns).toBe(5);
+      expect(repo.getFailedItemsSummary).toHaveBeenCalledWith(mockOrgId, {
+        brandId: 'brand-1',
+        locationId: undefined,
+        zoneId: undefined,
+        checklistTemplateId: undefined,
+        severity: undefined,
+        from: '2025-03-01',
+        to: undefined,
+      });
+    });
   });
 
   describe('getFailedItems', () => {
