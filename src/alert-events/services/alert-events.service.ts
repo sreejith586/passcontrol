@@ -1,15 +1,32 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+} from '@nestjs/common';
 import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertEventStatus } from '../enums/alert-status.enum';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
+import {
+  DOMAIN_EVENT_PUBLISHER,
+  DomainEventPublisher,
+} from '../../common/domain-events/contracts/domain-event-publisher.interface';
+import {
+  createAlertAcknowledgedEvent,
+} from '../../common/domain-events/events/alert-acknowledged.event';
+import {
+  createAlertResolvedEvent,
+} from '../../common/domain-events/events/alert-resolved.event';
 
 @Injectable()
 export class AlertEventsService {
   constructor(
     private readonly repo: AlertEventsRepository,
     private readonly audit: AuditLogsService,
+    @Inject(DOMAIN_EVENT_PUBLISHER)
+    private readonly domainEvents: DomainEventPublisher,
   ) {}
 
   /**
@@ -107,6 +124,21 @@ export class AlertEventsService {
       acknowledgedAt: new Date(),
       acknowledgedByUserId: ctx.userId ?? null,
     });
+    if (updated) {
+      const event = createAlertAcknowledgedEvent(ctx.organizationId, {
+        alertEventId: updated.id,
+        sourceType: updated.sourceType,
+        sourceId: updated.sourceId,
+        acknowledgedByUserId: updated.acknowledgedByUserId ?? null,
+        severity: updated.severity ?? null,
+        status: updated.status,
+        acknowledgedAt: updated.acknowledgedAt!,
+        brandId: updated.brandId ?? null,
+        locationId: updated.locationId ?? null,
+        zoneId: updated.zoneId ?? null,
+      });
+      await this.domainEvents.publish(event);
+    }
     await this.audit.recordWrite('ALERT_ACKNOWLEDGE', ctx, id, {
       before: existing,
       after: updated,
@@ -129,6 +161,22 @@ export class AlertEventsService {
       resolvedByUserId: ctx.userId ?? null,
       resolutionNote: resolutionNote?.trim() || null,
     });
+    if (updated) {
+      const event = createAlertResolvedEvent(ctx.organizationId, {
+        alertEventId: updated.id,
+        sourceType: updated.sourceType,
+        sourceId: updated.sourceId,
+        resolvedByUserId: updated.resolvedByUserId ?? null,
+        severity: updated.severity ?? null,
+        status: updated.status,
+        resolvedAt: updated.resolvedAt!,
+        resolutionNote: updated.resolutionNote ?? null,
+        brandId: updated.brandId ?? null,
+        locationId: updated.locationId ?? null,
+        zoneId: updated.zoneId ?? null,
+      });
+      await this.domainEvents.publish(event);
+    }
     await this.audit.recordWrite('ALERT_RESOLVE', ctx, id, {
       before: existing,
       after: updated,

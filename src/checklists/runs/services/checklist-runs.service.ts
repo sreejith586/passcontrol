@@ -2,12 +2,24 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { Prisma } from '@prisma/client';
 import { ChecklistRunsRepository } from '../repositories/checklist-runs.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
+import {
+  DOMAIN_EVENT_PUBLISHER,
+  DomainEventPublisher,
+} from '../../../common/domain-events/contracts/domain-event-publisher.interface';
+import {
+  createChecklistRunItemFailedEvent,
+  ChecklistRunItemFailedPayload,
+} from '../../../common/domain-events/events/checklist-run-item-failed.event';
+import {
+  createChecklistRunCompletedEvent,
+} from '../../../common/domain-events/events/checklist-run-completed.event';
 import { AttachmentsService } from '../../../attachments/services/attachments.service';
 import { TemperatureReadingsService } from '../../../temperature/services/temperature-readings.service';
 import { ListTodayRunsQueryDto } from '../dto/list-today-runs.dto';
@@ -25,6 +37,8 @@ export class ChecklistRunsService {
     private readonly repo: ChecklistRunsRepository,
     private readonly audit: AuditLogsService,
     private readonly alertEvents: AlertEventsService,
+    @Inject(DOMAIN_EVENT_PUBLISHER)
+    private readonly domainEvents: DomainEventPublisher,
     private readonly attachments: AttachmentsService,
     private readonly temperatureReadings: TemperatureReadingsService,
   ) {}
@@ -204,28 +218,26 @@ export class ChecklistRunsService {
       item.result !== 'FAIL' &&
       updated.result === 'FAIL'
     ) {
-      await this.alertEvents.createFromPayload({
-        organizationId: ctx.organizationId,
-        sourceType: 'CHECKLIST_RUN_ITEM',
-        sourceId: updated.id,
-        type: 'CHECKLIST_ITEM_FAIL',
+      const eventPayload: ChecklistRunItemFailedPayload = {
+        checklistRunItemSnapshotId: updated.id,
+        checklistRunId: updated.checklistRunId,
+        checklistTemplateId: updated.checklistRun.checklistTemplateId,
+        runNumber: updated.checklistRun.runNumber,
+        label: updated.labelSnapshot,
         severity: updated.severitySnapshot,
-        scope: {
-          brandId: updated.checklistRun.brandId ?? undefined,
-          locationId: updated.checklistRun.locationId ?? undefined,
-          zoneId: updated.checklistRun.zoneId ?? undefined,
-        },
-        payload: {
-          runId: updated.checklistRunId,
-          checklistRunItemSnapshotId: updated.id,
-          templateNameSnapshot: updated.checklistRun.templateNameSnapshot,
-          sectionTitle: updated.checklistRunSectionSnapshot?.titleSnapshot,
-          label: updated.labelSnapshot,
-          result: updated.result,
-          comment: updated.comment ?? undefined,
-          severity: updated.severitySnapshot,
-        },
-      });
+        comment: updated.comment ?? null,
+        brandId: updated.checklistRun.brandId ?? null,
+        locationId: updated.checklistRun.locationId ?? null,
+        zoneId: updated.checklistRun.zoneId ?? null,
+        dueAt: updated.checklistRun.dueAt ?? null,
+        templateNameSnapshot: updated.checklistRun.templateNameSnapshot,
+        sectionTitle: updated.checklistRunSectionSnapshot?.titleSnapshot ?? null,
+      };
+      const event = createChecklistRunItemFailedEvent(
+        ctx.organizationId,
+        eventPayload,
+      );
+      await this.domainEvents.publish(event);
     }
 
     await this.audit.recordWrite(
@@ -290,6 +302,22 @@ export class ChecklistRunsService {
       runId,
       ctx.userId ?? '',
     );
+
+    if (submitted) {
+      const event = createChecklistRunCompletedEvent(ctx.organizationId, {
+        checklistRunId: submitted.id,
+        runNumber: submitted.runNumber,
+        checklistTemplateId: submitted.checklistTemplateId,
+        templateNameSnapshot: submitted.templateNameSnapshot,
+        performedByUserId: submitted.performedByUserId ?? null,
+        brandId: submitted.brandId ?? null,
+        locationId: submitted.locationId ?? null,
+        zoneId: submitted.zoneId ?? null,
+        dueAt: submitted.dueAt ?? null,
+        completedAt: submitted.completedAt!,
+      });
+      await this.domainEvents.publish(event);
+    }
 
     await this.audit.recordWrite(
       'CHECKLIST_RUN_SUBMIT',

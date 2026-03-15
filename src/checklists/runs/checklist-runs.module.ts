@@ -5,6 +5,7 @@ import { AuditModule } from '../../audit/audit.module';
 import { AlertEventsModule } from '../../alert-events/alert-events.module';
 import { AttachmentsModule } from '../../attachments/attachments.module';
 import { TemperatureModule } from '../../temperature/temperature.module';
+import { DomainEventsModule } from '../../common/domain-events/domain-events.module';
 import { ChecklistRunsController } from './controllers/checklist-runs.controller';
 import { ChecklistRunItemsController } from './controllers/checklist-run-items.controller';
 import { ChecklistRunsService } from './services/checklist-runs.service';
@@ -13,7 +14,7 @@ import { ChecklistRunItemsService } from './services/checklist-run-items.service
 import { ChecklistRunItemsRepository } from './repositories/checklist-run-items.repository';
 
 @Module({
-  imports: [InfraModule, AccessModule, AuditModule, AlertEventsModule, AttachmentsModule, TemperatureModule],
+  imports: [InfraModule, AccessModule, AuditModule, AlertEventsModule, AttachmentsModule, TemperatureModule, DomainEventsModule],
   controllers: [ChecklistRunsController, ChecklistRunItemsController],
   providers: [
     ChecklistRunsService,
