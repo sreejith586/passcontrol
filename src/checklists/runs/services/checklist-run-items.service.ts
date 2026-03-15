@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AlertStatus } from '@prisma/client';
 import { ChecklistRunItemsRepository } from '../repositories/checklist-run-items.repository';
+import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
+import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 import { ListFailedChecklistRunItemsQueryDto } from '../dto/list-failed-checklist-run-items.dto';
 
 export interface RunItemDetailResponse {
@@ -83,6 +86,8 @@ export interface FailedRunItemResponse {
 export class ChecklistRunItemsService {
   constructor(
     private readonly repo: ChecklistRunItemsRepository,
+    private readonly alertEventsRepo: AlertEventsRepository,
+    private readonly alertEventsService: AlertEventsService,
   ) {}
 
   async getById(
@@ -94,6 +99,59 @@ export class ChecklistRunItemsService {
       throw new NotFoundException('Checklist run item snapshot not found');
     }
     return this.toDetailResponse(row);
+  }
+
+  /**
+   * Acknowledge the latest OPEN alert for this failed run item.
+   * Convenience wrapper: delegates to AlertEventsService.acknowledge.
+   */
+  async acknowledgeAlert(
+    ctx: { organizationId: string; userId?: string },
+    itemId: string,
+  ) {
+    const item = await this.repo.findById(ctx.organizationId, itemId);
+    if (!item) {
+      throw new NotFoundException('Checklist run item snapshot not found');
+    }
+    const alert = await this.alertEventsRepo.findFirstBySourceAndStatuses(
+      ctx.organizationId,
+      'CHECKLIST_RUN_ITEM',
+      itemId,
+      [AlertStatus.OPEN],
+    );
+    if (!alert) {
+      throw new NotFoundException(
+        'No OPEN alert found for this checklist run item',
+      );
+    }
+    return this.alertEventsService.acknowledge(ctx, alert.id);
+  }
+
+  /**
+   * Resolve the latest OPEN or ACKNOWLEDGED alert for this failed run item.
+   * Convenience wrapper: delegates to AlertEventsService.resolve.
+   */
+  async resolveAlert(
+    ctx: { organizationId: string; userId?: string },
+    itemId: string,
+    resolutionNote?: string,
+  ) {
+    const item = await this.repo.findById(ctx.organizationId, itemId);
+    if (!item) {
+      throw new NotFoundException('Checklist run item snapshot not found');
+    }
+    const alert = await this.alertEventsRepo.findFirstBySourceAndStatuses(
+      ctx.organizationId,
+      'CHECKLIST_RUN_ITEM',
+      itemId,
+      [AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED],
+    );
+    if (!alert) {
+      throw new NotFoundException(
+        'No OPEN or ACKNOWLEDGED alert found for this checklist run item',
+      );
+    }
+    return this.alertEventsService.resolve(ctx, alert.id, resolutionNote);
   }
 
   async getFailedItems(

@@ -144,6 +144,30 @@ describe('ChecklistRunItemsRepository', () => {
     });
   });
 
+  describe('findById', () => {
+    it('returns item id when found within organization', async () => {
+      prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue({
+        id: 'item-1',
+      });
+
+      const result = await repo.findById(mockOrgId, 'item-1');
+
+      expect(result).toEqual({ id: 'item-1' });
+      expect(prisma.checklistRunItemSnapshot.findFirst).toHaveBeenCalledWith({
+        where: { id: 'item-1', organizationId: mockOrgId },
+        select: { id: true },
+      });
+    });
+
+    it('returns null when item not found', async () => {
+      prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue(null);
+
+      const result = await repo.findById(mockOrgId, 'item-1');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('findByIdWithContext', () => {
     it('returns null when item not found', async () => {
       prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue(null);

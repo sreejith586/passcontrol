@@ -23,6 +23,7 @@ import { UpdateRunItemDto } from '../dto/update-run-item.dto';
 import { LinkAttachmentToRunItemDto } from '../dto/link-attachment-to-run-item.dto';
 import { CreateTemperatureReadingForRunItemDto } from '../dto/create-temperature-reading-for-run-item.dto';
 import { ListFailedChecklistRunItemsQueryDto } from '../dto/list-failed-checklist-run-items.dto';
+import { ResolveAlertDto } from '../../../alert-events/dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../../auth/guards/auth.guard';
 import { RbacGuard } from '../../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../../access/rbac/permissions.decorator';
@@ -133,5 +134,39 @@ export class ChecklistRunItemsController {
   ) {
     const reading = await this.service.createTemperatureReadingForRunItem(ctx, id, dto);
     return ApiResponse.created(reading);
+  }
+
+  @Post(':id/acknowledge-alert')
+  @RequirePermissions('alert.acknowledge')
+  @ApiOperation({
+    summary: 'Acknowledge alert for failed run item',
+    description:
+      'Convenience endpoint: finds the latest OPEN alert linked to this checklist run item and acknowledges it. Delegates to alert acknowledge flow.',
+  })
+  @ApiParam({ name: 'id', description: 'Run item snapshot UUID (ChecklistRunItemSnapshot.id)' })
+  async acknowledgeAlert(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const alert = await this.runItemsService.acknowledgeAlert(ctx, id);
+    return ApiResponse.ok(alert);
+  }
+
+  @Post(':id/resolve-alert')
+  @RequirePermissions('alert.resolve')
+  @ApiOperation({
+    summary: 'Resolve alert for failed run item',
+    description:
+      'Convenience endpoint: finds the latest OPEN or ACKNOWLEDGED alert linked to this checklist run item and resolves it. Delegates to alert resolve flow.',
+  })
+  @ApiParam({ name: 'id', description: 'Run item snapshot UUID (ChecklistRunItemSnapshot.id)' })
+  @ApiBody({ type: ResolveAlertDto, required: false })
+  async resolveAlert(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto?: ResolveAlertDto,
+  ) {
+    const alert = await this.runItemsService.resolveAlert(ctx, id, dto?.resolutionNote);
+    return ApiResponse.ok(alert);
   }
 }

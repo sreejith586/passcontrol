@@ -180,6 +180,17 @@ export class ChecklistRunItemsRepository {
   }
 
   /**
+   * Check if a ChecklistRunItemSnapshot exists within organization scope.
+   * Returns minimal record or null. Used for tenant-safe existence checks.
+   */
+  async findById(organizationId: string, id: string) {
+    return this.prisma.checklistRunItemSnapshot.findFirst({
+      where: { id, organizationId },
+      select: { id: true },
+    });
+  }
+
+  /**
    * Find a single ChecklistRunItemSnapshot by id with full supervisor context.
    * Includes section snapshot, run, attachments (with file metadata), temperature readings, and related alert.
    */

@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChecklistRunItemsService } from './checklist-run-items.service';
 import { ChecklistRunItemsRepository } from '../repositories/checklist-run-items.repository';
+import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
+import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 import { ChecklistItemSeverity } from '../../enums/checklist-item-severity.enum';
 
 describe('ChecklistRunItemsService', () => {
@@ -35,6 +37,7 @@ describe('ChecklistRunItemsService', () => {
         .fn()
         .mockResolvedValue([mockHydratedRow]),
       findByIdWithContext: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +46,14 @@ describe('ChecklistRunItemsService', () => {
         {
           provide: ChecklistRunItemsRepository,
           useValue: mockRepo,
+        },
+        {
+          provide: AlertEventsRepository,
+          useValue: { findFirstBySourceAndStatuses: jest.fn() },
+        },
+        {
+          provide: AlertEventsService,
+          useValue: { acknowledge: jest.fn(), resolve: jest.fn() },
         },
       ],
     }).compile();

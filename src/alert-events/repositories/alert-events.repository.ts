@@ -149,6 +149,27 @@ export class AlertEventsRepository {
     });
   }
 
+  /**
+   * Find latest alert by source and allowed statuses.
+   * Used for convenience endpoints (e.g. acknowledge-alert, resolve-alert from run item).
+   */
+  async findFirstBySourceAndStatuses(
+    organizationId: string,
+    sourceType: string,
+    sourceId: string,
+    statuses: AlertStatus[],
+  ) {
+    return this.prisma.alertEvent.findFirst({
+      where: {
+        organizationId,
+        sourceType,
+        sourceId,
+        status: { in: statuses },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async update(
     organizationId: string,
     id: string,
