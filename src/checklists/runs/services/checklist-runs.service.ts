@@ -11,6 +11,9 @@ import { AlertEventsService } from '../../../alert-events/services/alert-events.
 import { AttachmentsService } from '../../../attachments/services/attachments.service';
 import { TemperatureReadingsService } from '../../../temperature/services/temperature-readings.service';
 import { ListTodayRunsQueryDto } from '../dto/list-today-runs.dto';
+import { ListOverdueRunsQueryDto } from '../dto/list-overdue-runs.dto';
+import { ListFailedRunsQueryDto } from '../dto/list-failed-runs.dto';
+import { ChecklistRunMetricsQueryDto } from '../dto/list-metrics.dto';
 import { UpdateRunItemDto } from '../dto/update-run-item.dto';
 import { LinkAttachmentToRunItemDto } from '../dto/link-attachment-to-run-item.dto';
 import { CreateTemperatureReadingForRunItemDto } from '../dto/create-temperature-reading-for-run-item.dto';
@@ -40,6 +43,44 @@ export class ChecklistRunsService {
     return { start, end };
   }
 
+  async getMetrics(
+    ctx: { organizationId: string },
+    query: ChecklistRunMetricsQueryDto,
+  ) {
+    const todayRange = this.getDateRange(query.timezone, query.date);
+    // resolvedAlertsToday: always UTC today (per spec), not affected by timezone/date params
+    const utcToday = DateTime.utc();
+    const resolvedTodayRange = {
+      start: utcToday.startOf('day').toJSDate(),
+      end: utcToday.endOf('day').toJSDate(),
+    };
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+    };
+
+    const [todayRuns, overdueRuns, failedRuns, alertCounts] = await Promise.all([
+      this.repo.countTodayRuns(ctx.organizationId, filters, todayRange),
+      this.repo.countOverdueRuns(ctx.organizationId, filters),
+      this.repo.countFailedRuns(ctx.organizationId, filters),
+      this.alertEvents.getMetricsCounts(
+        ctx.organizationId,
+        filters,
+        resolvedTodayRange,
+      ),
+    ]);
+
+    return {
+      todayRuns,
+      overdueRuns,
+      failedRuns,
+      openAlerts: alertCounts.open,
+      acknowledgedAlerts: alertCounts.acknowledged,
+      resolvedAlertsToday: alertCounts.resolvedToday,
+    };
+  }
+
   async getTodayRuns(
     ctx: { organizationId: string },
     query: ListTodayRunsQueryDto,
@@ -56,6 +97,48 @@ export class ChecklistRunsService {
         zoneId: query.zoneId,
       },
       { start, end },
+      { page, limit },
+      { view: query.view ?? 'full' },
+    );
+    return { items, total, page, limit };
+  }
+
+  async getOverdueRuns(
+    ctx: { organizationId: string },
+    query: ListOverdueRunsQueryDto,
+  ) {
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 25, 100);
+    const { items, total } = await this.repo.findOverdueRuns(
+      ctx.organizationId,
+      {
+        brandId: query.brandId,
+        locationId: query.locationId,
+        zoneId: query.zoneId,
+        checklistTemplateId: query.checklistTemplateId,
+      },
+      { page, limit },
+      { view: query.view ?? 'full' },
+    );
+    return { items, total, page, limit };
+  }
+
+  async getFailedRuns(
+    ctx: { organizationId: string },
+    query: ListFailedRunsQueryDto,
+  ) {
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 25, 100);
+    const { items, total } = await this.repo.findFailedRuns(
+      ctx.organizationId,
+      {
+        brandId: query.brandId,
+        locationId: query.locationId,
+        zoneId: query.zoneId,
+        checklistTemplateId: query.checklistTemplateId,
+        from: query.from,
+        to: query.to,
+      },
       { page, limit },
       { view: query.view ?? 'full' },
     );

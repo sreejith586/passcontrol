@@ -40,6 +40,78 @@ const RUN_SUMMARY_SELECT = {
 export class ChecklistRunsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Count runs matching today endpoint date semantics (dueAt or createdAt in range).
+   */
+  async countTodayRuns(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+    },
+    dateRange: { start: Date; end: Date },
+  ): Promise<number> {
+    const where: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      OR: [
+        { dueAt: { gte: dateRange.start, lte: dateRange.end } },
+        {
+          dueAt: null,
+          createdAt: { gte: dateRange.start, lte: dateRange.end },
+        },
+      ],
+    };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    return this.prisma.checklistRun.count({ where });
+  }
+
+  /**
+   * Count overdue runs (status PENDING/IN_PROGRESS, dueAt not null, dueAt < now).
+   */
+  async countOverdueRuns(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+    },
+  ): Promise<number> {
+    const now = new Date();
+    const where: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      status: { in: ['PENDING', 'IN_PROGRESS'] },
+      dueAt: { not: null, lt: now },
+    };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    return this.prisma.checklistRun.count({ where });
+  }
+
+  /**
+   * Count runs with at least one itemSnapshot result = FAIL.
+   */
+  async countFailedRuns(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+    },
+  ): Promise<number> {
+    const where: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      itemSnapshots: { some: { result: 'FAIL' } },
+    };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    return this.prisma.checklistRun.count({ where });
+  }
+
   async findTodayRuns(
     organizationId: string,
     filters: {
@@ -73,6 +145,128 @@ export class ChecklistRunsRepository {
     const skip = (pagination.page - 1) * pagination.limit;
     const take = pagination.limit;
     const orderBy = [{ dueAt: 'asc' as const }, { createdAt: 'asc' as const }];
+
+    const [items, total] = await Promise.all([
+      useSummary
+        ? this.prisma.checklistRun.findMany({
+            where,
+            orderBy,
+            skip,
+            take,
+            select: RUN_SUMMARY_SELECT,
+          })
+        : this.prisma.checklistRun.findMany({
+            where,
+            orderBy,
+            skip,
+            take,
+            include: RUN_INCLUDE,
+          }),
+      this.prisma.checklistRun.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  async findOverdueRuns(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+    },
+    pagination: { page: number; limit: number },
+    options?: { view?: 'full' | 'summary' },
+  ) {
+    const now = new Date();
+    const where: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      status: { in: ['PENDING', 'IN_PROGRESS'] },
+      dueAt: { not: null, lt: now },
+    };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    if (filters.checklistTemplateId != null)
+      where.checklistTemplateId = filters.checklistTemplateId;
+
+    const useSummary = options?.view === 'summary';
+    const skip = (pagination.page - 1) * pagination.limit;
+    const take = pagination.limit;
+    const orderBy = [{ dueAt: 'asc' as const }, { createdAt: 'asc' as const }];
+
+    const [items, total] = await Promise.all([
+      useSummary
+        ? this.prisma.checklistRun.findMany({
+            where,
+            orderBy,
+            skip,
+            take,
+            select: RUN_SUMMARY_SELECT,
+          })
+        : this.prisma.checklistRun.findMany({
+            where,
+            orderBy,
+            skip,
+            take,
+            include: RUN_INCLUDE,
+          }),
+      this.prisma.checklistRun.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  /**
+   * Returns runs that have at least one item with result=FAIL.
+   * Each run appears once (no duplicates). Date filters apply to run-level dueAt/createdAt.
+   */
+  async findFailedRuns(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+      from?: string;
+      to?: string;
+    },
+    pagination: { page: number; limit: number },
+    options?: { view?: 'full' | 'summary' },
+  ) {
+    const where: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      itemSnapshots: {
+        some: { result: 'FAIL' },
+      },
+    };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    if (filters.checklistTemplateId != null)
+      where.checklistTemplateId = filters.checklistTemplateId;
+
+    if (filters.from || filters.to) {
+      const fromDate = filters.from ? new Date(filters.from) : undefined;
+      const toDate = filters.to ? new Date(filters.to) : undefined;
+      const dueAtFilter: Prisma.DateTimeNullableFilter = { not: null };
+      if (fromDate) dueAtFilter.gte = fromDate;
+      if (toDate) dueAtFilter.lte = toDate;
+      const createdAtFilter: Prisma.DateTimeFilter = {};
+      if (fromDate) createdAtFilter.gte = fromDate;
+      if (toDate) createdAtFilter.lte = toDate;
+
+      where.OR = [
+        { dueAt: dueAtFilter },
+        { dueAt: null, createdAt: createdAtFilter },
+      ];
+    }
+
+    const useSummary = options?.view === 'summary';
+    const skip = (pagination.page - 1) * pagination.limit;
+    const take = pagination.limit;
+    const orderBy = [{ createdAt: 'desc' as const }, { dueAt: 'desc' as const }];
 
     const [items, total] = await Promise.all([
       useSummary

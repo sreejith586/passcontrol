@@ -89,6 +89,40 @@ export class AlertEventsRepository {
     return { items, total };
   }
 
+  /**
+   * Count alerts by status. Used for supervisor dashboard metrics.
+   */
+  async countByStatus(
+    organizationId: string,
+    filters: { brandId?: string; locationId?: string; zoneId?: string },
+    status: AlertStatus,
+  ): Promise<number> {
+    const where: Prisma.AlertEventWhereInput = { organizationId, status };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    return this.prisma.alertEvent.count({ where });
+  }
+
+  /**
+   * Count resolved alerts where resolvedAt is within the given date range (UTC day).
+   */
+  async countResolvedInRange(
+    organizationId: string,
+    filters: { brandId?: string; locationId?: string; zoneId?: string },
+    dateRange: { start: Date; end: Date },
+  ): Promise<number> {
+    const where: Prisma.AlertEventWhereInput = {
+      organizationId,
+      status: AlertStatus.RESOLVED,
+      resolvedAt: { gte: dateRange.start, lte: dateRange.end },
+    };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    return this.prisma.alertEvent.count({ where });
+  }
+
   async update(
     organizationId: string,
     id: string,

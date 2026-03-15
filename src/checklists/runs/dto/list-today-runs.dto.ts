@@ -60,7 +60,7 @@ export class ListTodayRunsQueryDto {
     enum: ['full', 'summary'],
     default: 'full',
     description:
-      'View mode: "full" returns runs with sectionSnapshots and itemSnapshots; "summary" returns run-level fields only for lighter payloads',
+      'View mode: "full" includes sectionSnapshots and itemSnapshots; "summary" returns run-level fields only for lighter payloads',
   })
   @IsOptional()
   @IsIn(['full', 'summary'])

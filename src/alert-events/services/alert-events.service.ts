@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
-import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AlertEventStatus } from '../enums/alert-status.enum';
+import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 
 @Injectable()
@@ -79,6 +79,22 @@ export class AlertEventsService {
     );
 
     return { items, total, page, limit };
+  }
+
+  /**
+   * Returns counts for supervisor dashboard metrics (open, acknowledged, resolved today).
+   */
+  async getMetricsCounts(
+    organizationId: string,
+    filters: { brandId?: string; locationId?: string; zoneId?: string },
+    resolvedTodayRange: { start: Date; end: Date },
+  ): Promise<{ open: number; acknowledged: number; resolvedToday: number }> {
+    const [open, acknowledged, resolvedToday] = await Promise.all([
+      this.repo.countByStatus(organizationId, filters, AlertStatus.OPEN),
+      this.repo.countByStatus(organizationId, filters, AlertStatus.ACKNOWLEDGED),
+      this.repo.countResolvedInRange(organizationId, filters, resolvedTodayRange),
+    ]);
+    return { open, acknowledged, resolvedToday };
   }
 
   async acknowledge(ctx: { organizationId: string; userId?: string }, id: string) {
