@@ -156,6 +156,52 @@ export class ChecklistRunItemsService {
   }
 
   /**
+   * Get failed items summary grouped by locationId.
+   * Returns items ordered by: critical DESC, open alerts DESC, total DESC, locationId ASC.
+   */
+  async getSummaryByLocation(
+    ctx: { organizationId: string },
+    query: ListFailedChecklistRunItemsSummaryQueryDto,
+  ) {
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      checklistTemplateId: query.checklistTemplateId,
+      severity: query.severity,
+      from: query.from,
+      to: query.to,
+    };
+    const rows = await this.repo.getFailedItemsSummaryByLocation(
+      ctx.organizationId,
+      filters,
+    );
+    return {
+      items: rows.map((r) => ({
+        locationId: r.locationId,
+        failedItems: {
+          total: r.total,
+          bySeverity: {
+            critical: r.critical,
+            high: r.high,
+            medium: r.medium,
+            low: r.low,
+            unknown: r.unknown,
+          },
+        },
+        alerts: {
+          open: r.openAlerts,
+          acknowledged: r.acknowledgedAlerts,
+          resolved: r.resolvedAlerts,
+        },
+        runs: {
+          affectedRuns: r.affectedRuns,
+        },
+      })),
+    };
+  }
+
+  /**
    * Get dashboard summary for failed checklist run items.
    * Returns compact counts: failed items by severity, latest alert status, affected runs.
    */

@@ -270,6 +270,246 @@ describe('ChecklistRunItemsRepository', () => {
     });
   });
 
+  describe('getFailedItemsSummaryByLocation', () => {
+    it('returns empty items when no failed items', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result).toEqual([]);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('groups correctly by locationId', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: 'loc-1',
+          total: BigInt(5),
+          critical: BigInt(2),
+          high: BigInt(1),
+          medium: BigInt(1),
+          low: BigInt(1),
+          unknown: BigInt(0),
+          affected_runs: BigInt(3),
+          open_alerts: BigInt(2),
+          acknowledged_alerts: BigInt(1),
+          resolved_alerts: BigInt(0),
+        },
+        {
+          location_id: 'loc-2',
+          total: BigInt(2),
+          critical: BigInt(0),
+          high: BigInt(1),
+          medium: BigInt(1),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(2),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(1),
+          resolved_alerts: BigInt(1),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result).toHaveLength(2);
+      expect(result[0].locationId).toBe('loc-1');
+      expect(result[0].total).toBe(5);
+      expect(result[0].critical).toBe(2);
+      expect(result[0].affectedRuns).toBe(3);
+      expect(result[0].openAlerts).toBe(2);
+      expect(result[1].locationId).toBe('loc-2');
+      expect(result[1].total).toBe(2);
+    });
+
+    it('includes null locationId', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: null,
+          total: BigInt(3),
+          critical: BigInt(1),
+          high: BigInt(0),
+          medium: BigInt(1),
+          low: BigInt(1),
+          unknown: BigInt(0),
+          affected_runs: BigInt(2),
+          open_alerts: BigInt(1),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result).toHaveLength(1);
+      expect(result[0].locationId).toBeNull();
+      expect(result[0].total).toBe(3);
+    });
+
+    it('returns correct severity buckets per location', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: 'loc-1',
+          total: BigInt(5),
+          critical: BigInt(1),
+          high: BigInt(1),
+          medium: BigInt(1),
+          low: BigInt(1),
+          unknown: BigInt(1),
+          affected_runs: BigInt(2),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result[0].critical).toBe(1);
+      expect(result[0].high).toBe(1);
+      expect(result[0].medium).toBe(1);
+      expect(result[0].low).toBe(1);
+      expect(result[0].unknown).toBe(1);
+      expect(result[0].total).toBe(5);
+    });
+
+    it('returns correct affectedRuns distinct count per location', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: 'loc-1',
+          total: BigInt(10),
+          critical: BigInt(0),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(4),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result[0].affectedRuns).toBe(4);
+    });
+
+    it('returns correct latest alert status counts per location', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: 'loc-1',
+          total: BigInt(3),
+          critical: BigInt(0),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(2),
+          open_alerts: BigInt(2),
+          acknowledged_alerts: BigInt(1),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result[0].openAlerts).toBe(2);
+      expect(result[0].acknowledgedAlerts).toBe(1);
+      expect(result[0].resolvedAlerts).toBe(0);
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getFailedItemsSummaryByLocation(mockOrgId, {
+        brandId: 'brand-1',
+        locationId: 'loc-1',
+        zoneId: 'zone-1',
+        checklistTemplateId: 'tpl-1',
+        severity: 'CRITICAL',
+        from: '2025-03-01',
+        to: '2025-03-15',
+      });
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('filtered_failed_items');
+      expect(queryStr).toContain('latest_alerts');
+      expect(queryStr).toContain('DISTINCT ON');
+      expect(queryStr).toContain('source_type');
+      expect(queryStr).toContain('CHECKLIST_RUN_ITEM');
+      expect(queryStr).toContain('location_id');
+      expect(queryStr).toContain('ORDER BY');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getFailedItemsSummaryByLocation('org-tenant-1', {});
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+      const fullQuery = Array.isArray(sqlArg?.strings)
+        ? sqlArg.strings.join(' ')
+        : String(sqlArg);
+      expect(fullQuery).toMatch(/organization_id|organization\.id/i);
+    });
+
+    it('ordering is correct (critical DESC, open DESC, total DESC, locationId ASC)', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: 'loc-critical',
+          total: BigInt(5),
+          critical: BigInt(3),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(2),
+          open_alerts: BigInt(2),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+        {
+          location_id: 'loc-high-open',
+          total: BigInt(4),
+          critical: BigInt(0),
+          high: BigInt(2),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(2),
+          open_alerts: BigInt(3),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+        {
+          location_id: 'loc-low',
+          total: BigInt(1),
+          critical: BigInt(0),
+          high: BigInt(0),
+          medium: BigInt(0),
+          low: BigInt(0),
+          unknown: BigInt(0),
+          affected_runs: BigInt(1),
+          open_alerts: BigInt(0),
+          acknowledged_alerts: BigInt(0),
+          resolved_alerts: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsSummaryByLocation(mockOrgId, {});
+
+      expect(result[0].locationId).toBe('loc-critical');
+      expect(result[0].critical).toBe(3);
+      expect(result[1].locationId).toBe('loc-high-open');
+      expect(result[1].openAlerts).toBe(3);
+      expect(result[2].locationId).toBe('loc-low');
+    });
+  });
+
   describe('findById', () => {
     it('returns item id when found within organization', async () => {
       prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue({

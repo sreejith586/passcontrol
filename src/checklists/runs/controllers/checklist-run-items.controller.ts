@@ -44,6 +44,38 @@ export class ChecklistRunItemsController {
     private readonly runItemsService: ChecklistRunItemsService,
   ) {}
 
+  @Get('summary-by-location')
+  @RequirePermissions('checklist.run.view')
+  @ApiOperation({
+    summary: 'Failed run items summary by location',
+    description:
+      'Returns failed items and alert counts grouped by locationId. Sorted by critical count, open alerts, total. Helps identify which locations need attention.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'checklistTemplateId', required: false, description: 'Filter by checklist template UUID' })
+  @ApiQuery({ name: 'severity', required: false, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    example: '2025-03-01',
+    description: 'Filter from date (inclusive). Uses run dueAt when present, otherwise createdAt.',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    example: '2025-03-15',
+    description: 'Filter to date (inclusive). Uses run dueAt when present, otherwise createdAt.',
+  })
+  async getSummaryByLocation(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: ListFailedChecklistRunItemsSummaryQueryDto,
+  ) {
+    const summary = await this.runItemsService.getSummaryByLocation(ctx, query);
+    return ApiResponse.ok(summary);
+  }
+
   @Get('summary')
   @RequirePermissions('checklist.run.view')
   @ApiOperation({
