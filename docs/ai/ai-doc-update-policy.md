@@ -1,35 +1,29 @@
 # AI Doc Update Policy
 
-**When to update `/docs/ai` and `/scripts/ai`**
+**When to update the AI Collaboration Kit (`docs/ai/`, `scripts/ai/`)**
+
+## Scope
+
+The AI Doc Guard treats changes under `src/`, `scripts/`, and `prisma/` as potentially architecture-impacting. If you change any of these paths without also updating `docs/ai/` or `scripts/ai/`, the workflow will add a reminder comment on your PR.
 
 ## Update Required
 
-Update the AI Collaboration Kit when you change:
+Update the AI Collaboration Kit when you change architecture, APIs, or domain behavior:
 
-- **Checklist engine** — templates, schedules, runs, snapshots, execution logic
-- **Alert system** — alert lifecycle, linkage, status flows
-- **Temperature** — policies, readings, breach handling
-- **Files & attachments** — registration, linkage, ownership
-- **Schema** — Prisma models, migrations
+- **New or changed endpoints** — `05-api-surface.md`
+- **New features or modules** — `02-current-progress.md`, `01-system-architecture.md`, `05-api-surface.md` if API
+- **Architecture decisions** — `06-decisions-log.md`
+- **Domain model changes** — `04-domain-model.md`
+- **Workflow or playbook changes** — `08-cursor-workflow.md`, `03-development-playbook.md`
 
-## What to Update
+## When Not Required (Can Ignore the Warning)
 
-| Change type | Update |
-|-------------|--------|
-| New endpoint | `05-api-surface.md` |
-| New feature | `02-current-progress.md`, `05-api-surface.md` if API |
-| Architecture decision | `06-decisions-log.md` |
-| New module or pattern | `01-system-architecture.md` |
-| Domain model change | `04-domain-model.md` |
-| New workflow step | `08-cursor-workflow.md` or `03-development-playbook.md` |
-
-## When Not Required
-
-- Bug fixes that don't change behavior or contracts
-- Test-only changes
-- Config or env changes
-- Dependency bumps without API impact
+- **Purely internal changes** — Refactors, renames, code moves with no behavior change
+- **Bug fixes** — That don't change contracts or observable behavior
+- **Test-only changes** — New or updated tests
+- **Config or env** — No API or domain impact
+- **Dependency bumps** — Without API or behavior impact
 
 ## Before Merging
 
-If the CI workflow comments on your PR about AI docs, review this policy and update the relevant docs.
+If the CI workflow comments on your PR, review this policy. If your changes are purely internal, you can ignore the reminder. Otherwise, update the relevant docs.

@@ -4,11 +4,8 @@ on:
   pull_request:
     branches: [main, master]
     paths:
-      - 'src/checklists/**'
-      - 'src/alert-events/**'
-      - 'src/temperature/**'
-      - 'src/files/**'
-      - 'src/attachments/**'
+      - 'src/**'
+      - 'scripts/**'
       - 'prisma/**'
       - 'docs/ai/**'
       - 'scripts/ai/**'
@@ -27,13 +24,11 @@ jobs:
       - name: Check for architecture changes without AI doc updates
         id: check
         run: |
-          # Files changed in this PR (against base branch)
+          # Architecture-impacting: src/, scripts/, prisma/
+          # AI doc updates: docs/ai/, scripts/ai/
           ARCH_PATHS=(
-            "src/checklists/"
-            "src/alert-events/"
-            "src/temperature/"
-            "src/files/"
-            "src/attachments/"
+            "src/"
+            "scripts/"
             "prisma/"
           )
           AI_DOC_PATHS=(
@@ -60,10 +55,8 @@ jobs:
 
           if [ "$ARCH_CHANGED" = true ] && [ "$AI_DOC_CHANGED" = false ]; then
             echo "warning=true" >> $GITHUB_OUTPUT
-            echo "arch_changed=true" >> $GITHUB_OUTPUT
           else
             echo "warning=false" >> $GITHUB_OUTPUT
-            echo "arch_changed=$ARCH_CHANGED" >> $GITHUB_OUTPUT
           fi
 
       - name: Comment on PR if AI docs not updated
@@ -75,11 +68,11 @@ jobs:
             const body = `## ⚠️ AI Doc Guard
             ${marker}
 
-            This PR changes architecture-impacting code but does not include updates to the AI Collaboration Kit (\`docs/ai/\` or \`scripts/ai/\`).
+            This PR changes code under \`src/\`, \`scripts/\`, or \`prisma/\` but does not include updates to the AI Collaboration Kit (\`docs/ai/\` or \`scripts/ai/\`).
 
             **Please consider updating** the relevant docs per [\`docs/ai/ai-doc-update-policy.md\`](https://github.com/${{ github.repository }}/blob/${{ github.head_ref }}/docs/ai/ai-doc-update-policy.md).
 
-            This is a reminder only; the PR is not blocked.`;
+            **Purely internal changes** (refactors, bug fixes, tests, config) can safely ignore this reminder. This is advisory only; the PR is not blocked.`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
