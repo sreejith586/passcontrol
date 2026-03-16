@@ -1,0 +1,103 @@
+name: AI Doc Guard
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'src/checklists/**'
+      - 'src/alert-events/**'
+      - 'src/temperature/**'
+      - 'src/files/**'
+      - 'src/attachments/**'
+      - 'prisma/**'
+      - 'docs/ai/**'
+      - 'scripts/ai/**'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: Check for architecture changes without AI doc updates
+        id: check
+        run: |
+          # Files changed in this PR (against base branch)
+          ARCH_PATHS=(
+            "src/checklists/"
+            "src/alert-events/"
+            "src/temperature/"
+            "src/files/"
+            "src/attachments/"
+            "prisma/"
+          )
+          AI_DOC_PATHS=(
+            "docs/ai/"
+            "scripts/ai/"
+          )
+
+          ARCH_CHANGED=false
+          AI_DOC_CHANGED=false
+
+          for path in "${ARCH_PATHS[@]}"; do
+            if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^${path}"; then
+              ARCH_CHANGED=true
+              break
+            fi
+          done
+
+          for path in "${AI_DOC_PATHS[@]}"; do
+            if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^${path}"; then
+              AI_DOC_CHANGED=true
+              break
+            fi
+          done
+
+          if [ "$ARCH_CHANGED" = true ] && [ "$AI_DOC_CHANGED" = false ]; then
+            echo "warning=true" >> $GITHUB_OUTPUT
+            echo "arch_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "warning=false" >> $GITHUB_OUTPUT
+            echo "arch_changed=$ARCH_CHANGED" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR if AI docs not updated
+        if: steps.check.outputs.warning == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- ai-doc-guard -->';
+            const body = `## ⚠️ AI Doc Guard
+            ${marker}
+
+            This PR changes architecture-impacting code but does not include updates to the AI Collaboration Kit (\`docs/ai/\` or \`scripts/ai/\`).
+
+            **Please consider updating** the relevant docs per [\`docs/ai/ai-doc-update-policy.md\`](https://github.com/${{ github.repository }}/blob/${{ github.head_ref }}/docs/ai/ai-doc-update-policy.md).
+
+            This is a reminder only; the PR is not blocked.`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker) && c.user.type === 'Bot');
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
