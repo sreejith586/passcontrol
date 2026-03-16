@@ -39,6 +39,10 @@ Review [component/endpoint] for:
 Return pass/fail per check; smallest safe fix only if needed.
 ```
 
+## Local Hooks
+
+Run `./scripts/ai/setup-hooks.sh` once to enable the pre-commit AI doc reminder. The hook warns (does not block) when staged changes touch `src/`, `scripts/`, or `prisma/` without `docs/ai/` or `scripts/ai/`.
+
 ## Checkpointing
 
 - Use `/docs/ai/checkpoint-template.md` to capture session state.
