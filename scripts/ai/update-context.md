@@ -1,0 +1,1 @@
+Read scripts/ai/run-checkpoint-update.md and execute it.

@@ -107,7 +107,7 @@ export class ChecklistRunItemsRepository {
         WHERE ae.organization_id = ${organizationId}
           AND ae.source_type = 'CHECKLIST_RUN_ITEM'
           AND ae.source_id IN (SELECT id FROM filtered_failed_items)
-        ORDER BY ae.source_id, ae.created_at DESC
+        ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC
       )
       SELECT
         (SELECT COUNT(*) FROM filtered_failed_items)::bigint AS total,

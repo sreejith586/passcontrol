@@ -18,3 +18,4 @@ chmod +x "$SCRIPT_DIR/check-ai-docs.sh"
 
 echo "Git hooks configured. Hooks path: .githooks"
 echo "Run 'git commit' to trigger the pre-commit AI doc reminder."
+echo "Remember to run this script after cloning the repo on a new machine."
