@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiBody, ApiQuery } fro
 import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AlertTrendsQueryDto } from '../dto/alert-trends-query.dto';
+import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
@@ -53,6 +54,29 @@ export class AlertEventsController {
   ) {
     const trends = await this.service.getTrends(ctx, query);
     return ApiResponse.ok(trends);
+  }
+
+  @Get('escalations')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Alert escalations with SLA breach flags',
+    description:
+      'Returns active (OPEN/ACKNOWLEDGED) alerts with computed SLA deadlines and breach flags. Sorted by urgency.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'ACKNOWLEDGED'] })
+  @ApiQuery({ name: 'onlyBreached', required: false, type: Boolean })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getEscalations(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertEscalationsQueryDto,
+  ) {
+    const escalations = await this.service.getEscalations(ctx, query);
+    return ApiResponse.ok(escalations);
   }
 
   @Get()

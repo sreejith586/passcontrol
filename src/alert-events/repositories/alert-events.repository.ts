@@ -284,6 +284,179 @@ export class AlertEventsRepository {
     }));
   }
 
+  /**
+   * List alerts with SLA escalation data (deadlines, breach flags).
+   * Uses application-provided now for deterministic breach computation.
+   */
+  async listEscalations(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      severity?: string;
+      status?: 'OPEN' | 'ACKNOWLEDGED';
+      onlyBreached?: boolean;
+    },
+    pagination: { page: number; limit: number },
+    now: Date,
+  ): Promise<{
+    items: Array<{
+      alertEventId: string;
+      severity: string | null;
+      status: string;
+      createdAt: Date;
+      acknowledgedAt: Date | null;
+      resolvedAt: Date | null;
+      sourceType: string;
+      sourceId: string;
+      scope: {
+        brandId: string | null;
+        locationId: string | null;
+        zoneId: string | null;
+      };
+      sla: {
+        acknowledgeWithinMinutes: number;
+        resolveWithinMinutes: number;
+        acknowledgeBy: Date;
+        resolveBy: Date;
+        acknowledgeBreached: boolean;
+        resolveBreached: boolean;
+      };
+    }>;
+    total: number;
+  }> {
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
+    ];
+    if (filters.brandId != null) {
+      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.status != null) {
+      baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const offset = (pagination.page - 1) * pagination.limit;
+
+    const breachCondition =
+      filters.onlyBreached === true
+        ? Prisma.sql`AND (ack_breached OR res_breached)`
+        : Prisma.empty;
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        severity: string | null;
+        status: string;
+        created_at: Date;
+        acknowledged_at: Date | null;
+        resolved_at: Date | null;
+        source_type: string;
+        source_id: string;
+        brand_id: string | null;
+        location_id: string | null;
+        zone_id: string | null;
+        ack_within: number;
+        res_within: number;
+        acknowledge_by: Date;
+        resolve_by: Date;
+        ack_breached: boolean;
+        res_breached: boolean;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.id,
+          ae.severity,
+          ae.status,
+          ae.created_at,
+          ae.acknowledged_at,
+          ae.resolved_at,
+          ae.source_type,
+          ae.source_id,
+          ae.brand_id,
+          ae.location_id,
+          ae.zone_id,
+          ae.acknowledge_within_minutes AS ack_within,
+          ae.resolve_within_minutes AS res_within,
+          ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval AS acknowledge_by,
+          ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval AS resolve_by,
+          (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT * FROM base
+      WHERE 1=1 ${breachCondition}
+      ORDER BY
+        res_breached DESC,
+        ack_breached DESC,
+        CASE severity
+          WHEN 'CRITICAL' THEN 4
+          WHEN 'HIGH' THEN 3
+          WHEN 'MEDIUM' THEN 2
+          WHEN 'LOW' THEN 1
+          ELSE 0
+        END DESC,
+        created_at ASC
+      LIMIT ${pagination.limit} OFFSET ${offset}
+    `);
+
+    const countRows = await this.prisma.$queryRaw<
+      Array<{ count: bigint }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.id,
+          (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT COUNT(*)::bigint AS count FROM base
+      WHERE 1=1 ${breachCondition}
+    `);
+
+    const total = Number(countRows[0]?.count ?? 0);
+
+    const items = rows.map((r) => ({
+      alertEventId: r.id,
+      severity: r.severity,
+      status: r.status,
+      createdAt: r.created_at,
+      acknowledgedAt: r.acknowledged_at,
+      resolvedAt: r.resolved_at,
+      sourceType: r.source_type,
+      sourceId: r.source_id,
+      scope: {
+        brandId: r.brand_id,
+        locationId: r.location_id,
+        zoneId: r.zone_id,
+      },
+      sla: {
+        acknowledgeWithinMinutes: r.ack_within,
+        resolveWithinMinutes: r.res_within,
+        acknowledgeBy: r.acknowledge_by,
+        resolveBy: r.resolve_by,
+        acknowledgeBreached: r.ack_breached,
+        resolveBreached: r.res_breached,
+      },
+    }));
+
+    return { items, total };
+  }
+
   private buildDimensionConditions(
     _organizationId: string,
     filters: AlertTrendsFilters,

@@ -48,6 +48,7 @@
 - [x] `GET /v1/checklist-run-items/summary-by-template` (failed items grouped by template)
 - [x] `GET /v1/checklist-run-items/trends/failures` (failed items trends over time)
 - [x] `GET /v1/alert-events/trends` (alert lifecycle trends over time)
+- [x] `GET /v1/alert-events/escalations` (SLA-based alert escalation reporting)
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] `POST /v1/checklist-run-items/:id/acknowledge-alert`, `resolve-alert`
 
