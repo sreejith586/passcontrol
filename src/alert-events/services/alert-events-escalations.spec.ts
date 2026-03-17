@@ -81,6 +81,31 @@ describe('AlertEventsService (escalations)', () => {
     },
   ];
 
+  const mockPrioritizedEscalations = [
+    {
+      alertEventId: 'alert-1',
+      severity: 'CRITICAL',
+      status: 'OPEN',
+      createdAt: new Date('2025-03-17T10:00:00Z'),
+      acknowledgedAt: null as Date | null,
+      resolvedAt: null as Date | null,
+      sourceType: 'CHECKLIST_RUN_ITEM',
+      sourceId: 'item-1',
+      scope: { brandId: 'b1', locationId: 'l1', zoneId: 'z1' },
+      sla: {
+        acknowledgeWithinMinutes: 15,
+        resolveWithinMinutes: 60,
+        acknowledgeBy: new Date('2025-03-17T10:15:00Z'),
+        resolveBy: new Date('2025-03-17T11:00:00Z'),
+        acknowledgeBreached: true,
+        resolveBreached: true,
+        acknowledgeOverdueMinutes: 30,
+        resolveOverdueMinutes: 90,
+      },
+      priority: { rankGroup: 'RESOLVE_BREACHED' as const, scoreHint: 90 },
+    },
+  ];
+
   const mockSlaCompliance = {
     totalAlerts: 10,
     ackWithinSla: 6,
@@ -96,6 +121,7 @@ describe('AlertEventsService (escalations)', () => {
       getEscalationsSummaryByLocation: jest.fn().mockResolvedValue(mockSummaryByLocation),
       getEscalationsTrends: jest.fn().mockResolvedValue(mockEscalationsTrends),
       getSlaCompliance: jest.fn().mockResolvedValue(mockSlaCompliance),
+      listPrioritizedEscalations: jest.fn().mockResolvedValue(mockPrioritizedEscalations),
     };
     const mockSlaResolver = {
       resolve: jest.fn().mockResolvedValue({
@@ -509,6 +535,93 @@ describe('AlertEventsService (escalations)', () => {
         mockOrgId,
         expect.any(Object),
         'day',
+        expect.any(Date),
+      );
+    });
+  });
+
+  describe('getPrioritizedEscalations', () => {
+    it('returns prioritized escalations from repository with correct response shape', async () => {
+      const result = await service.getPrioritizedEscalations(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toEqual({
+        alertEventId: 'alert-1',
+        severity: 'CRITICAL',
+        status: 'OPEN',
+        createdAt: '2025-03-17T10:00:00.000Z',
+        acknowledgedAt: null,
+        resolvedAt: null,
+        sourceType: 'CHECKLIST_RUN_ITEM',
+        sourceId: 'item-1',
+        scope: { brandId: 'b1', locationId: 'l1', zoneId: 'z1' },
+        sla: {
+          acknowledgeWithinMinutes: 15,
+          resolveWithinMinutes: 60,
+          acknowledgeBy: '2025-03-17T10:15:00.000Z',
+          resolveBy: '2025-03-17T11:00:00.000Z',
+          acknowledgeBreached: true,
+          resolveBreached: true,
+          acknowledgeOverdueMinutes: 30,
+          resolveOverdueMinutes: 90,
+        },
+        priority: { rankGroup: 'RESOLVE_BREACHED', scoreHint: 90 },
+      });
+      expect(repo.listPrioritizedEscalations).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          severity: undefined,
+          status: undefined,
+        },
+        25,
+        expect.any(Date),
+      );
+    });
+
+    it('passes limit and filters to repository', async () => {
+      await service.getPrioritizedEscalations(
+        { organizationId: mockOrgId },
+        { brandId: 'b1', locationId: 'l1', limit: 50 },
+      );
+
+      expect(repo.listPrioritizedEscalations).toHaveBeenCalledWith(
+        mockOrgId,
+        { brandId: 'b1', locationId: 'l1', zoneId: undefined, severity: undefined, status: undefined },
+        50,
+        expect.any(Date),
+      );
+    });
+
+    it('caps limit at 100', async () => {
+      await service.getPrioritizedEscalations(
+        { organizationId: mockOrgId },
+        { limit: 200 },
+      );
+
+      expect(repo.listPrioritizedEscalations).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.any(Object),
+        100,
+        expect.any(Date),
+      );
+    });
+
+    it('scopes by organizationId for tenant isolation', async () => {
+      await service.getPrioritizedEscalations(
+        { organizationId: 'org-tenant-xyz' },
+        {},
+      );
+
+      expect(repo.listPrioritizedEscalations).toHaveBeenCalledWith(
+        'org-tenant-xyz',
+        expect.any(Object),
+        25,
         expect.any(Date),
       );
     });

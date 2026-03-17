@@ -4,6 +4,7 @@ import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AlertTrendsQueryDto } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
+import { AlertEscalationsPrioritizedQueryDto } from '../dto/alert-escalations-prioritized-query.dto';
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import { AlertEscalationsTrendsQueryDto } from '../dto/alert-escalations-trends-query.dto';
 import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
@@ -144,6 +145,27 @@ export class AlertEventsController {
   ) {
     const trends = await this.service.getEscalationsTrends(ctx, query);
     return ApiResponse.ok(trends);
+  }
+
+  @Get('escalations/prioritized')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Prioritized escalations (top N by urgency)',
+    description:
+      'Returns most urgent active alerts first: resolve breached, then acknowledge breached, then non-breached. For dashboard widgets and quick triage.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'ACKNOWLEDGED'] })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max items to return (default 25, max 100)' })
+  async getPrioritizedEscalations(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertEscalationsPrioritizedQueryDto,
+  ) {
+    const result = await this.service.getPrioritizedEscalations(ctx, query);
+    return ApiResponse.ok(result);
   }
 
   @Get('escalations')

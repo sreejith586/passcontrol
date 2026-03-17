@@ -54,6 +54,7 @@
 - [x] `GET /v1/alert-events/escalations/trends` (time-series escalation counts by bucket)
 - [x] `GET /v1/alert-events/sla-compliance` (SLA compliance metrics: within-SLA/breached counts and rates)
 - [x] `POST /v1/alert-events/bulk-acknowledge`, `POST /v1/alert-events/bulk-resolve` (bulk alert actions)
+- [x] `GET /v1/alert-events/escalations/prioritized` (top N escalations by urgency)
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
 - [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)

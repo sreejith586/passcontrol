@@ -458,6 +458,231 @@ export class AlertEventsRepository {
   }
 
   /**
+   * List prioritized escalations: most urgent active alerts first.
+   * Uses application-provided now for breach and overdue computation.
+   * Priority: resolve breached > acknowledge breached > active not breached.
+   * Within group: severity (CRITICAL>HIGH>MEDIUM>LOW), then overdue duration or createdAt.
+   */
+  async listPrioritizedEscalations(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      severity?: string;
+      status?: 'OPEN' | 'ACKNOWLEDGED';
+    },
+    limit: number,
+    now: Date,
+  ): Promise<
+    Array<{
+      alertEventId: string;
+      severity: string | null;
+      status: string;
+      createdAt: Date;
+      acknowledgedAt: Date | null;
+      resolvedAt: Date | null;
+      sourceType: string;
+      sourceId: string;
+      scope: {
+        brandId: string | null;
+        locationId: string | null;
+        zoneId: string | null;
+      };
+      sla: {
+        acknowledgeWithinMinutes: number;
+        resolveWithinMinutes: number;
+        acknowledgeBy: Date;
+        resolveBy: Date;
+        acknowledgeBreached: boolean;
+        resolveBreached: boolean;
+        acknowledgeOverdueMinutes: number;
+        resolveOverdueMinutes: number;
+      };
+      priority: {
+        rankGroup: 'RESOLVE_BREACHED' | 'ACKNOWLEDGE_BREACHED' | 'ACTIVE_NOT_BREACHED';
+        scoreHint: number;
+      };
+    }>
+  > {
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
+    ];
+    if (filters.brandId != null) {
+      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.status != null) {
+      baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const effectiveLimit = Math.min(Math.max(limit, 1), 100);
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        severity: string | null;
+        status: string;
+        created_at: Date;
+        acknowledged_at: Date | null;
+        resolved_at: Date | null;
+        source_type: string;
+        source_id: string;
+        brand_id: string | null;
+        location_id: string | null;
+        zone_id: string | null;
+        ack_within: number;
+        res_within: number;
+        acknowledge_by: Date;
+        resolve_by: Date;
+        ack_breached: boolean;
+        res_breached: boolean;
+        ack_overdue_minutes: number;
+        res_overdue_minutes: number;
+        rank_group: string;
+        score_hint: number;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.id,
+          ae.severity,
+          ae.status,
+          ae.created_at,
+          ae.acknowledged_at,
+          ae.resolved_at,
+          ae.source_type,
+          ae.source_id,
+          ae.brand_id,
+          ae.location_id,
+          ae.zone_id,
+          ae.acknowledge_within_minutes AS ack_within,
+          ae.resolve_within_minutes AS res_within,
+          ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval AS acknowledge_by,
+          ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval AS resolve_by,
+          (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached,
+          CASE
+            WHEN (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now})
+            THEN GREATEST(0, EXTRACT(EPOCH FROM (${now} - (ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval))) / 60)::int
+            ELSE 0
+          END AS res_overdue_minutes,
+          CASE
+            WHEN (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now})
+            THEN GREATEST(0, EXTRACT(EPOCH FROM (${now} - (ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval))) / 60)::int
+            ELSE 0
+          END AS ack_overdue_minutes,
+          CASE
+            WHEN (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) THEN 1
+            WHEN (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) THEN 2
+            ELSE 3
+          END AS rank_group_num,
+          CASE
+            WHEN UPPER(TRIM(COALESCE(ae.severity, ''))) = 'CRITICAL' THEN 4
+            WHEN UPPER(TRIM(COALESCE(ae.severity, ''))) = 'HIGH' THEN 3
+            WHEN UPPER(TRIM(COALESCE(ae.severity, ''))) = 'MEDIUM' THEN 2
+            WHEN UPPER(TRIM(COALESCE(ae.severity, ''))) = 'LOW' THEN 1
+            ELSE 0
+          END AS severity_rank
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT
+        id,
+        severity,
+        status,
+        created_at,
+        acknowledged_at,
+        resolved_at,
+        source_type,
+        source_id,
+        brand_id,
+        location_id,
+        zone_id,
+        ack_within,
+        res_within,
+        acknowledge_by,
+        resolve_by,
+        ack_breached,
+        res_breached,
+        ack_overdue_minutes,
+        res_overdue_minutes,
+        CASE rank_group_num
+          WHEN 1 THEN 'RESOLVE_BREACHED'
+          WHEN 2 THEN 'ACKNOWLEDGE_BREACHED'
+          ELSE 'ACTIVE_NOT_BREACHED'
+        END AS rank_group,
+        CASE rank_group_num
+          WHEN 1 THEN res_overdue_minutes
+          WHEN 2 THEN ack_overdue_minutes
+          ELSE 0
+        END AS score_hint
+      FROM base
+      ORDER BY
+        base.rank_group_num ASC,
+        base.severity_rank DESC,
+        CASE base.rank_group_num
+          WHEN 1 THEN base.res_overdue_minutes
+          ELSE 0
+        END DESC,
+        CASE base.rank_group_num
+          WHEN 2 THEN base.ack_overdue_minutes
+          ELSE 0
+        END DESC,
+        base.created_at ASC
+      LIMIT ${effectiveLimit}
+    `);
+
+    const rankGroupMap = {
+      RESOLVE_BREACHED: 'RESOLVE_BREACHED' as const,
+      ACKNOWLEDGE_BREACHED: 'ACKNOWLEDGE_BREACHED' as const,
+      ACTIVE_NOT_BREACHED: 'ACTIVE_NOT_BREACHED' as const,
+    };
+
+    return rows.map((r) => ({
+      alertEventId: r.id,
+      severity: r.severity,
+      status: r.status,
+      createdAt: r.created_at,
+      acknowledgedAt: r.acknowledged_at,
+      resolvedAt: r.resolved_at,
+      sourceType: r.source_type,
+      sourceId: r.source_id,
+      scope: {
+        brandId: r.brand_id,
+        locationId: r.location_id,
+        zoneId: r.zone_id,
+      },
+      sla: {
+        acknowledgeWithinMinutes: r.ack_within,
+        resolveWithinMinutes: r.res_within,
+        acknowledgeBy: r.acknowledge_by,
+        resolveBy: r.resolve_by,
+        acknowledgeBreached: r.ack_breached,
+        resolveBreached: r.res_breached,
+        acknowledgeOverdueMinutes: r.ack_overdue_minutes,
+        resolveOverdueMinutes: r.res_overdue_minutes,
+      },
+      priority: {
+        rankGroup:
+          rankGroupMap[r.rank_group as keyof typeof rankGroupMap] ??
+          'ACTIVE_NOT_BREACHED',
+        scoreHint: r.score_hint,
+      },
+    }));
+  }
+
+  /**
    * Get escalation summary: total active alerts, breach counts, severity breakdown.
    * Uses application-provided now for deterministic breach computation.
    */

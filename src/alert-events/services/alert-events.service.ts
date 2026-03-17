@@ -16,6 +16,7 @@ import {
   ALERT_TRENDS_INTERVALS,
 } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
+import { AlertEscalationsPrioritizedQueryDto } from '../dto/alert-escalations-prioritized-query.dto';
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import {
   AlertEscalationsTrendsQueryDto,
@@ -223,6 +224,50 @@ export class AlertEventsService {
       filters,
       new Date(),
     );
+  }
+
+  async getPrioritizedEscalations(
+    ctx: { organizationId: string },
+    query: AlertEscalationsPrioritizedQueryDto,
+  ) {
+    const limit = Math.min(Math.max(query.limit ?? 25, 1), 100);
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      severity: query.severity,
+      status: query.status,
+    };
+    const items = await this.repo.listPrioritizedEscalations(
+      ctx.organizationId,
+      filters,
+      limit,
+      new Date(),
+    );
+    return {
+      items: items.map((item) => ({
+        alertEventId: item.alertEventId,
+        severity: item.severity,
+        status: item.status,
+        createdAt: item.createdAt.toISOString(),
+        acknowledgedAt: item.acknowledgedAt?.toISOString() ?? null,
+        resolvedAt: item.resolvedAt?.toISOString() ?? null,
+        sourceType: item.sourceType,
+        sourceId: item.sourceId,
+        scope: item.scope,
+        sla: {
+          acknowledgeWithinMinutes: item.sla.acknowledgeWithinMinutes,
+          resolveWithinMinutes: item.sla.resolveWithinMinutes,
+          acknowledgeBy: item.sla.acknowledgeBy.toISOString(),
+          resolveBy: item.sla.resolveBy.toISOString(),
+          acknowledgeBreached: item.sla.acknowledgeBreached,
+          resolveBreached: item.sla.resolveBreached,
+          acknowledgeOverdueMinutes: item.sla.acknowledgeOverdueMinutes,
+          resolveOverdueMinutes: item.sla.resolveOverdueMinutes,
+        },
+        priority: item.priority,
+      })),
+    };
   }
 
   async getEscalations(

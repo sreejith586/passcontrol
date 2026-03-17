@@ -38,6 +38,7 @@ Base: `/v1` (versioned)
 | GET | /alert-events/escalations/summary | alert.view | Escalation summary (totals, breach counts, severity breakdown) |
 | GET | /alert-events/escalations/summary-by-location | alert.view | Escalation summary grouped by location |
 | GET | /alert-events/escalations/trends | alert.view | Time-series escalation counts (day/week/month buckets) |
+| GET | /alert-events/escalations/prioritized | alert.view | Top N escalations by urgency (resolve/acknowledge breached, severity) |
 | GET | /alert-events/sla-compliance | alert.view | SLA compliance metrics (within-SLA/breached counts and rates) |
 | GET | /alert-events | alert.view | List alerts |
 | GET | /alert-events/:id | alert.view | Get alert |

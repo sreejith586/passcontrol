@@ -15,7 +15,7 @@
 
 - ~~**Bulk acknowledge alerts**~~ — *Done.* `POST /v1/alert-events/bulk-acknowledge` with `{ alertEventIds }`.
 - ~~**Bulk resolve alerts**~~ — *Done.* `POST /v1/alert-events/bulk-resolve` with `{ alertEventIds, resolutionNote? }`.
-- **Prioritized escalation retrieval (top N)** — Lightweight endpoint returning top N escalations by severity and breach duration (e.g. longest-breached first). For dashboard widgets and quick triage.
+- ~~**Prioritized escalation retrieval (top N)**~~ — *Done.* `GET /v1/alert-events/escalations/prioritized` returns top N by urgency (resolve breached, acknowledge breached, active).
 - **Alert assignment / ownership** *(optional future)* — Model and APIs for assigning alerts to users; ownership tracking for accountability and routing.
 
 ---

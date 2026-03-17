@@ -579,6 +579,178 @@ describe('AlertEventsRepository', () => {
     });
   });
 
+  describe('listPrioritizedEscalations', () => {
+    const mockNow = new Date('2025-03-17T12:00:00Z');
+
+    const mockPrioritizedRow = (overrides: Partial<{
+      id: string;
+      severity: string | null;
+      status: string;
+      created_at: Date;
+      acknowledged_at: Date | null;
+      resolved_at: Date | null;
+      ack_breached: boolean;
+      res_breached: boolean;
+      ack_overdue_minutes: number;
+      res_overdue_minutes: number;
+      rank_group: string;
+      score_hint: number;
+    }> = {}) => ({
+      id: 'alert-1',
+      severity: 'CRITICAL',
+      status: 'OPEN',
+      created_at: new Date('2025-03-17T10:00:00Z'),
+      acknowledged_at: null,
+      resolved_at: null,
+      source_type: 'CHECKLIST_RUN_ITEM',
+      source_id: 'item-1',
+      brand_id: 'brand-1',
+      location_id: 'loc-1',
+      zone_id: 'zone-1',
+      ack_within: 15,
+      res_within: 60,
+      acknowledge_by: new Date('2025-03-17T10:15:00Z'),
+      resolve_by: new Date('2025-03-17T11:00:00Z'),
+      ack_breached: true,
+      res_breached: true,
+      ack_overdue_minutes: 120,
+      res_overdue_minutes: 60,
+      rank_group: 'RESOLVE_BREACHED',
+      score_hint: 60,
+      ...overrides,
+    });
+
+    it('resolve-breached sorts before acknowledge-breached', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({ id: 'res-1', rank_group: 'RESOLVE_BREACHED', res_breached: true }),
+        mockPrioritizedRow({ id: 'ack-1', rank_group: 'ACKNOWLEDGE_BREACHED', res_breached: false, ack_breached: true }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 25, mockNow);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].priority.rankGroup).toBe('RESOLVE_BREACHED');
+      expect(result[1].priority.rankGroup).toBe('ACKNOWLEDGE_BREACHED');
+    });
+
+    it('acknowledge-breached sorts before active non-breached', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({ id: 'ack-1', rank_group: 'ACKNOWLEDGE_BREACHED' }),
+        mockPrioritizedRow({ id: 'active-1', rank_group: 'ACTIVE_NOT_BREACHED', ack_breached: false, res_breached: false }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 25, mockNow);
+
+      expect(result[0].priority.rankGroup).toBe('ACKNOWLEDGE_BREACHED');
+      expect(result[1].priority.rankGroup).toBe('ACTIVE_NOT_BREACHED');
+    });
+
+    it('severity ordering within same group', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({ id: '1', severity: 'CRITICAL', rank_group: 'RESOLVE_BREACHED' }),
+        mockPrioritizedRow({ id: '2', severity: 'HIGH', rank_group: 'RESOLVE_BREACHED' }),
+        mockPrioritizedRow({ id: '3', severity: 'MEDIUM', rank_group: 'RESOLVE_BREACHED' }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 25, mockNow);
+
+      expect(result[0].severity).toBe('CRITICAL');
+      expect(result[1].severity).toBe('HIGH');
+      expect(result[2].severity).toBe('MEDIUM');
+    });
+
+    it('overdue duration ordering', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({ id: '1', res_overdue_minutes: 120, score_hint: 120 }),
+        mockPrioritizedRow({ id: '2', res_overdue_minutes: 60, score_hint: 60 }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 25, mockNow);
+
+      expect(result[0].sla.resolveOverdueMinutes).toBe(120);
+      expect(result[1].sla.resolveOverdueMinutes).toBe(60);
+    });
+
+    it('limit works', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({ id: '1' }),
+        mockPrioritizedRow({ id: '2' }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 2, mockNow);
+
+      expect(result).toHaveLength(2);
+      expect(prisma.$queryRaw).toHaveBeenCalledWith(
+        expect.anything(),
+      );
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      expect(call.strings.some((s: string) => s.includes('LIMIT'))).toBe(true);
+    });
+
+    it('filters apply', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.listPrioritizedEscalations(
+        mockOrgId,
+        { brandId: 'b1', locationId: 'l1', severity: 'HIGH', status: 'OPEN' },
+        25,
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('organization_id');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.listPrioritizedEscalations('org-tenant-1', {}, 25, mockNow);
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toMatch(/organization_id/);
+    });
+
+    it('acknowledged alerts never ack-breached', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({
+          id: 'ack-1',
+          status: 'ACKNOWLEDGED',
+          acknowledged_at: new Date('2025-03-17T10:10:00Z'),
+          ack_breached: false,
+          res_breached: true,
+          rank_group: 'RESOLVE_BREACHED',
+        }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 25, mockNow);
+
+      expect(result[0].sla.acknowledgeBreached).toBe(false);
+      expect(result[0].sla.resolveBreached).toBe(true);
+    });
+
+    it('returns correct response shape with priority and overdue minutes', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockPrioritizedRow({
+          id: 'alert-1',
+          ack_overdue_minutes: 30,
+          res_overdue_minutes: 90,
+          rank_group: 'RESOLVE_BREACHED',
+          score_hint: 90,
+        }),
+      ]);
+
+      const result = await repo.listPrioritizedEscalations(mockOrgId, {}, 25, mockNow);
+
+      expect(result[0].alertEventId).toBe('alert-1');
+      expect(result[0].sla.acknowledgeOverdueMinutes).toBe(30);
+      expect(result[0].sla.resolveOverdueMinutes).toBe(90);
+      expect(result[0].priority.rankGroup).toBe('RESOLVE_BREACHED');
+      expect(result[0].priority.scoreHint).toBe(90);
+    });
+  });
+
   describe('getSlaCompliance', () => {
     const mockNow = new Date('2025-03-17T12:00:00Z');
 

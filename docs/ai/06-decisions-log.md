@@ -57,3 +57,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `bulk-acknowledge` and `bulk-resolve` endpoints; delegate to existing single-alert methods; partial success model; max 100 IDs; deduplicate before processing.
 - **Rationale:** No logic duplication; audit, domain events, validations remain centralized; operational efficiency for supervisors.
+
+### Prioritized escalation retrieval
+
+- **Decision:** Add `GET /v1/alert-events/escalations/prioritized` with raw SQL; rank groups RESOLVE_BREACHED > ACKNOWLEDGE_BREACHED > ACTIVE_NOT_BREACHED; within group: severity, overdue minutes, createdAt; include acknowledgeOverdueMinutes and resolveOverdueMinutes in response.
+- **Rationale:** Lightweight top-N for dashboards; no pagination; scoreHint reflects overdue duration for UI.
