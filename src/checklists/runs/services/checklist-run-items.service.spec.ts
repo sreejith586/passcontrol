@@ -39,6 +39,7 @@ describe('ChecklistRunItemsService', () => {
       findByIdWithContext: jest.fn().mockResolvedValue(null),
       findById: jest.fn().mockResolvedValue(null),
       getFailedItemsSummaryByLocation: jest.fn().mockResolvedValue([]),
+      getFailedItemsSummaryByTemplate: jest.fn().mockResolvedValue([]),
       getFailedItemsSummary: jest.fn().mockResolvedValue({
         total: 0,
         critical: 0,
@@ -77,6 +78,149 @@ describe('ChecklistRunItemsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getSummaryByTemplate', () => {
+    it('returns items: [] when no data', async () => {
+      repo.getFailedItemsSummaryByTemplate.mockResolvedValue([]);
+
+      const result = await service.getSummaryByTemplate(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual({ items: [] });
+      expect(repo.getFailedItemsSummaryByTemplate).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.objectContaining({
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          checklistTemplateId: undefined,
+          severity: undefined,
+          from: undefined,
+          to: undefined,
+        }),
+      );
+    });
+
+    it('maps repository rows to response shape with nested structure', async () => {
+      repo.getFailedItemsSummaryByTemplate.mockResolvedValue([
+        {
+          checklistTemplateId: 'tpl-1',
+          templateName: 'Daily Opening',
+          total: 5,
+          critical: 2,
+          high: 1,
+          medium: 1,
+          low: 1,
+          unknown: 0,
+          affectedRuns: 3,
+          openAlerts: 2,
+          acknowledgedAlerts: 1,
+          resolvedAlerts: 0,
+        },
+      ]);
+
+      const result = await service.getSummaryByTemplate(
+        { organizationId: mockOrgId },
+        { brandId: 'brand-1', from: '2025-03-01' },
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toEqual({
+        checklistTemplateId: 'tpl-1',
+        templateName: 'Daily Opening',
+        failedItems: {
+          total: 5,
+          bySeverity: {
+            critical: 2,
+            high: 1,
+            medium: 1,
+            low: 1,
+            unknown: 0,
+          },
+        },
+        alerts: {
+          open: 2,
+          acknowledged: 1,
+          resolved: 0,
+        },
+        runs: {
+          affectedRuns: 3,
+        },
+      });
+      expect(repo.getFailedItemsSummaryByTemplate).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: 'brand-1',
+          locationId: undefined,
+          zoneId: undefined,
+          checklistTemplateId: undefined,
+          severity: undefined,
+          from: '2025-03-01',
+          to: undefined,
+        },
+      );
+    });
+
+    it('includes null checklistTemplateId and templateName in response', async () => {
+      repo.getFailedItemsSummaryByTemplate.mockResolvedValue([
+        {
+          checklistTemplateId: null,
+          templateName: null,
+          total: 2,
+          critical: 0,
+          high: 1,
+          medium: 0,
+          low: 0,
+          unknown: 1,
+          affectedRuns: 1,
+          openAlerts: 1,
+          acknowledgedAlerts: 0,
+          resolvedAlerts: 0,
+        },
+      ]);
+
+      const result = await service.getSummaryByTemplate(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result.items[0].checklistTemplateId).toBeNull();
+      expect(result.items[0].templateName).toBeNull();
+      expect(result.items[0].failedItems.bySeverity.unknown).toBe(1);
+    });
+
+    it('passes all filters to repository', async () => {
+      repo.getFailedItemsSummaryByTemplate.mockResolvedValue([]);
+
+      await service.getSummaryByTemplate(
+        { organizationId: mockOrgId },
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          checklistTemplateId: 't1',
+          severity: ChecklistItemSeverity.CRITICAL,
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+      );
+
+      expect(repo.getFailedItemsSummaryByTemplate).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          checklistTemplateId: 't1',
+          severity: 'CRITICAL',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+      );
+    });
   });
 
   describe('getSummaryByLocation', () => {

@@ -45,6 +45,7 @@
 - [x] `GET /v1/checklist-run-items/failed`, `:id`
 - [x] `GET /v1/checklist-run-items/summary` (dashboard counts)
 - [x] `GET /v1/checklist-run-items/summary-by-location` (failed items grouped by location)
+- [x] `GET /v1/checklist-run-items/summary-by-template` (failed items grouped by template)
 - [x] `POST /v1/checklist-run-items/:id/acknowledge-alert`, `resolve-alert`
 
 ### Other

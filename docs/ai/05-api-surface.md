@@ -19,6 +19,7 @@ Base: `/v1` (versioned)
 |--------|------|------------|-------------|
 | GET | /checklist-run-items/summary | checklist.run.view | Dashboard summary (counts) |
 | GET | /checklist-run-items/summary-by-location | checklist.run.view | Failed items summary grouped by location |
+| GET | /checklist-run-items/summary-by-template | checklist.run.view | Failed items summary grouped by checklist template |
 | GET | /checklist-run-items/failed | checklist.run.view | Failed items (paginated) |
 | GET | /checklist-run-items/:id | checklist.run.view | Item with context |
 | PATCH | /checklist-run-items/:id | checklist.run.update | Update item response |
