@@ -459,4 +459,123 @@ describe('AlertEventsRepository', () => {
       );
     });
   });
+
+  describe('getEscalationsSummaryByLocation', () => {
+    const mockNow = new Date('2025-03-17T12:00:00Z');
+
+    const zeroBySeverity = {
+      critical: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      high: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      medium: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      low: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      unknown: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+    };
+
+    it('returns empty items when no data', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getEscalationsSummaryByLocation(mockOrgId, {}, mockNow);
+
+      expect(result.items).toHaveLength(0);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('groups by location', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: 'loc-1',
+          severity_bucket: 'critical',
+          total: BigInt(2),
+          acknowledge_breached: BigInt(1),
+          resolve_breached: BigInt(1),
+        },
+        {
+          location_id: 'loc-1',
+          severity_bucket: 'high',
+          total: BigInt(1),
+          acknowledge_breached: BigInt(0),
+          resolve_breached: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getEscalationsSummaryByLocation(mockOrgId, {}, mockNow);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].locationId).toBe('loc-1');
+      expect(result.items[0].totalActiveAlerts).toBe(3);
+      expect(result.items[0].acknowledgeBreached).toBe(1);
+      expect(result.items[0].resolveBreached).toBe(1);
+      expect(result.items[0].bySeverity.critical).toEqual({
+        total: 2,
+        acknowledgeBreached: 1,
+        resolveBreached: 1,
+      });
+      expect(result.items[0].bySeverity.high).toEqual({
+        total: 1,
+        acknowledgeBreached: 0,
+        resolveBreached: 0,
+      });
+    });
+
+    it('includes null location', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          location_id: null,
+          severity_bucket: 'medium',
+          total: BigInt(1),
+          acknowledge_breached: BigInt(0),
+          resolve_breached: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getEscalationsSummaryByLocation(mockOrgId, {}, mockNow);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].locationId).toBeNull();
+      expect(result.items[0].totalActiveAlerts).toBe(1);
+    });
+
+    it('orders by resolveBreached DESC, acknowledgeBreached DESC, total DESC, locationId ASC NULLS LAST', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        { location_id: 'loc-low', severity_bucket: 'low', total: BigInt(1), acknowledge_breached: BigInt(0), resolve_breached: BigInt(0) },
+        { location_id: 'loc-high', severity_bucket: 'critical', total: BigInt(2), acknowledge_breached: BigInt(1), resolve_breached: BigInt(2) },
+        { location_id: null, severity_bucket: 'medium', total: BigInt(3), acknowledge_breached: BigInt(2), resolve_breached: BigInt(1) },
+      ]);
+
+      const result = await repo.getEscalationsSummaryByLocation(mockOrgId, {}, mockNow);
+
+      expect(result.items).toHaveLength(3);
+      expect(result.items[0].locationId).toBe('loc-high');
+      expect(result.items[0].resolveBreached).toBe(2);
+      expect(result.items[1].locationId).toBe(null);
+      expect(result.items[1].resolveBreached).toBe(1);
+      expect(result.items[2].locationId).toBe('loc-low');
+      expect(result.items[2].resolveBreached).toBe(0);
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getEscalationsSummaryByLocation(
+        mockOrgId,
+        { brandId: 'brand-1', severity: 'HIGH', status: 'OPEN' },
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('organization_id');
+      expect(queryStr).toContain('location_id');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getEscalationsSummaryByLocation('org-tenant-1', {}, mockNow);
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toMatch(/organization_id/);
+    });
+  });
 });

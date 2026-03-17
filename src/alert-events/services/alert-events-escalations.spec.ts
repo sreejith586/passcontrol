@@ -48,10 +48,29 @@ describe('AlertEventsService (escalations)', () => {
     },
   };
 
+  const mockSummaryByLocation = {
+    items: [
+      {
+        locationId: 'loc-1',
+        totalActiveAlerts: 3,
+        acknowledgeBreached: 1,
+        resolveBreached: 2,
+        bySeverity: {
+          critical: { total: 1, acknowledgeBreached: 1, resolveBreached: 1 },
+          high: { total: 2, acknowledgeBreached: 0, resolveBreached: 1 },
+          medium: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+          low: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+          unknown: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+        },
+      },
+    ],
+  };
+
   beforeEach(async () => {
     const mockRepo = {
       listEscalations: jest.fn().mockResolvedValue({ items: [], total: 0 }),
       getEscalationsSummary: jest.fn().mockResolvedValue(mockSummary),
+      getEscalationsSummaryByLocation: jest.fn().mockResolvedValue(mockSummaryByLocation),
     };
     const mockSlaResolver = {
       resolve: jest.fn().mockResolvedValue({
@@ -127,6 +146,60 @@ describe('AlertEventsService (escalations)', () => {
       );
 
       expect(repo.getEscalationsSummary).toHaveBeenCalledWith(
+        'org-tenant-xyz',
+        expect.any(Object),
+        expect.any(Date),
+      );
+    });
+  });
+
+  describe('getEscalationsSummaryByLocation', () => {
+    it('returns summary by location from repository', async () => {
+      const result = await service.getEscalationsSummaryByLocation(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual(mockSummaryByLocation);
+      expect(repo.getEscalationsSummaryByLocation).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          severity: undefined,
+          status: undefined,
+        },
+        expect.any(Date),
+      );
+    });
+
+    it('passes filters to repository', async () => {
+      await service.getEscalationsSummaryByLocation(
+        { organizationId: mockOrgId },
+        { brandId: 'b1', locationId: 'l1', severity: 'HIGH' },
+      );
+
+      expect(repo.getEscalationsSummaryByLocation).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: undefined,
+          severity: 'HIGH',
+          status: undefined,
+        },
+        expect.any(Date),
+      );
+    });
+
+    it('scopes by organizationId for tenant isolation', async () => {
+      await service.getEscalationsSummaryByLocation(
+        { organizationId: 'org-tenant-xyz' },
+        {},
+      );
+
+      expect(repo.getEscalationsSummaryByLocation).toHaveBeenCalledWith(
         'org-tenant-xyz',
         expect.any(Object),
         expect.any(Date),

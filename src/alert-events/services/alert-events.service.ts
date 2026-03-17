@@ -127,6 +127,24 @@ export class AlertEventsService {
     );
   }
 
+  async getEscalationsSummaryByLocation(
+    ctx: { organizationId: string },
+    query: AlertEscalationsSummaryQueryDto,
+  ) {
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      severity: query.severity,
+      status: query.status,
+    };
+    return this.repo.getEscalationsSummaryByLocation(
+      ctx.organizationId,
+      filters,
+      new Date(),
+    );
+  }
+
   async getEscalations(
     ctx: { organizationId: string },
     query: AlertEscalationsQueryDto,

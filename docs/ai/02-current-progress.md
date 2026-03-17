@@ -50,6 +50,7 @@
 - [x] `GET /v1/alert-events/trends` (alert lifecycle trends over time)
 - [x] `GET /v1/alert-events/escalations` (SLA-based alert escalation reporting)
 - [x] `GET /v1/alert-events/escalations/summary` (compact escalation summary for dashboards)
+- [x] `GET /v1/alert-events/escalations/summary-by-location` (location-level escalation summary)
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
 - [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)

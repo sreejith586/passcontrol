@@ -577,6 +577,165 @@ export class AlertEventsRepository {
     };
   }
 
+  /**
+   * Get escalation summary grouped by location.
+   * Uses application-provided now for deterministic breach computation.
+   * Ordered by resolveBreached DESC, acknowledgeBreached DESC, totalActiveAlerts DESC, locationId ASC NULLS LAST.
+   */
+  async getEscalationsSummaryByLocation(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      severity?: string;
+      status?: 'OPEN' | 'ACKNOWLEDGED';
+    },
+    now: Date,
+  ): Promise<{
+    items: Array<{
+      locationId: string | null;
+      totalActiveAlerts: number;
+      acknowledgeBreached: number;
+      resolveBreached: number;
+      bySeverity: Record<
+        string,
+        { total: number; acknowledgeBreached: number; resolveBreached: number }
+      >;
+    }>;
+  }> {
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
+    ];
+    if (filters.brandId != null) {
+      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.status != null) {
+      baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        location_id: string | null;
+        severity_bucket: string;
+        total: bigint;
+        acknowledge_breached: bigint;
+        resolve_breached: bigint;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.location_id,
+          ae.severity,
+          (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT
+        location_id,
+        CASE
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'CRITICAL' THEN 'critical'
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'HIGH' THEN 'high'
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'MEDIUM' THEN 'medium'
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'LOW' THEN 'low'
+          ELSE 'unknown'
+        END AS severity_bucket,
+        COUNT(*)::bigint AS total,
+        COUNT(*) FILTER (WHERE ack_breached)::bigint AS acknowledge_breached,
+        COUNT(*) FILTER (WHERE res_breached)::bigint AS resolve_breached
+      FROM base
+      GROUP BY location_id, 2
+    `);
+
+    const severityBuckets = ['critical', 'high', 'medium', 'low', 'unknown'] as const;
+    const createZeroBySeverity = () => {
+      const r: Record<
+        string,
+        { total: number; acknowledgeBreached: number; resolveBreached: number }
+      > = {};
+      for (const bucket of severityBuckets) {
+        r[bucket] = { total: 0, acknowledgeBreached: 0, resolveBreached: 0 };
+      }
+      return r;
+    };
+
+    const byLocation = new Map<
+      string,
+      {
+        totalActiveAlerts: number;
+        acknowledgeBreached: number;
+        resolveBreached: number;
+        bySeverity: Record<
+          string,
+          { total: number; acknowledgeBreached: number; resolveBreached: number }
+        >;
+      }
+    >();
+
+    for (const r of rows) {
+      const locKey = r.location_id ?? '__null__';
+      if (!byLocation.has(locKey)) {
+        byLocation.set(locKey, {
+          totalActiveAlerts: 0,
+          acknowledgeBreached: 0,
+          resolveBreached: 0,
+          bySeverity: createZeroBySeverity(),
+        });
+      }
+      const loc = byLocation.get(locKey)!;
+      const bucket = r.severity_bucket?.toLowerCase() ?? 'unknown';
+      const key = severityBuckets.includes(bucket as (typeof severityBuckets)[number])
+        ? bucket
+        : 'unknown';
+      const total = Number(r.total);
+      const ackBr = Number(r.acknowledge_breached);
+      const resBr = Number(r.resolve_breached);
+
+      loc.totalActiveAlerts += total;
+      loc.acknowledgeBreached += ackBr;
+      loc.resolveBreached += resBr;
+      loc.bySeverity[key] = {
+        total: (loc.bySeverity[key]?.total ?? 0) + total,
+        acknowledgeBreached: (loc.bySeverity[key]?.acknowledgeBreached ?? 0) + ackBr,
+        resolveBreached: (loc.bySeverity[key]?.resolveBreached ?? 0) + resBr,
+      };
+    }
+
+    const items = Array.from(byLocation.entries()).map(([locKey, loc]) => ({
+      locationId: locKey === '__null__' ? null : locKey,
+      totalActiveAlerts: loc.totalActiveAlerts,
+      acknowledgeBreached: loc.acknowledgeBreached,
+      resolveBreached: loc.resolveBreached,
+      bySeverity: loc.bySeverity,
+    }));
+
+    items.sort((a, b) => {
+      if (b.resolveBreached !== a.resolveBreached) return b.resolveBreached - a.resolveBreached;
+      if (b.acknowledgeBreached !== a.acknowledgeBreached)
+        return b.acknowledgeBreached - a.acknowledgeBreached;
+      if (b.totalActiveAlerts !== a.totalActiveAlerts)
+        return b.totalActiveAlerts - a.totalActiveAlerts;
+      if (a.locationId === null && b.locationId === null) return 0;
+      if (a.locationId === null) return 1;
+      if (b.locationId === null) return -1;
+      return a.locationId.localeCompare(b.locationId);
+    });
+
+    return { items };
+  }
+
   private buildDimensionConditions(
     _organizationId: string,
     filters: AlertTrendsFilters,

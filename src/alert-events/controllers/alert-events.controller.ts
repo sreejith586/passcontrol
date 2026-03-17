@@ -77,6 +77,26 @@ export class AlertEventsController {
     return ApiResponse.ok(summary);
   }
 
+  @Get('escalations/summary-by-location')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Escalation summary by location',
+    description:
+      'Returns location-level summary of active alerts for dashboards. Ordered by escalation pressure.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'ACKNOWLEDGED'] })
+  async getEscalationsSummaryByLocation(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertEscalationsSummaryQueryDto,
+  ) {
+    const summary = await this.service.getEscalationsSummaryByLocation(ctx, query);
+    return ApiResponse.ok(summary);
+  }
+
   @Get('escalations')
   @RequirePermissions('alert.view')
   @ApiOperation({
