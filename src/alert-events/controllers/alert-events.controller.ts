@@ -5,6 +5,7 @@ import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AlertTrendsQueryDto } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
+import { AlertEscalationsTrendsQueryDto } from '../dto/alert-escalations-trends-query.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
@@ -95,6 +96,29 @@ export class AlertEventsController {
   ) {
     const summary = await this.service.getEscalationsSummaryByLocation(ctx, query);
     return ApiResponse.ok(summary);
+  }
+
+  @Get('escalations/trends')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Escalation trends over time',
+    description:
+      'Returns time-series escalation counts (active alerts, acknowledge breached, resolve breached) bucketed by alert createdAt. For trend charts.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'ACKNOWLEDGED'] })
+  @ApiQuery({ name: 'from', required: false, example: '2025-03-01', description: 'Filter from date (inclusive, applied to createdAt)' })
+  @ApiQuery({ name: 'to', required: false, example: '2025-03-15', description: 'Filter to date (inclusive, applied to createdAt)' })
+  @ApiQuery({ name: 'interval', required: false, enum: ['day', 'week', 'month'], description: 'Time bucket interval. Default: day.' })
+  async getEscalationsTrends(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertEscalationsTrendsQueryDto,
+  ) {
+    const trends = await this.service.getEscalationsTrends(ctx, query);
+    return ApiResponse.ok(trends);
   }
 
   @Get('escalations')

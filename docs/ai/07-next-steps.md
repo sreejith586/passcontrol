@@ -6,7 +6,7 @@
 
 ## 1. Advanced Operational Intelligence (HIGH PRIORITY)
 
-- **Escalation trends (time-based)** — Endpoint returning breach counts and active-alert counts over time buckets (day/week/month). Enables trend charts for escalation pressure.
+- ~~**Escalation trends (time-based)**~~ — *Done.* `GET /v1/alert-events/escalations/trends` returns breach counts and active-alert counts over time buckets (day/week/month).
 - **SLA compliance metrics** — Endpoint or aggregation returning breached vs within-SLA ratios over a period (e.g. % acknowledged within SLA, % resolved within SLA). Supports compliance dashboards.
 
 ---

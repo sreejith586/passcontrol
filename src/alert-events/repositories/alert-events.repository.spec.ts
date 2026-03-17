@@ -578,4 +578,204 @@ describe('AlertEventsRepository', () => {
       expect(queryStr).toMatch(/organization_id/);
     });
   });
+
+  describe('getEscalationsTrends', () => {
+    const mockNow = new Date('2025-03-17T12:00:00Z');
+
+    it('returns empty points when no data', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'day',
+        mockNow,
+      );
+
+      expect(result).toEqual([]);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns correct counts per bucket', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-01'),
+          total_active_alerts: BigInt(5),
+          acknowledge_breached: BigInt(2),
+          resolve_breached: BigInt(1),
+        },
+      ]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'day',
+        mockNow,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].date).toBe('2025-03-01');
+      expect(result[0].totalActiveAlerts).toBe(5);
+      expect(result[0].acknowledgeBreached).toBe(2);
+      expect(result[0].resolveBreached).toBe(1);
+    });
+
+    it('acknowledge breach counts correct', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-02'),
+          total_active_alerts: BigInt(3),
+          acknowledge_breached: BigInt(3),
+          resolve_breached: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'day',
+        mockNow,
+      );
+
+      expect(result[0].acknowledgeBreached).toBe(3);
+    });
+
+    it('resolve breach counts correct', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-03'),
+          total_active_alerts: BigInt(2),
+          acknowledge_breached: BigInt(0),
+          resolve_breached: BigInt(2),
+        },
+      ]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'day',
+        mockNow,
+      );
+
+      expect(result[0].resolveBreached).toBe(2);
+    });
+
+    it('ordering ascending by date', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-01'),
+          total_active_alerts: BigInt(1),
+          acknowledge_breached: BigInt(0),
+          resolve_breached: BigInt(0),
+        },
+        {
+          bucket: new Date('2025-03-02'),
+          total_active_alerts: BigInt(2),
+          acknowledge_breached: BigInt(0),
+          resolve_breached: BigInt(0),
+        },
+        {
+          bucket: new Date('2025-03-03'),
+          total_active_alerts: BigInt(1),
+          acknowledge_breached: BigInt(0),
+          resolve_breached: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'day',
+        mockNow,
+      );
+
+      expect(result[0].date).toBe('2025-03-01');
+      expect(result[1].date).toBe('2025-03-02');
+      expect(result[2].date).toBe('2025-03-03');
+    });
+
+    it('interval grouping works for week', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-03'), // week start
+          total_active_alerts: BigInt(4),
+          acknowledge_breached: BigInt(1),
+          resolve_breached: BigInt(0),
+        },
+      ]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'week',
+        mockNow,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].totalActiveAlerts).toBe(4);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      // Interval is parameterized; verify DATE_TRUNC pattern exists
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('DATE_TRUNC');
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getEscalationsTrends(
+        mockOrgId,
+        {
+          brandId: 'brand-1',
+          locationId: 'loc-1',
+          zoneId: 'zone-1',
+          severity: 'HIGH',
+          status: 'OPEN',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+        'day',
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('organization_id');
+      expect(queryStr).toContain('OPEN');
+      expect(queryStr).toContain('ACKNOWLEDGED');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getEscalationsTrends('org-tenant-1', {}, 'day', mockNow);
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toMatch(/organization_id/);
+    });
+
+    it('uses application-provided now for breach computation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const now = new Date('2025-03-20T15:30:00Z');
+      await repo.getEscalationsTrends(mockOrgId, {}, 'day', now);
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to day when invalid interval passed', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getEscalationsTrends(
+        mockOrgId,
+        {},
+        'invalid' as 'day',
+        mockNow,
+      );
+
+      expect(result).toEqual([]);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+  });
 });

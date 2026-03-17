@@ -66,11 +66,27 @@ describe('AlertEventsService (escalations)', () => {
     ],
   };
 
+  const mockEscalationsTrends = [
+    {
+      date: '2025-03-01',
+      totalActiveAlerts: 3,
+      acknowledgeBreached: 1,
+      resolveBreached: 0,
+    },
+    {
+      date: '2025-03-02',
+      totalActiveAlerts: 2,
+      acknowledgeBreached: 2,
+      resolveBreached: 1,
+    },
+  ];
+
   beforeEach(async () => {
     const mockRepo = {
       listEscalations: jest.fn().mockResolvedValue({ items: [], total: 0 }),
       getEscalationsSummary: jest.fn().mockResolvedValue(mockSummary),
       getEscalationsSummaryByLocation: jest.fn().mockResolvedValue(mockSummaryByLocation),
+      getEscalationsTrends: jest.fn().mockResolvedValue(mockEscalationsTrends),
     };
     const mockSlaResolver = {
       resolve: jest.fn().mockResolvedValue({
@@ -366,6 +382,126 @@ describe('AlertEventsService (escalations)', () => {
       expect(result.items[0].resolvedAt).toBe('2025-03-17T11:30:00.000Z');
       expect(result.items[0].sla.acknowledgeBreached).toBe(false);
       expect(result.items[0].sla.resolveBreached).toBe(false);
+    });
+  });
+
+  describe('getEscalationsTrends', () => {
+    it('returns trends from repository with correct response shape', async () => {
+      const result = await service.getEscalationsTrends(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual({
+        interval: 'day',
+        points: [
+          {
+            date: '2025-03-01',
+            alerts: {
+              totalActiveAlerts: 3,
+              acknowledgeBreached: 1,
+              resolveBreached: 0,
+            },
+          },
+          {
+            date: '2025-03-02',
+            alerts: {
+              totalActiveAlerts: 2,
+              acknowledgeBreached: 2,
+              resolveBreached: 1,
+            },
+          },
+        ],
+      });
+      expect(repo.getEscalationsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          severity: undefined,
+          status: undefined,
+          from: undefined,
+          to: undefined,
+        },
+        'day',
+        expect.any(Date),
+      );
+    });
+
+    it('returns empty points when no data', async () => {
+      repo.getEscalationsTrends.mockResolvedValue([]);
+
+      const result = await service.getEscalationsTrends(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual({
+        interval: 'day',
+        points: [],
+      });
+    });
+
+    it('passes filters to repository', async () => {
+      await service.getEscalationsTrends(
+        { organizationId: mockOrgId },
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          severity: 'HIGH',
+          status: 'OPEN',
+          from: '2025-03-01',
+          to: '2025-03-15',
+          interval: 'week',
+        },
+      );
+
+      expect(repo.getEscalationsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          severity: 'HIGH',
+          status: 'OPEN',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+        'week',
+        expect.any(Date),
+      );
+    });
+
+    it('scopes by organizationId for tenant isolation', async () => {
+      await service.getEscalationsTrends(
+        { organizationId: 'org-tenant-xyz' },
+        {},
+      );
+
+      expect(repo.getEscalationsTrends).toHaveBeenCalledWith(
+        'org-tenant-xyz',
+        expect.any(Object),
+        'day',
+        expect.any(Date),
+      );
+    });
+
+    it('defaults to day interval when invalid', async () => {
+      repo.getEscalationsTrends.mockResolvedValue([]);
+
+      await service.getEscalationsTrends(
+        { organizationId: mockOrgId },
+        { interval: 'invalid' as 'day' },
+      );
+
+      expect(repo.getEscalationsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.any(Object),
+        'day',
+        expect.any(Date),
+      );
     });
   });
 });

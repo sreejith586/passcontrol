@@ -42,3 +42,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Dedicated `AlertSlaPoliciesModule` with CRUD, conflict detection, and preview; reuse `AlertSlaResolverService` from AlertEventsModule for preview.
 - **Rationale:** Separation of admin concerns; preview uses same resolver as alert creation; service-layer conflict checking for duplicate active policies.
+
+### Escalation trends endpoint
+
+- **Decision:** Add `GET /v1/alert-events/escalations/trends` with raw SQL; bucket by `DATE_TRUNC(interval, created_at)::date`; from/to apply to `created_at`; breach flags computed at application-provided `now`.
+- **Rationale:** Consistent with existing escalation reporting (CTEs, breach logic in SQL); shows escalation pressure over time for dashboards; no fill of missing buckets.

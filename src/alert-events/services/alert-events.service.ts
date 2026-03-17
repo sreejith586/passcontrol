@@ -15,6 +15,10 @@ import {
 } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
+import {
+  AlertEscalationsTrendsQueryDto,
+  ALERT_ESCALATIONS_TRENDS_INTERVALS,
+} from '../dto/alert-escalations-trends-query.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import {
   DOMAIN_EVENT_PUBLISHER,
@@ -104,6 +108,42 @@ export class AlertEventsService {
           created: r.created,
           acknowledged: r.acknowledged,
           resolved: r.resolved,
+        },
+      })),
+    };
+  }
+
+  async getEscalationsTrends(
+    ctx: { organizationId: string },
+    query: AlertEscalationsTrendsQueryDto,
+  ) {
+    const interval =
+      query.interval && ALERT_ESCALATIONS_TRENDS_INTERVALS.includes(query.interval)
+        ? query.interval
+        : 'day';
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      severity: query.severity,
+      status: query.status,
+      from: query.from,
+      to: query.to,
+    };
+    const rows = await this.repo.getEscalationsTrends(
+      ctx.organizationId,
+      filters,
+      interval,
+      new Date(),
+    );
+    return {
+      interval,
+      points: rows.map((r) => ({
+        date: r.date,
+        alerts: {
+          totalActiveAlerts: r.totalActiveAlerts,
+          acknowledgeBreached: r.acknowledgeBreached,
+          resolveBreached: r.resolveBreached,
         },
       })),
     };

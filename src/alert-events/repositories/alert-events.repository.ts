@@ -736,6 +736,99 @@ export class AlertEventsRepository {
     return { items };
   }
 
+  /**
+   * Get escalation trends: time-series counts of active alerts and breach flags by bucket.
+   * Buckets by alert createdAt. Uses application-provided now for deterministic breach computation.
+   */
+  async getEscalationsTrends(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      severity?: string;
+      status?: 'OPEN' | 'ACKNOWLEDGED';
+      from?: string;
+      to?: string;
+    },
+    interval: 'day' | 'week' | 'month',
+    now: Date,
+  ): Promise<
+    Array<{
+      date: string;
+      totalActiveAlerts: number;
+      acknowledgeBreached: number;
+      resolveBreached: number;
+    }>
+  > {
+    const safeInterval = ['day', 'week', 'month'].includes(interval)
+      ? interval
+      : 'day';
+
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
+    ];
+    if (filters.brandId != null) {
+      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.status != null) {
+      baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    if (filters.from != null) {
+      baseConditions.push(Prisma.sql`ae.created_at >= ${new Date(filters.from)}`);
+    }
+    if (filters.to != null) {
+      baseConditions.push(Prisma.sql`ae.created_at <= ${new Date(filters.to)}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        bucket: Date;
+        total_active_alerts: bigint;
+        acknowledge_breached: bigint;
+        resolve_breached: bigint;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          DATE_TRUNC(${safeInterval}, ae.created_at)::date AS bucket,
+          (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT
+        base.bucket,
+        COUNT(*)::bigint AS total_active_alerts,
+        COUNT(*) FILTER (WHERE base.ack_breached)::bigint AS acknowledge_breached,
+        COUNT(*) FILTER (WHERE base.res_breached)::bigint AS resolve_breached
+      FROM base
+      GROUP BY base.bucket
+      ORDER BY base.bucket ASC
+    `);
+
+    return rows.map((r) => ({
+      date:
+        r.bucket instanceof Date
+          ? r.bucket.toISOString().slice(0, 10)
+          : String(r.bucket).slice(0, 10),
+      totalActiveAlerts: Number(r.total_active_alerts ?? 0),
+      acknowledgeBreached: Number(r.acknowledge_breached ?? 0),
+      resolveBreached: Number(r.resolve_breached ?? 0),
+    }));
+  }
+
   private buildDimensionConditions(
     _organizationId: string,
     filters: AlertTrendsFilters,
