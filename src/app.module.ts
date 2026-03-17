@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { AccessModule } from './access/access.module';
 import { TemperatureModule } from './temperature/temperature.module';
 import { AlertEventsModule } from './alert-events/alert-events.module';
+import { AlertSlaPoliciesModule } from './alert-sla-policies/alert-sla-policies.module';
 import { FilesModule } from './files/files.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ChecklistTemplatesModule } from './checklists/templates/checklist-templates.module';
@@ -22,6 +23,7 @@ import { HealthController } from './health.controller';
     AccessModule,
     TemperatureModule,
     AlertEventsModule,
+    AlertSlaPoliciesModule,
     FilesModule,
     AttachmentsModule,
     ChecklistTemplatesModule,
