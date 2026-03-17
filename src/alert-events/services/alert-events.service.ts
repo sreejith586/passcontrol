@@ -19,6 +19,7 @@ import {
   AlertEscalationsTrendsQueryDto,
   ALERT_ESCALATIONS_TRENDS_INTERVALS,
 } from '../dto/alert-escalations-trends-query.dto';
+import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import {
   DOMAIN_EVENT_PUBLISHER,
@@ -110,6 +111,43 @@ export class AlertEventsService {
           resolved: r.resolved,
         },
       })),
+    };
+  }
+
+  async getSlaCompliance(
+    ctx: { organizationId: string },
+    query: AlertSlaComplianceQueryDto,
+  ) {
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      severity: query.severity,
+      status: query.status,
+      from: query.from,
+      to: query.to,
+    };
+    const raw = await this.repo.getSlaCompliance(
+      ctx.organizationId,
+      filters,
+      new Date(),
+    );
+    const ackEvaluated = raw.ackWithinSla + raw.ackBreached;
+    const resEvaluated = raw.resWithinSla + raw.resBreached;
+    return {
+      totalAlerts: raw.totalAlerts,
+      acknowledgment: {
+        withinSla: raw.ackWithinSla,
+        breached: raw.ackBreached,
+        evaluated: ackEvaluated,
+        complianceRate: ackEvaluated > 0 ? raw.ackWithinSla / ackEvaluated : null,
+      },
+      resolution: {
+        withinSla: raw.resWithinSla,
+        breached: raw.resBreached,
+        evaluated: resEvaluated,
+        complianceRate: resEvaluated > 0 ? raw.resWithinSla / resEvaluated : null,
+      },
     };
   }
 

@@ -81,12 +81,21 @@ describe('AlertEventsService (escalations)', () => {
     },
   ];
 
+  const mockSlaCompliance = {
+    totalAlerts: 10,
+    ackWithinSla: 6,
+    ackBreached: 2,
+    resWithinSla: 5,
+    resBreached: 3,
+  };
+
   beforeEach(async () => {
     const mockRepo = {
       listEscalations: jest.fn().mockResolvedValue({ items: [], total: 0 }),
       getEscalationsSummary: jest.fn().mockResolvedValue(mockSummary),
       getEscalationsSummaryByLocation: jest.fn().mockResolvedValue(mockSummaryByLocation),
       getEscalationsTrends: jest.fn().mockResolvedValue(mockEscalationsTrends),
+      getSlaCompliance: jest.fn().mockResolvedValue(mockSlaCompliance),
     };
     const mockSlaResolver = {
       resolve: jest.fn().mockResolvedValue({
@@ -500,6 +509,124 @@ describe('AlertEventsService (escalations)', () => {
         mockOrgId,
         expect.any(Object),
         'day',
+        expect.any(Date),
+      );
+    });
+  });
+
+  describe('getSlaCompliance', () => {
+    it('returns compliance from repository with correct response shape', async () => {
+      const result = await service.getSlaCompliance(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual({
+        totalAlerts: 10,
+        acknowledgment: {
+          withinSla: 6,
+          breached: 2,
+          evaluated: 8,
+          complianceRate: 0.75, // 6/8
+        },
+        resolution: {
+          withinSla: 5,
+          breached: 3,
+          evaluated: 8,
+          complianceRate: 0.625, // 5/8
+        },
+      });
+      expect(repo.getSlaCompliance).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          severity: undefined,
+          status: undefined,
+          from: undefined,
+          to: undefined,
+        },
+        expect.any(Date),
+      );
+    });
+
+    it('complianceRate is null when evaluated is 0', async () => {
+      repo.getSlaCompliance.mockResolvedValue({
+        totalAlerts: 5,
+        ackWithinSla: 0,
+        ackBreached: 0,
+        resWithinSla: 0,
+        resBreached: 0,
+      });
+
+      const result = await service.getSlaCompliance(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result.acknowledgment.evaluated).toBe(0);
+      expect(result.acknowledgment.complianceRate).toBeNull();
+      expect(result.resolution.evaluated).toBe(0);
+      expect(result.resolution.complianceRate).toBeNull();
+    });
+
+    it('rate calculation: 100% when all within SLA', async () => {
+      repo.getSlaCompliance.mockResolvedValue({
+        totalAlerts: 4,
+        ackWithinSla: 4,
+        ackBreached: 0,
+        resWithinSla: 4,
+        resBreached: 0,
+      });
+
+      const result = await service.getSlaCompliance(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result.acknowledgment.complianceRate).toBe(1);
+      expect(result.resolution.complianceRate).toBe(1);
+    });
+
+    it('passes filters to repository', async () => {
+      await service.getSlaCompliance(
+        { organizationId: mockOrgId },
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          severity: 'HIGH',
+          status: 'RESOLVED',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+      );
+
+      expect(repo.getSlaCompliance).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          severity: 'HIGH',
+          status: 'RESOLVED',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+        expect.any(Date),
+      );
+    });
+
+    it('scopes by organizationId for tenant isolation', async () => {
+      await service.getSlaCompliance(
+        { organizationId: 'org-tenant-xyz' },
+        {},
+      );
+
+      expect(repo.getSlaCompliance).toHaveBeenCalledWith(
+        'org-tenant-xyz',
+        expect.any(Object),
         expect.any(Date),
       );
     });

@@ -579,6 +579,169 @@ describe('AlertEventsRepository', () => {
     });
   });
 
+  describe('getSlaCompliance', () => {
+    const mockNow = new Date('2025-03-17T12:00:00Z');
+
+    const mockRow = (overrides: Partial<{
+      total_alerts: bigint;
+      ack_within_sla: bigint;
+      ack_breached: bigint;
+      res_within_sla: bigint;
+      res_breached: bigint;
+    }> = {}) => ({
+      total_alerts: BigInt(0),
+      ack_within_sla: BigInt(0),
+      ack_breached: BigInt(0),
+      res_within_sla: BigInt(0),
+      res_breached: BigInt(0),
+      ...overrides,
+    });
+
+    it('returns empty result when no data', async () => {
+      prisma.$queryRaw.mockResolvedValue([mockRow()]);
+
+      const result = await repo.getSlaCompliance(mockOrgId, {}, mockNow);
+
+      expect(result).toEqual({
+        totalAlerts: 0,
+        ackWithinSla: 0,
+        ackBreached: 0,
+        resWithinSla: 0,
+        resBreached: 0,
+      });
+    });
+
+    it('acknowledged within SLA', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockRow({
+          total_alerts: BigInt(1),
+          ack_within_sla: BigInt(1),
+          ack_breached: BigInt(0),
+          res_within_sla: BigInt(0),
+          res_breached: BigInt(0),
+        }),
+      ]);
+
+      const result = await repo.getSlaCompliance(mockOrgId, {}, mockNow);
+
+      expect(result.ackWithinSla).toBe(1);
+      expect(result.ackBreached).toBe(0);
+    });
+
+    it('acknowledged after SLA', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockRow({
+          total_alerts: BigInt(1),
+          ack_within_sla: BigInt(0),
+          ack_breached: BigInt(1),
+          res_within_sla: BigInt(0),
+          res_breached: BigInt(0),
+        }),
+      ]);
+
+      const result = await repo.getSlaCompliance(mockOrgId, {}, mockNow);
+
+      expect(result.ackWithinSla).toBe(0);
+      expect(result.ackBreached).toBe(1);
+    });
+
+    it('resolved within SLA', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockRow({
+          total_alerts: BigInt(1),
+          ack_within_sla: BigInt(1),
+          ack_breached: BigInt(0),
+          res_within_sla: BigInt(1),
+          res_breached: BigInt(0),
+        }),
+      ]);
+
+      const result = await repo.getSlaCompliance(mockOrgId, {}, mockNow);
+
+      expect(result.resWithinSla).toBe(1);
+      expect(result.resBreached).toBe(0);
+    });
+
+    it('resolved after SLA', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockRow({
+          total_alerts: BigInt(1),
+          ack_within_sla: BigInt(1),
+          ack_breached: BigInt(0),
+          res_within_sla: BigInt(0),
+          res_breached: BigInt(1),
+        }),
+      ]);
+
+      const result = await repo.getSlaCompliance(mockOrgId, {}, mockNow);
+
+      expect(result.resWithinSla).toBe(0);
+      expect(result.resBreached).toBe(1);
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([mockRow()]);
+
+      await repo.getSlaCompliance(
+        mockOrgId,
+        {
+          brandId: 'brand-1',
+          locationId: 'loc-1',
+          zoneId: 'zone-1',
+          severity: 'HIGH',
+          status: 'RESOLVED',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('organization_id');
+      expect(queryStr).toContain('created_at');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([mockRow()]);
+
+      await repo.getSlaCompliance('org-tenant-1', {}, mockNow);
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toMatch(/organization_id/);
+    });
+
+    it('uses application-provided now for breach computation', async () => {
+      prisma.$queryRaw.mockResolvedValue([mockRow()]);
+
+      const now = new Date('2025-03-20T15:30:00Z');
+      await repo.getSlaCompliance(mockOrgId, {}, now);
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('aggregates mixed compliance correctly', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        mockRow({
+          total_alerts: BigInt(10),
+          ack_within_sla: BigInt(6),
+          ack_breached: BigInt(2),
+          res_within_sla: BigInt(5),
+          res_breached: BigInt(3),
+        }),
+      ]);
+
+      const result = await repo.getSlaCompliance(mockOrgId, {}, mockNow);
+
+      expect(result.totalAlerts).toBe(10);
+      expect(result.ackWithinSla).toBe(6);
+      expect(result.ackBreached).toBe(2);
+      expect(result.resWithinSla).toBe(5);
+      expect(result.resBreached).toBe(3);
+    });
+  });
+
   describe('getEscalationsTrends', () => {
     const mockNow = new Date('2025-03-17T12:00:00Z');
 

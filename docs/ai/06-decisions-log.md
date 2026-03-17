@@ -47,3 +47,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `GET /v1/alert-events/escalations/trends` with raw SQL; bucket by `DATE_TRUNC(interval, created_at)::date`; from/to apply to `created_at`; breach flags computed at application-provided `now`.
 - **Rationale:** Consistent with existing escalation reporting (CTEs, breach logic in SQL); shows escalation pressure over time for dashboards; no fill of missing buckets.
+
+### SLA compliance summary endpoint
+
+- **Decision:** Add `GET /v1/alert-events/sla-compliance` with raw SQL; from/to apply to `created_at`; all statuses by default; compliance = withinSla / (withinSla + breached); evaluated excludes alerts not yet past deadline.
+- **Rationale:** Management/reporting endpoint distinct from escalation list; KPI-style metrics; unacknowledged/unresolved alerts within SLA window excluded from evaluated count.

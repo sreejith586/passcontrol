@@ -737,6 +737,95 @@ export class AlertEventsRepository {
   }
 
   /**
+   * Get SLA compliance summary for alerts created in a period.
+   * Uses application-provided now for breach evaluation.
+   * Acknowledge: withinSla = acknowledged on time; breached = acknowledged late OR unacknowledged past deadline.
+   * Resolve: withinSla = resolved on time; breached = resolved late OR unresolved past deadline.
+   * Alerts not yet past deadline (unacknowledged/unresolved) are not counted as evaluated.
+   */
+  async getSlaCompliance(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      severity?: string;
+      status?: 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED';
+      from?: string;
+      to?: string;
+    },
+    now: Date,
+  ): Promise<{
+    totalAlerts: number;
+    ackWithinSla: number;
+    ackBreached: number;
+    resWithinSla: number;
+    resBreached: number;
+  }> {
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+    ];
+    if (filters.brandId != null) {
+      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.status != null) {
+      baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    if (filters.from != null) {
+      baseConditions.push(Prisma.sql`ae.created_at >= ${new Date(filters.from)}`);
+    }
+    if (filters.to != null) {
+      baseConditions.push(Prisma.sql`ae.created_at <= ${new Date(filters.to)}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        total_alerts: bigint;
+        ack_within_sla: bigint;
+        ack_breached: bigint;
+        res_within_sla: bigint;
+        res_breached: bigint;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.acknowledged_at,
+          ae.resolved_at,
+          ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval AS acknowledge_by,
+          ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval AS resolve_by
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT
+        COUNT(*)::bigint AS total_alerts,
+        COUNT(*) FILTER (WHERE b.acknowledged_at IS NOT NULL AND b.acknowledged_at <= b.acknowledge_by)::bigint AS ack_within_sla,
+        COUNT(*) FILTER (WHERE (b.acknowledged_at IS NOT NULL AND b.acknowledged_at > b.acknowledge_by) OR (b.acknowledged_at IS NULL AND b.acknowledge_by < ${now}))::bigint AS ack_breached,
+        COUNT(*) FILTER (WHERE b.resolved_at IS NOT NULL AND b.resolved_at <= b.resolve_by)::bigint AS res_within_sla,
+        COUNT(*) FILTER (WHERE (b.resolved_at IS NOT NULL AND b.resolved_at > b.resolve_by) OR (b.resolved_at IS NULL AND b.resolve_by < ${now}))::bigint AS res_breached
+      FROM base b
+    `);
+
+    const r = rows[0];
+    return {
+      totalAlerts: Number(r?.total_alerts ?? 0),
+      ackWithinSla: Number(r?.ack_within_sla ?? 0),
+      ackBreached: Number(r?.ack_breached ?? 0),
+      resWithinSla: Number(r?.res_within_sla ?? 0),
+      resBreached: Number(r?.res_breached ?? 0),
+    };
+  }
+
+  /**
    * Get escalation trends: time-series counts of active alerts and breach flags by bucket.
    * Buckets by alert createdAt. Uses application-provided now for deterministic breach computation.
    */

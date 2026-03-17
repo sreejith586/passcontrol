@@ -6,6 +6,7 @@ import { AlertTrendsQueryDto } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import { AlertEscalationsTrendsQueryDto } from '../dto/alert-escalations-trends-query.dto';
+import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
@@ -20,6 +21,28 @@ import {
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class AlertEventsController {
   constructor(private readonly service: AlertEventsService) {}
+
+  @Get('sla-compliance')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'SLA compliance metrics',
+    description:
+      'Returns KPI-style SLA compliance metrics for alerts created in a period: acknowledge and resolve within-SLA/breached counts and compliance rates.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'] })
+  @ApiQuery({ name: 'from', required: false, example: '2025-03-01', description: 'Filter from date (inclusive, applied to createdAt)' })
+  @ApiQuery({ name: 'to', required: false, example: '2025-03-15', description: 'Filter to date (inclusive, applied to createdAt)' })
+  async getSlaCompliance(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertSlaComplianceQueryDto,
+  ) {
+    const compliance = await this.service.getSlaCompliance(ctx, query);
+    return ApiResponse.ok(compliance);
+  }
 
   @Get('trends')
   @RequirePermissions('alert.view')
