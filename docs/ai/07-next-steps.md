@@ -1,21 +1,40 @@
-# Next Steps
+Rewrite docs/ai/07-next-steps.md completely based on current system state.
 
-**Review and update after each implementation session.**
+Context
+The system now includes:
+- checklist run engine
+- alert lifecycle (create, acknowledge, resolve)
+- SLA policy system (DB-driven with resolver and preview)
+- escalation detection and reporting
+- summary and trends endpoints for failures and alerts
 
-## Recommended (Priority Order)
+Remove all outdated or completed items (e.g. tie-breakers, basic summaries).
 
-1. **Add `ae.id DESC` tie-breaker** — In checklist-run-items summary query `latest_alerts` CTE, make ORDER BY deterministic when `created_at` ties: `ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC`.
+Structure the next steps into 3 sections:
 
-2. **Handlers for published events** — Consider handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved` if downstream use cases emerge (e.g. notifications, analytics).
+1. Advanced Operational Intelligence (HIGH PRIORITY)
+Include:
+- Escalation summary by severity
+- Escalation trends (time-based)
+- SLA compliance metrics (breached vs within SLA)
 
-3. **Integration tests** — Add DB-backed tests for summary SQL and critical flows if not yet present.
+2. Supervisor / Action Layer (HIGH PRIORITY)
+Include:
+- Bulk acknowledge / resolve alerts
+- Prioritized escalation retrieval (top N by severity and breach duration)
+- Optional future: alert assignment / ownership
 
-## Optional / Future
+3. Platform Hardening (MEDIUM PRIORITY)
+Include:
+- Pagination standardization
+- Query/index optimization for escalation queries
+- Expansion of domain event handlers for new alert sources
 
-- Async domain event publishing (outbox pattern)
-- Additional reporting endpoints
-- Webhook or notification integration
+Each item must:
+- be actionable
+- reflect real gaps in current system
+- not duplicate already implemented features
 
-## Blocked / Deferred
+Do not include anything already completed.
 
-- None
+Keep it concise and structured.
