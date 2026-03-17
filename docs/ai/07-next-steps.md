@@ -1,40 +1,27 @@
-Rewrite docs/ai/07-next-steps.md completely based on current system state.
+# Next Steps
 
-Context
-The system now includes:
-- checklist run engine
-- alert lifecycle (create, acknowledge, resolve)
-- SLA policy system (DB-driven with resolver and preview)
-- escalation detection and reporting
-- summary and trends endpoints for failures and alerts
+**Review and update after each implementation session.**
 
-Remove all outdated or completed items (e.g. tie-breakers, basic summaries).
+---
 
-Structure the next steps into 3 sections:
+## 1. Advanced Operational Intelligence (HIGH PRIORITY)
 
-1. Advanced Operational Intelligence (HIGH PRIORITY)
-Include:
-- Escalation summary by severity
-- Escalation trends (time-based)
-- SLA compliance metrics (breached vs within SLA)
+- **Escalation trends (time-based)** — Endpoint returning breach counts and active-alert counts over time buckets (day/week/month). Enables trend charts for escalation pressure.
+- **SLA compliance metrics** — Endpoint or aggregation returning breached vs within-SLA ratios over a period (e.g. % acknowledged within SLA, % resolved within SLA). Supports compliance dashboards.
 
-2. Supervisor / Action Layer (HIGH PRIORITY)
-Include:
-- Bulk acknowledge / resolve alerts
-- Prioritized escalation retrieval (top N by severity and breach duration)
-- Optional future: alert assignment / ownership
+---
 
-3. Platform Hardening (MEDIUM PRIORITY)
-Include:
-- Pagination standardization
-- Query/index optimization for escalation queries
-- Expansion of domain event handlers for new alert sources
+## 2. Supervisor / Action Layer (HIGH PRIORITY)
 
-Each item must:
-- be actionable
-- reflect real gaps in current system
-- not duplicate already implemented features
+- **Bulk acknowledge alerts** — Endpoint to acknowledge multiple alerts by ID in one request. Reduces round-trips for supervisors clearing many alerts.
+- **Bulk resolve alerts** — Endpoint to resolve multiple alerts by ID in one request. Optional resolution note applied to all.
+- **Prioritized escalation retrieval (top N)** — Lightweight endpoint returning top N escalations by severity and breach duration (e.g. longest-breached first). For dashboard widgets and quick triage.
+- **Alert assignment / ownership** *(optional future)* — Model and APIs for assigning alerts to users; ownership tracking for accountability and routing.
 
-Do not include anything already completed.
+---
 
-Keep it concise and structured.
+## 3. Platform Hardening (MEDIUM PRIORITY)
+
+- **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.
+- **Query/index optimization for escalation queries** — Add or tune indexes for `alert_events` escalation filters (organization_id, status, created_at, location_id). Profile and optimize raw SQL.
+- **Expansion of domain event handlers** — Handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved`. Extend to temperature, IoT, or other alert sources as needed.
