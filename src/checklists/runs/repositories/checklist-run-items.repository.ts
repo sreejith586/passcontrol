@@ -13,6 +13,14 @@ export interface FailedItemFilters {
   to?: string;
 }
 
+export type FailuresTrendsInterval = 'day' | 'week' | 'month';
+
+const FAILURES_TRENDS_INTERVALS: FailuresTrendsInterval[] = [
+  'day',
+  'week',
+  'month',
+];
+
 @Injectable()
 export class ChecklistRunItemsRepository {
   constructor(
@@ -324,6 +332,70 @@ export class ChecklistRunItemsRepository {
       openAlerts: Number(r.open_alerts ?? 0),
       acknowledgedAlerts: Number(r.acknowledged_alerts ?? 0),
       resolvedAlerts: Number(r.resolved_alerts ?? 0),
+    }));
+  }
+
+  /**
+   * Get failed items trends over time, grouped by truncated effective date.
+   * Uses effective date = COALESCE(due_at, created_at).
+   * Returns only existing data points (no fill for missing dates).
+   */
+  async getFailedItemsTrends(
+    organizationId: string,
+    filters: FailedItemFilters,
+    interval: FailuresTrendsInterval,
+  ): Promise<
+    Array<{
+      date: string;
+      total: number;
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+      unknown: number;
+    }>
+  > {
+    const safeInterval = FAILURES_TRENDS_INTERVALS.includes(interval)
+      ? interval
+      : 'day';
+    const conditions = this.buildWhereConditions(organizationId, filters);
+    const whereClause =
+      conditions.length > 0 ? Prisma.join(conditions, ' AND ') : Prisma.empty;
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        bucket: Date;
+        total: bigint;
+        critical: bigint;
+        high: bigint;
+        medium: bigint;
+        low: bigint;
+        unknown: bigint;
+      }>
+    >(Prisma.sql`
+      SELECT
+        DATE_TRUNC(${safeInterval}, COALESCE(cr.due_at, cr.created_at))::date AS bucket,
+        COUNT(*)::bigint AS total,
+        COUNT(*) FILTER (WHERE cri.severity_snapshot = 'CRITICAL')::bigint AS critical,
+        COUNT(*) FILTER (WHERE cri.severity_snapshot = 'HIGH')::bigint AS high,
+        COUNT(*) FILTER (WHERE cri.severity_snapshot = 'MEDIUM')::bigint AS medium,
+        COUNT(*) FILTER (WHERE cri.severity_snapshot = 'LOW')::bigint AS low,
+        COUNT(*) FILTER (WHERE cri.severity_snapshot IS NULL OR cri.severity_snapshot NOT IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW'))::bigint AS unknown
+      FROM checklist_run_item_snapshots cri
+      INNER JOIN checklist_runs cr ON cr.id = cri.checklist_run_id
+      WHERE ${whereClause}
+      GROUP BY DATE_TRUNC(${safeInterval}, COALESCE(cr.due_at, cr.created_at))
+      ORDER BY bucket ASC
+    `);
+
+    return rows.map((r) => ({
+      date: r.bucket instanceof Date ? r.bucket.toISOString().slice(0, 10) : String(r.bucket).slice(0, 10),
+      total: Number(r.total ?? 0),
+      critical: Number(r.critical ?? 0),
+      high: Number(r.high ?? 0),
+      medium: Number(r.medium ?? 0),
+      low: Number(r.low ?? 0),
+      unknown: Number(r.unknown ?? 0),
     }));
   }
 

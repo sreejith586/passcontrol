@@ -5,6 +5,10 @@ import { AlertEventsRepository } from '../../../alert-events/repositories/alert-
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 import { ListFailedChecklistRunItemsQueryDto } from '../dto/list-failed-checklist-run-items.dto';
 import { ListFailedChecklistRunItemsSummaryQueryDto } from '../dto/list-failed-checklist-run-items-summary.dto';
+import {
+  FailuresTrendsQueryDto,
+  FAILURES_TRENDS_INTERVALS,
+} from '../dto/failures-trends-query.dto';
 
 export interface RunItemDetailResponse {
   id: string;
@@ -243,6 +247,50 @@ export class ChecklistRunItemsService {
         },
         runs: {
           affectedRuns: r.affectedRuns,
+        },
+      })),
+    };
+  }
+
+  /**
+   * Get failed items trends over time for compliance visualization.
+   * Returns data points grouped by interval (day/week/month).
+   */
+  async getFailuresTrends(
+    ctx: { organizationId: string },
+    query: FailuresTrendsQueryDto,
+  ) {
+    const interval =
+      query.interval && FAILURES_TRENDS_INTERVALS.includes(query.interval)
+        ? query.interval
+        : 'day';
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      checklistTemplateId: query.checklistTemplateId,
+      severity: query.severity,
+      from: query.from,
+      to: query.to,
+    };
+    const rows = await this.repo.getFailedItemsTrends(
+      ctx.organizationId,
+      filters,
+      interval,
+    );
+    return {
+      interval,
+      points: rows.map((r) => ({
+        date: r.date,
+        failedItems: {
+          total: r.total,
+          bySeverity: {
+            critical: r.critical,
+            high: r.high,
+            medium: r.medium,
+            low: r.low,
+            unknown: r.unknown,
+          },
         },
       })),
     };

@@ -761,6 +761,134 @@ describe('ChecklistRunItemsRepository', () => {
     });
   });
 
+  describe('getFailedItemsTrends', () => {
+    it('returns empty points when no failed items', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getFailedItemsTrends(mockOrgId, {}, 'day');
+
+      expect(result).toEqual([]);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('groups correctly per interval with date and severity buckets', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-01'),
+          total: BigInt(5),
+          critical: BigInt(2),
+          high: BigInt(1),
+          medium: BigInt(1),
+          low: BigInt(1),
+          unknown: BigInt(0),
+        },
+        {
+          bucket: new Date('2025-03-02'),
+          total: BigInt(3),
+          critical: BigInt(0),
+          high: BigInt(1),
+          medium: BigInt(1),
+          low: BigInt(0),
+          unknown: BigInt(1),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsTrends(mockOrgId, {}, 'day');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].date).toBe('2025-03-01');
+      expect(result[0].total).toBe(5);
+      expect(result[0].critical).toBe(2);
+      expect(result[0].high).toBe(1);
+      expect(result[0].medium).toBe(1);
+      expect(result[0].low).toBe(1);
+      expect(result[0].unknown).toBe(0);
+      expect(result[1].date).toBe('2025-03-02');
+      expect(result[1].total).toBe(3);
+      expect(result[1].unknown).toBe(1);
+    });
+
+    it('returns correct severity buckets per point', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2025-03-01'),
+          total: BigInt(5),
+          critical: BigInt(1),
+          high: BigInt(1),
+          medium: BigInt(1),
+          low: BigInt(1),
+          unknown: BigInt(1),
+        },
+      ]);
+
+      const result = await repo.getFailedItemsTrends(mockOrgId, {}, 'day');
+
+      expect(result[0].critical).toBe(1);
+      expect(result[0].high).toBe(1);
+      expect(result[0].medium).toBe(1);
+      expect(result[0].low).toBe(1);
+      expect(result[0].unknown).toBe(1);
+    });
+
+    it('ordering is correct (date ASC)', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        { bucket: new Date('2025-03-01'), total: BigInt(5), critical: BigInt(0), high: BigInt(0), medium: BigInt(0), low: BigInt(0), unknown: BigInt(0) },
+        { bucket: new Date('2025-03-02'), total: BigInt(3), critical: BigInt(0), high: BigInt(0), medium: BigInt(0), low: BigInt(0), unknown: BigInt(0) },
+        { bucket: new Date('2025-03-03'), total: BigInt(1), critical: BigInt(0), high: BigInt(0), medium: BigInt(0), low: BigInt(0), unknown: BigInt(0) },
+      ]);
+
+      const result = await repo.getFailedItemsTrends(mockOrgId, {}, 'day');
+
+      expect(result[0].date).toBe('2025-03-01');
+      expect(result[1].date).toBe('2025-03-02');
+      expect(result[2].date).toBe('2025-03-03');
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getFailedItemsTrends(mockOrgId, {
+        brandId: 'brand-1',
+        locationId: 'loc-1',
+        zoneId: 'zone-1',
+        checklistTemplateId: 'tpl-1',
+        severity: 'CRITICAL',
+        from: '2025-03-01',
+        to: '2025-03-15',
+      }, 'week');
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('DATE_TRUNC');
+      expect(queryStr).toContain('COALESCE');
+      expect(queryStr).toContain('GROUP BY');
+      expect(queryStr).toContain('ORDER BY');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getFailedItemsTrends('org-tenant-1', {}, 'day');
+
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      const sqlArg = prisma.$queryRaw.mock.calls[0][0];
+      const fullQuery = Array.isArray(sqlArg?.strings)
+        ? sqlArg.strings.join(' ')
+        : String(sqlArg);
+      expect(fullQuery).toMatch(/organization_id|organization\.id/i);
+    });
+
+    it('falls back to day when invalid interval passed (safe interval mapping)', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getFailedItemsTrends(mockOrgId, {}, 'invalid' as 'day');
+
+      expect(result).toEqual([]);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('findById', () => {
     it('returns item id when found within organization', async () => {
       prisma.checklistRunItemSnapshot.findFirst.mockResolvedValue({

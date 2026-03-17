@@ -40,6 +40,7 @@ describe('ChecklistRunItemsService', () => {
       findById: jest.fn().mockResolvedValue(null),
       getFailedItemsSummaryByLocation: jest.fn().mockResolvedValue([]),
       getFailedItemsSummaryByTemplate: jest.fn().mockResolvedValue([]),
+      getFailedItemsTrends: jest.fn().mockResolvedValue([]),
       getFailedItemsSummary: jest.fn().mockResolvedValue({
         total: 0,
         critical: 0,
@@ -78,6 +79,138 @@ describe('ChecklistRunItemsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getFailuresTrends', () => {
+    it('returns empty points when no data', async () => {
+      repo.getFailedItemsTrends.mockResolvedValue([]);
+
+      const result = await service.getFailuresTrends(
+        { organizationId: mockOrgId },
+        {},
+      );
+
+      expect(result).toEqual({
+        interval: 'day',
+        points: [],
+      });
+      expect(repo.getFailedItemsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.objectContaining({
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          checklistTemplateId: undefined,
+          severity: undefined,
+          from: undefined,
+          to: undefined,
+        }),
+        'day',
+      );
+    });
+
+    it('maps repository rows to response shape with nested structure', async () => {
+      repo.getFailedItemsTrends.mockResolvedValue([
+        {
+          date: '2025-03-01',
+          total: 5,
+          critical: 2,
+          high: 1,
+          medium: 1,
+          low: 1,
+          unknown: 0,
+        },
+        {
+          date: '2025-03-02',
+          total: 3,
+          critical: 0,
+          high: 1,
+          medium: 1,
+          low: 0,
+          unknown: 1,
+        },
+      ]);
+
+      const result = await service.getFailuresTrends(
+        { organizationId: mockOrgId },
+        { interval: 'week', from: '2025-03-01' },
+      );
+
+      expect(result.interval).toBe('week');
+      expect(result.points).toHaveLength(2);
+      expect(result.points[0]).toEqual({
+        date: '2025-03-01',
+        failedItems: {
+          total: 5,
+          bySeverity: {
+            critical: 2,
+            high: 1,
+            medium: 1,
+            low: 1,
+            unknown: 0,
+          },
+        },
+      });
+      expect(result.points[1].date).toBe('2025-03-02');
+      expect(result.points[1].failedItems.bySeverity.unknown).toBe(1);
+      expect(repo.getFailedItemsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: undefined,
+          locationId: undefined,
+          zoneId: undefined,
+          checklistTemplateId: undefined,
+          severity: undefined,
+          from: '2025-03-01',
+          to: undefined,
+        },
+        'week',
+      );
+    });
+
+    it('defaults to day when interval not provided', async () => {
+      repo.getFailedItemsTrends.mockResolvedValue([]);
+
+      await service.getFailuresTrends({ organizationId: mockOrgId }, {});
+
+      expect(repo.getFailedItemsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.any(Object),
+        'day',
+      );
+    });
+
+    it('passes all filters to repository', async () => {
+      repo.getFailedItemsTrends.mockResolvedValue([]);
+
+      await service.getFailuresTrends(
+        { organizationId: mockOrgId },
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          checklistTemplateId: 't1',
+          severity: ChecklistItemSeverity.CRITICAL,
+          from: '2025-03-01',
+          to: '2025-03-15',
+          interval: 'month',
+        },
+      );
+
+      expect(repo.getFailedItemsTrends).toHaveBeenCalledWith(
+        mockOrgId,
+        {
+          brandId: 'b1',
+          locationId: 'l1',
+          zoneId: 'z1',
+          checklistTemplateId: 't1',
+          severity: 'CRITICAL',
+          from: '2025-03-01',
+          to: '2025-03-15',
+        },
+        'month',
+      );
+    });
   });
 
   describe('getSummaryByTemplate', () => {
