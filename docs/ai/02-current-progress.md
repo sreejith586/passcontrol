@@ -51,6 +51,7 @@
 - [x] `GET /v1/alert-events/escalations` (SLA-based alert escalation reporting)
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
+- [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)
 - [x] `POST /v1/checklist-run-items/:id/acknowledge-alert`, `resolve-alert`
 
 ### Other

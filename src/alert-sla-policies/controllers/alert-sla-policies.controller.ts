@@ -13,6 +13,7 @@ import { AlertSlaPoliciesService } from '../services/alert-sla-policies.service'
 import { CreateAlertSlaPolicyDto } from '../dto/create-alert-sla-policy.dto';
 import { UpdateAlertSlaPolicyDto } from '../dto/update-alert-sla-policy.dto';
 import { ListAlertSlaPoliciesQueryDto } from '../dto/list-alert-sla-policies.dto';
+import { PreviewAlertSlaPolicyQueryDto } from '../dto/preview-alert-sla-policy-query.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
@@ -44,6 +45,20 @@ export class AlertSlaPoliciesController {
   ) {
     const list = await this.service.list(ctx, query);
     return ApiResponse.ok(list);
+  }
+
+  @Get('preview')
+  @RequirePermissions('alert.sla-policy.view')
+  @ApiOperation({ summary: 'Preview which SLA policy would apply for given severity and scope' })
+  @ApiQuery({ name: 'severity', required: true, description: 'Severity (e.g. CRITICAL, HIGH, MEDIUM, LOW)' })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Optional brand scope' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Optional location scope' })
+  async preview(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: PreviewAlertSlaPolicyQueryDto,
+  ) {
+    const preview = await this.service.preview(ctx, query);
+    return ApiResponse.ok(preview);
   }
 
   @Post()

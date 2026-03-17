@@ -28,6 +28,7 @@ describe('AlertSlaResolverService', () => {
 
   it('returns location-level match when policy exists', async () => {
     policyRepo.findByLocationAndSeverity.mockResolvedValue({
+      id: 'policy-loc-1',
       acknowledgeWithinMinutes: 10,
       resolveWithinMinutes: 45,
     });
@@ -42,6 +43,8 @@ describe('AlertSlaResolverService', () => {
     expect(result).toEqual({
       acknowledgeWithinMinutes: 10,
       resolveWithinMinutes: 45,
+      sourceType: 'LOCATION_POLICY',
+      policyId: 'policy-loc-1',
     });
     expect(policyRepo.findByLocationAndSeverity).toHaveBeenCalledWith(
       mockOrgId,
@@ -55,6 +58,7 @@ describe('AlertSlaResolverService', () => {
   it('falls back to brand-level when no location match', async () => {
     policyRepo.findByLocationAndSeverity.mockResolvedValue(null);
     policyRepo.findByBrandAndSeverity.mockResolvedValue({
+      id: 'policy-brand-1',
       acknowledgeWithinMinutes: 20,
       resolveWithinMinutes: 90,
     });
@@ -69,6 +73,8 @@ describe('AlertSlaResolverService', () => {
     expect(result).toEqual({
       acknowledgeWithinMinutes: 20,
       resolveWithinMinutes: 90,
+      sourceType: 'BRAND_POLICY',
+      policyId: 'policy-brand-1',
     });
     expect(policyRepo.findByLocationAndSeverity).toHaveBeenCalled();
     expect(policyRepo.findByBrandAndSeverity).toHaveBeenCalledWith(
@@ -82,6 +88,7 @@ describe('AlertSlaResolverService', () => {
     policyRepo.findByLocationAndSeverity.mockResolvedValue(null);
     policyRepo.findByBrandAndSeverity.mockResolvedValue(null);
     policyRepo.findByOrgDefaultAndSeverity.mockResolvedValue({
+      id: 'policy-org-default',
       acknowledgeWithinMinutes: 30,
       resolveWithinMinutes: 120,
     });
@@ -96,6 +103,8 @@ describe('AlertSlaResolverService', () => {
     expect(result).toEqual({
       acknowledgeWithinMinutes: 30,
       resolveWithinMinutes: 120,
+      sourceType: 'ORG_DEFAULT_POLICY',
+      policyId: 'policy-org-default',
     });
     expect(policyRepo.findByOrgDefaultAndSeverity).toHaveBeenCalledWith(
       mockOrgId,
@@ -116,6 +125,8 @@ describe('AlertSlaResolverService', () => {
     expect(result).toEqual({
       acknowledgeWithinMinutes: 15,
       resolveWithinMinutes: 60,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
     });
   });
 
@@ -124,16 +135,36 @@ describe('AlertSlaResolverService', () => {
 
     expect(
       await service.resolve({ organizationId: mockOrgId, severity: 'CRITICAL' }),
-    ).toEqual({ acknowledgeWithinMinutes: 15, resolveWithinMinutes: 60 });
+    ).toEqual({
+      acknowledgeWithinMinutes: 15,
+      resolveWithinMinutes: 60,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
+    });
     expect(
       await service.resolve({ organizationId: mockOrgId, severity: 'HIGH' }),
-    ).toEqual({ acknowledgeWithinMinutes: 30, resolveWithinMinutes: 120 });
+    ).toEqual({
+      acknowledgeWithinMinutes: 30,
+      resolveWithinMinutes: 120,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
+    });
     expect(
       await service.resolve({ organizationId: mockOrgId, severity: 'MEDIUM' }),
-    ).toEqual({ acknowledgeWithinMinutes: 60, resolveWithinMinutes: 240 });
+    ).toEqual({
+      acknowledgeWithinMinutes: 60,
+      resolveWithinMinutes: 240,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
+    });
     expect(
       await service.resolve({ organizationId: mockOrgId, severity: 'LOW' }),
-    ).toEqual({ acknowledgeWithinMinutes: 120, resolveWithinMinutes: 480 });
+    ).toEqual({
+      acknowledgeWithinMinutes: 120,
+      resolveWithinMinutes: 480,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
+    });
   });
 
   it('ignores inactive policies (repo only returns active)', async () => {
@@ -149,16 +180,19 @@ describe('AlertSlaResolverService', () => {
     expect(result).toEqual({
       acknowledgeWithinMinutes: 15,
       resolveWithinMinutes: 60,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
     });
   });
 
   it('is tenant-scoped (organizationId passed to repo)', async () => {
     policyRepo.findByOrgDefaultAndSeverity.mockResolvedValue({
+      id: 'policy-org-xyz',
       acknowledgeWithinMinutes: 25,
       resolveWithinMinutes: 100,
     });
 
-    await service.resolve({
+    const result = await service.resolve({
       organizationId: 'org-tenant-xyz',
       severity: 'HIGH',
     });
@@ -167,6 +201,8 @@ describe('AlertSlaResolverService', () => {
       'org-tenant-xyz',
       'HIGH',
     );
+    expect(result.sourceType).toBe('ORG_DEFAULT_POLICY');
+    expect(result.policyId).toBe('policy-org-xyz');
   });
 
   it('uses MEDIUM defaults for unknown severity', async () => {
@@ -180,6 +216,8 @@ describe('AlertSlaResolverService', () => {
     expect(result).toEqual({
       acknowledgeWithinMinutes: 60,
       resolveWithinMinutes: 240,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
     });
   });
 });

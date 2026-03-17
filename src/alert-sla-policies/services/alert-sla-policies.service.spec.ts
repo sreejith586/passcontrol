@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { AlertSlaPoliciesService } from './alert-sla-policies.service';
 import { AlertSlaPolicyRepository } from '../repositories/alert-sla-policy.repository';
+import { AlertSlaResolverService } from '../../alert-events/services/alert-sla-resolver.service';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 
 describe('AlertSlaPoliciesService', () => {
   let service: AlertSlaPoliciesService;
   let repo: jest.Mocked<AlertSlaPolicyRepository>;
+  let slaResolver: jest.Mocked<AlertSlaResolverService>;
   let audit: jest.Mocked<AuditLogsService>;
 
   const mockOrgId = 'org-123';
@@ -35,19 +37,157 @@ describe('AlertSlaPoliciesService', () => {
       create: jest.fn(),
       update: jest.fn(),
     };
+    const mockSlaResolver = {
+      resolve: jest.fn().mockResolvedValue({
+        acknowledgeWithinMinutes: 60,
+        resolveWithinMinutes: 240,
+        sourceType: 'FALLBACK_DEFAULT',
+        policyId: null,
+      }),
+    };
     const mockAudit = { recordWrite: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlertSlaPoliciesService,
         { provide: AlertSlaPolicyRepository, useValue: mockRepo },
+        { provide: AlertSlaResolverService, useValue: mockSlaResolver },
         { provide: AuditLogsService, useValue: mockAudit },
       ],
     }).compile();
 
     service = module.get(AlertSlaPoliciesService);
     repo = module.get(AlertSlaPolicyRepository);
+    slaResolver = module.get(AlertSlaResolverService);
     audit = module.get(AuditLogsService);
+  });
+
+  describe('preview', () => {
+    it('returns location-level preview when policy exists', async () => {
+      slaResolver.resolve.mockResolvedValue({
+        acknowledgeWithinMinutes: 10,
+        resolveWithinMinutes: 45,
+        sourceType: 'LOCATION_POLICY',
+        policyId: 'policy-loc-1',
+      });
+
+      const result = await service.preview(
+        { organizationId: mockOrgId },
+        { severity: 'CRITICAL', locationId: 'loc-1', brandId: 'brand-1' },
+      );
+
+      expect(result).toEqual({
+        severity: 'CRITICAL',
+        scope: { brandId: 'brand-1', locationId: 'loc-1' },
+        sla: { acknowledgeWithinMinutes: 10, resolveWithinMinutes: 45 },
+        source: { type: 'LOCATION_POLICY', policyId: 'policy-loc-1' },
+      });
+      expect(slaResolver.resolve).toHaveBeenCalledWith({
+        organizationId: mockOrgId,
+        brandId: 'brand-1',
+        locationId: 'loc-1',
+        zoneId: null,
+        severity: 'CRITICAL',
+      });
+    });
+
+    it('returns brand-level fallback when no location match', async () => {
+      slaResolver.resolve.mockResolvedValue({
+        acknowledgeWithinMinutes: 20,
+        resolveWithinMinutes: 90,
+        sourceType: 'BRAND_POLICY',
+        policyId: 'policy-brand-1',
+      });
+
+      const result = await service.preview(
+        { organizationId: mockOrgId },
+        { severity: 'HIGH', brandId: 'brand-1' },
+      );
+
+      expect(result.source.type).toBe('BRAND_POLICY');
+      expect(result.source.policyId).toBe('policy-brand-1');
+      expect(result.sla.acknowledgeWithinMinutes).toBe(20);
+    });
+
+    it('returns org default fallback when no location or brand match', async () => {
+      slaResolver.resolve.mockResolvedValue({
+        acknowledgeWithinMinutes: 30,
+        resolveWithinMinutes: 120,
+        sourceType: 'ORG_DEFAULT_POLICY',
+        policyId: 'policy-org-default',
+      });
+
+      const result = await service.preview(
+        { organizationId: mockOrgId },
+        { severity: 'MEDIUM' },
+      );
+
+      expect(result.source.type).toBe('ORG_DEFAULT_POLICY');
+      expect(result.source.policyId).toBe('policy-org-default');
+      expect(result.scope).toEqual({ brandId: null, locationId: null });
+    });
+
+    it('returns hardcoded fallback with policyId null', async () => {
+      slaResolver.resolve.mockResolvedValue({
+        acknowledgeWithinMinutes: 15,
+        resolveWithinMinutes: 60,
+        sourceType: 'FALLBACK_DEFAULT',
+        policyId: null,
+      });
+
+      const result = await service.preview(
+        { organizationId: mockOrgId },
+        { severity: 'CRITICAL' },
+      );
+
+      expect(result.source.type).toBe('FALLBACK_DEFAULT');
+      expect(result.source.policyId).toBeNull();
+    });
+
+    it('normalizes severity to uppercase', async () => {
+      slaResolver.resolve.mockResolvedValue({
+        acknowledgeWithinMinutes: 15,
+        resolveWithinMinutes: 60,
+        sourceType: 'FALLBACK_DEFAULT',
+        policyId: null,
+      });
+
+      const result = await service.preview(
+        { organizationId: mockOrgId },
+        { severity: 'critical' },
+      );
+
+      expect(result.severity).toBe('CRITICAL');
+      expect(slaResolver.resolve).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'CRITICAL' }),
+      );
+    });
+
+    it('rejects blank severity', async () => {
+      await expect(
+        service.preview({ organizationId: mockOrgId }, { severity: '  ' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(slaResolver.resolve).not.toHaveBeenCalled();
+    });
+
+    it('scopes by organizationId for tenant isolation', async () => {
+      slaResolver.resolve.mockResolvedValue({
+        acknowledgeWithinMinutes: 25,
+        resolveWithinMinutes: 100,
+        sourceType: 'ORG_DEFAULT_POLICY',
+        policyId: 'policy-org-xyz',
+      });
+
+      await service.preview(
+        { organizationId: 'org-tenant-xyz' },
+        { severity: 'HIGH' },
+      );
+
+      expect(slaResolver.resolve).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationId: 'org-tenant-xyz' }),
+      );
+    });
   });
 
   describe('create', () => {

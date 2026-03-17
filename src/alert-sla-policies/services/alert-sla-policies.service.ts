@@ -5,15 +5,18 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { AlertSlaPolicyRepository } from '../repositories/alert-sla-policy.repository';
+import { AlertSlaResolverService } from '../../alert-events/services/alert-sla-resolver.service';
 import { CreateAlertSlaPolicyDto } from '../dto/create-alert-sla-policy.dto';
 import { UpdateAlertSlaPolicyDto } from '../dto/update-alert-sla-policy.dto';
 import { ListAlertSlaPoliciesQueryDto } from '../dto/list-alert-sla-policies.dto';
+import { PreviewAlertSlaPolicyQueryDto } from '../dto/preview-alert-sla-policy-query.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 
 @Injectable()
 export class AlertSlaPoliciesService {
   constructor(
     private readonly repo: AlertSlaPolicyRepository,
+    private readonly slaResolver: AlertSlaResolverService,
     private readonly audit: AuditLogsService,
   ) {}
 
@@ -85,6 +88,40 @@ export class AlertSlaPoliciesService {
       after: created,
     });
     return created;
+  }
+
+  async preview(
+    ctx: { organizationId: string },
+    query: PreviewAlertSlaPolicyQueryDto,
+  ) {
+    const severity = this.normalizeSeverity(query.severity);
+    if (!severity) {
+      throw new BadRequestException('severity is required');
+    }
+
+    const resolved = await this.slaResolver.resolve({
+      organizationId: ctx.organizationId,
+      brandId: query.brandId ?? null,
+      locationId: query.locationId ?? null,
+      zoneId: null,
+      severity,
+    });
+
+    return {
+      severity,
+      scope: {
+        brandId: query.brandId ?? null,
+        locationId: query.locationId ?? null,
+      },
+      sla: {
+        acknowledgeWithinMinutes: resolved.acknowledgeWithinMinutes,
+        resolveWithinMinutes: resolved.resolveWithinMinutes,
+      },
+      source: {
+        type: resolved.sourceType,
+        policyId: resolved.policyId,
+      },
+    };
   }
 
   async getById(ctx: { organizationId: string }, id: string) {

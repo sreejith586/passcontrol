@@ -45,6 +45,7 @@ Base: `/v1` (versioned)
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
 | GET | /alert-sla-policies | alert.sla-policy.view | List SLA policies (paginated) |
+| GET | /alert-sla-policies/preview | alert.sla-policy.view | Preview which SLA would apply for severity/scope |
 | GET | /alert-sla-policies/:id | alert.sla-policy.view | Get SLA policy by ID |
 | POST | /alert-sla-policies | alert.sla-policy.manage | Create SLA policy |
 | PATCH | /alert-sla-policies/:id | alert.sla-policy.manage | Update SLA policy |

@@ -1,6 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { AlertSlaPolicyRepository } from '../repositories/alert-sla-policy.repository';
 
+export type SlaSourceType =
+  | 'LOCATION_POLICY'
+  | 'BRAND_POLICY'
+  | 'ORG_DEFAULT_POLICY'
+  | 'FALLBACK_DEFAULT';
+
+export interface ResolvedSlaWithSource {
+  acknowledgeWithinMinutes: number;
+  resolveWithinMinutes: number;
+  sourceType: SlaSourceType;
+  policyId: string | null;
+}
+
 /** Hardcoded fallback defaults when no DB policy matches. */
 const FALLBACK_SLA: Record<string, { acknowledge: number; resolve: number }> = {
   CRITICAL: { acknowledge: 15, resolve: 60 },
@@ -25,7 +38,7 @@ export class AlertSlaResolverService {
     locationId?: string | null;
     zoneId?: string | null;
     severity: string;
-  }): Promise<{ acknowledgeWithinMinutes: number; resolveWithinMinutes: number }> {
+  }): Promise<ResolvedSlaWithSource> {
     const { organizationId, brandId, locationId, severity } = params;
     const normalizedSeverity = severity?.toUpperCase() || 'MEDIUM';
 
@@ -37,7 +50,12 @@ export class AlertSlaResolverService {
         normalizedSeverity,
       );
       if (policy) {
-        return policy;
+        return {
+          acknowledgeWithinMinutes: policy.acknowledgeWithinMinutes,
+          resolveWithinMinutes: policy.resolveWithinMinutes,
+          sourceType: 'LOCATION_POLICY',
+          policyId: policy.id,
+        };
       }
     }
 
@@ -49,7 +67,12 @@ export class AlertSlaResolverService {
         normalizedSeverity,
       );
       if (policy) {
-        return policy;
+        return {
+          acknowledgeWithinMinutes: policy.acknowledgeWithinMinutes,
+          resolveWithinMinutes: policy.resolveWithinMinutes,
+          sourceType: 'BRAND_POLICY',
+          policyId: policy.id,
+        };
       }
     }
 
@@ -59,7 +82,12 @@ export class AlertSlaResolverService {
       normalizedSeverity,
     );
     if (orgDefault) {
-      return orgDefault;
+      return {
+        acknowledgeWithinMinutes: orgDefault.acknowledgeWithinMinutes,
+        resolveWithinMinutes: orgDefault.resolveWithinMinutes,
+        sourceType: 'ORG_DEFAULT_POLICY',
+        policyId: orgDefault.id,
+      };
     }
 
     // 4. hardcoded fallback
@@ -67,6 +95,8 @@ export class AlertSlaResolverService {
     return {
       acknowledgeWithinMinutes: fallback.acknowledge,
       resolveWithinMinutes: fallback.resolve,
+      sourceType: 'FALLBACK_DEFAULT',
+      policyId: null,
     };
   }
 }

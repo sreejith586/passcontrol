@@ -6,6 +6,10 @@ export interface ResolvedSla {
   resolveWithinMinutes: number;
 }
 
+export interface ResolvedSlaWithId extends ResolvedSla {
+  id: string;
+}
+
 @Injectable()
 export class AlertSlaPolicyRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -17,7 +21,7 @@ export class AlertSlaPolicyRepository {
     organizationId: string,
     locationId: string,
     severity: string,
-  ): Promise<ResolvedSla | null> {
+  ): Promise<ResolvedSlaWithId | null> {
     const policy = await this.prisma.alertSlaPolicy.findFirst({
       where: {
         organizationId,
@@ -26,6 +30,7 @@ export class AlertSlaPolicyRepository {
         isActive: true,
       },
       select: {
+        id: true,
         acknowledgeWithinMinutes: true,
         resolveWithinMinutes: true,
       },
@@ -40,7 +45,7 @@ export class AlertSlaPolicyRepository {
     organizationId: string,
     brandId: string,
     severity: string,
-  ): Promise<ResolvedSla | null> {
+  ): Promise<ResolvedSlaWithId | null> {
     const policy = await this.prisma.alertSlaPolicy.findFirst({
       where: {
         organizationId,
@@ -49,6 +54,7 @@ export class AlertSlaPolicyRepository {
         isActive: true,
       },
       select: {
+        id: true,
         acknowledgeWithinMinutes: true,
         resolveWithinMinutes: true,
       },
@@ -62,7 +68,7 @@ export class AlertSlaPolicyRepository {
   async findByOrgDefaultAndSeverity(
     organizationId: string,
     severity: string,
-  ): Promise<ResolvedSla | null> {
+  ): Promise<ResolvedSlaWithId | null> {
     const policy = await this.prisma.alertSlaPolicy.findFirst({
       where: {
         organizationId,
@@ -73,6 +79,7 @@ export class AlertSlaPolicyRepository {
         isActive: true,
       },
       select: {
+        id: true,
         acknowledgeWithinMinutes: true,
         resolveWithinMinutes: true,
       },
