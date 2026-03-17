@@ -457,6 +457,126 @@ export class AlertEventsRepository {
     return { items, total };
   }
 
+  /**
+   * Get escalation summary: total active alerts, breach counts, severity breakdown.
+   * Uses application-provided now for deterministic breach computation.
+   */
+  async getEscalationsSummary(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      severity?: string;
+      status?: 'OPEN' | 'ACKNOWLEDGED';
+    },
+    now: Date,
+  ): Promise<{
+    totalActiveAlerts: number;
+    acknowledgeBreached: number;
+    resolveBreached: number;
+    bySeverity: Record<
+      string,
+      { total: number; acknowledgeBreached: number; resolveBreached: number }
+    >;
+  }> {
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
+    ];
+    if (filters.brandId != null) {
+      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.status != null) {
+      baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        severity_bucket: string;
+        total: bigint;
+        acknowledge_breached: bigint;
+        resolve_breached: bigint;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.severity,
+          (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT
+        CASE
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'CRITICAL' THEN 'critical'
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'HIGH' THEN 'high'
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'MEDIUM' THEN 'medium'
+          WHEN UPPER(TRIM(COALESCE(severity, ''))) = 'LOW' THEN 'low'
+          ELSE 'unknown'
+        END AS severity_bucket,
+        COUNT(*)::bigint AS total,
+        COUNT(*) FILTER (WHERE ack_breached)::bigint AS acknowledge_breached,
+        COUNT(*) FILTER (WHERE res_breached)::bigint AS resolve_breached
+      FROM base
+      GROUP BY 1
+    `);
+
+    const severityBuckets = ['critical', 'high', 'medium', 'low', 'unknown'] as const;
+    const bySeverity: Record<
+      string,
+      { total: number; acknowledgeBreached: number; resolveBreached: number }
+    > = {};
+    for (const bucket of severityBuckets) {
+      bySeverity[bucket] = {
+        total: 0,
+        acknowledgeBreached: 0,
+        resolveBreached: 0,
+      };
+    }
+
+    let totalActiveAlerts = 0;
+    let acknowledgeBreached = 0;
+    let resolveBreached = 0;
+
+    for (const r of rows) {
+      const bucket = r.severity_bucket?.toLowerCase() ?? 'unknown';
+      const total = Number(r.total);
+      const ackBr = Number(r.acknowledge_breached);
+      const resBr = Number(r.resolve_breached);
+
+      totalActiveAlerts += total;
+      acknowledgeBreached += ackBr;
+      resolveBreached += resBr;
+
+      const key = severityBuckets.includes(bucket as (typeof severityBuckets)[number])
+        ? bucket
+        : 'unknown';
+      bySeverity[key] = {
+        total: (bySeverity[key]?.total ?? 0) + total,
+        acknowledgeBreached: (bySeverity[key]?.acknowledgeBreached ?? 0) + ackBr,
+        resolveBreached: (bySeverity[key]?.resolveBreached ?? 0) + resBr,
+      };
+    }
+
+    return {
+      totalActiveAlerts,
+      acknowledgeBreached,
+      resolveBreached,
+      bySeverity,
+    };
+  }
+
   private buildDimensionConditions(
     _organizationId: string,
     filters: AlertTrendsFilters,

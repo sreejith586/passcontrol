@@ -35,6 +35,7 @@ Base: `/v1` (versioned)
 |--------|------|------------|-------------|
 | GET | /alert-events/trends | alert.view | Alert lifecycle trends over time |
 | GET | /alert-events/escalations | alert.view | SLA-based alert escalations (breach flags, deadlines) |
+| GET | /alert-events/escalations/summary | alert.view | Escalation summary (totals, breach counts, severity breakdown) |
 | GET | /alert-events | alert.view | List alerts |
 | GET | /alert-events/:id | alert.view | Get alert |
 | POST | /alert-events/:id/acknowledge | alert.acknowledge | Acknowledge |

@@ -4,6 +4,7 @@ import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import { AlertTrendsQueryDto } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
+import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
@@ -54,6 +55,26 @@ export class AlertEventsController {
   ) {
     const trends = await this.service.getTrends(ctx, query);
     return ApiResponse.ok(trends);
+  }
+
+  @Get('escalations/summary')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Escalation summary for dashboards',
+    description:
+      'Returns compact summary of active alerts: total, breach counts, and severity breakdown.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
+  @ApiQuery({ name: 'status', required: false, enum: ['OPEN', 'ACKNOWLEDGED'] })
+  async getEscalationsSummary(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertEscalationsSummaryQueryDto,
+  ) {
+    const summary = await this.service.getEscalationsSummary(ctx, query);
+    return ApiResponse.ok(summary);
   }
 
   @Get('escalations')

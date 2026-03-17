@@ -14,6 +14,7 @@ import {
   ALERT_TRENDS_INTERVALS,
 } from '../dto/alert-trends-query.dto';
 import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
+import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import {
   DOMAIN_EVENT_PUBLISHER,
@@ -106,6 +107,24 @@ export class AlertEventsService {
         },
       })),
     };
+  }
+
+  async getEscalationsSummary(
+    ctx: { organizationId: string },
+    query: AlertEscalationsSummaryQueryDto,
+  ) {
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      severity: query.severity,
+      status: query.status,
+    };
+    return this.repo.getEscalationsSummary(
+      ctx.organizationId,
+      filters,
+      new Date(),
+    );
   }
 
   async getEscalations(

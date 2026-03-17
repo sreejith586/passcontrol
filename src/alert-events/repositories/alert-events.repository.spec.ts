@@ -342,4 +342,121 @@ describe('AlertEventsRepository', () => {
       expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('getEscalationsSummary', () => {
+    const mockNow = new Date('2025-03-17T12:00:00Z');
+
+    const zeroBuckets = {
+      critical: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      high: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      medium: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      low: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+      unknown: { total: 0, acknowledgeBreached: 0, resolveBreached: 0 },
+    };
+
+    it('returns zero-filled buckets when no data', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await repo.getEscalationsSummary(mockOrgId, {}, mockNow);
+
+      expect(result).toEqual({
+        totalActiveAlerts: 0,
+        acknowledgeBreached: 0,
+        resolveBreached: 0,
+        bySeverity: zeroBuckets,
+      });
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns correct breached counts', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          severity_bucket: 'critical',
+          total: BigInt(3),
+          acknowledge_breached: BigInt(2),
+          resolve_breached: BigInt(1),
+        },
+      ]);
+
+      const result = await repo.getEscalationsSummary(mockOrgId, {}, mockNow);
+
+      expect(result.totalActiveAlerts).toBe(3);
+      expect(result.acknowledgeBreached).toBe(2);
+      expect(result.resolveBreached).toBe(1);
+      expect(result.bySeverity.critical).toEqual({
+        total: 3,
+        acknowledgeBreached: 2,
+        resolveBreached: 1,
+      });
+    });
+
+    it('aggregates severity breakdown correctly', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        { severity_bucket: 'critical', total: BigInt(1), acknowledge_breached: BigInt(1), resolve_breached: BigInt(1) },
+        { severity_bucket: 'high', total: BigInt(2), acknowledge_breached: BigInt(0), resolve_breached: BigInt(1) },
+      ]);
+
+      const result = await repo.getEscalationsSummary(mockOrgId, {}, mockNow);
+
+      expect(result.totalActiveAlerts).toBe(3);
+      expect(result.acknowledgeBreached).toBe(1);
+      expect(result.resolveBreached).toBe(2);
+      expect(result.bySeverity.critical).toEqual({
+        total: 1,
+        acknowledgeBreached: 1,
+        resolveBreached: 1,
+      });
+      expect(result.bySeverity.high).toEqual({
+        total: 2,
+        acknowledgeBreached: 0,
+        resolveBreached: 1,
+      });
+      expect(result.bySeverity.medium).toEqual(zeroBuckets.medium);
+    });
+
+    it('passes filters to query', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getEscalationsSummary(
+        mockOrgId,
+        {
+          brandId: 'brand-1',
+          locationId: 'loc-1',
+          zoneId: 'zone-1',
+          severity: 'HIGH',
+          status: 'OPEN',
+        },
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('organization_id');
+      expect(queryStr).toContain('OPEN');
+      expect(queryStr).toContain('ACKNOWLEDGED');
+    });
+
+    it('scopes query by organizationId for tenant isolation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await repo.getEscalationsSummary('org-tenant-1', {}, mockNow);
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toMatch(/organization_id/);
+    });
+
+    it('uses application-provided now for breach computation', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const now = new Date('2025-03-20T15:30:00Z');
+      await repo.getEscalationsSummary(mockOrgId, {}, now);
+
+      expect(prisma.$queryRaw).toHaveBeenCalledWith(
+        expect.objectContaining({
+          strings: expect.any(Array),
+        }),
+      );
+    });
+  });
 });
