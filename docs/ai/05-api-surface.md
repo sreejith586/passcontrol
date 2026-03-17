@@ -41,6 +41,8 @@ Base: `/v1` (versioned)
 | GET | /alert-events/sla-compliance | alert.view | SLA compliance metrics (within-SLA/breached counts and rates) |
 | GET | /alert-events | alert.view | List alerts |
 | GET | /alert-events/:id | alert.view | Get alert |
+| POST | /alert-events/bulk-acknowledge | alert.acknowledge | Bulk acknowledge (max 100 IDs) |
+| POST | /alert-events/bulk-resolve | alert.resolve | Bulk resolve (max 100 IDs, optional note) |
 | POST | /alert-events/:id/acknowledge | alert.acknowledge | Acknowledge |
 | POST | /alert-events/:id/resolve | alert.resolve | Resolve |
 

@@ -52,3 +52,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `GET /v1/alert-events/sla-compliance` with raw SQL; from/to apply to `created_at`; all statuses by default; compliance = withinSla / (withinSla + breached); evaluated excludes alerts not yet past deadline.
 - **Rationale:** Management/reporting endpoint distinct from escalation list; KPI-style metrics; unacknowledged/unresolved alerts within SLA window excluded from evaluated count.
+
+### Bulk alert actions
+
+- **Decision:** Add `bulk-acknowledge` and `bulk-resolve` endpoints; delegate to existing single-alert methods; partial success model; max 100 IDs; deduplicate before processing.
+- **Rationale:** No logic duplication; audit, domain events, validations remain centralized; operational efficiency for supervisors.

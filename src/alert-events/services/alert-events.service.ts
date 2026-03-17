@@ -4,6 +4,8 @@ import {
   BadRequestException,
   Inject,
 } from '@nestjs/common';
+import { BulkAcknowledgeAlertsDto } from '../dto/bulk-acknowledge-alerts.dto';
+import { BulkResolveAlertsDto } from '../dto/bulk-resolve-alerts.dto';
 import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
@@ -354,6 +356,101 @@ export class AlertEventsService {
       after: updated,
     });
     return updated;
+  }
+
+  /**
+   * Bulk acknowledge alerts. Delegates to acknowledge() for each ID.
+   * Partial success: one failure does not fail the batch.
+   */
+  async bulkAcknowledge(
+    ctx: { organizationId: string; userId?: string },
+    dto: BulkAcknowledgeAlertsDto,
+  ): Promise<{
+    requested: number;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    results: Array<{ alertEventId: string; success: boolean; error?: string }>;
+  }> {
+    const requested = dto.alertEventIds.length;
+    const deduplicatedIds = [...new Set(dto.alertEventIds)];
+    const results: Array<{ alertEventId: string; success: boolean; error?: string }> = [];
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const id of deduplicatedIds) {
+      try {
+        await this.acknowledge(ctx, id);
+        results.push({ alertEventId: id, success: true });
+        succeeded++;
+      } catch (err) {
+        const error = this.toBulkError(err);
+        results.push({ alertEventId: id, success: false, error });
+        failed++;
+      }
+    }
+
+    return {
+      requested,
+      processed: deduplicatedIds.length,
+      succeeded,
+      failed,
+      results,
+    };
+  }
+
+  /**
+   * Bulk resolve alerts. Delegates to resolve() for each ID.
+   * Partial success: one failure does not fail the batch.
+   */
+  async bulkResolve(
+    ctx: { organizationId: string; userId?: string },
+    dto: BulkResolveAlertsDto,
+  ): Promise<{
+    requested: number;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    results: Array<{ alertEventId: string; success: boolean; error?: string }>;
+  }> {
+    const requested = dto.alertEventIds.length;
+    const deduplicatedIds = [...new Set(dto.alertEventIds)];
+    const resolutionNote = dto.resolutionNote?.trim() || undefined;
+    const results: Array<{ alertEventId: string; success: boolean; error?: string }> = [];
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const id of deduplicatedIds) {
+      try {
+        await this.resolve(ctx, id, resolutionNote);
+        results.push({ alertEventId: id, success: true });
+        succeeded++;
+      } catch (err) {
+        const error = this.toBulkError(err);
+        results.push({ alertEventId: id, success: false, error });
+        failed++;
+      }
+    }
+
+    return {
+      requested,
+      processed: deduplicatedIds.length,
+      succeeded,
+      failed,
+      results,
+    };
+  }
+
+  private toBulkError(err: unknown): string {
+    if (err instanceof NotFoundException) return 'Alert not found';
+    if (err instanceof BadRequestException) {
+      const msg = (err as BadRequestException).message;
+      if (msg?.includes('already acknowledged')) return 'Alert already acknowledged';
+      if (msg?.includes('already resolved')) return 'Alert already resolved';
+      if (msg?.includes('Only OPEN')) return 'Alert already acknowledged';
+      return msg ?? 'Bad request';
+    }
+    return err instanceof Error ? err.message : 'Unknown error';
   }
 
   async resolve(

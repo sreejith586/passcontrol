@@ -7,6 +7,8 @@ import { AlertEscalationsQueryDto } from '../dto/alert-escalations-query.dto';
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import { AlertEscalationsTrendsQueryDto } from '../dto/alert-escalations-trends-query.dto';
 import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
+import { BulkAcknowledgeAlertsDto } from '../dto/bulk-acknowledge-alerts.dto';
+import { BulkResolveAlertsDto } from '../dto/bulk-resolve-alerts.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
@@ -188,6 +190,38 @@ export class AlertEventsController {
   ) {
     const alert = await this.service.getById(ctx, id);
     return ApiResponse.ok(alert);
+  }
+
+  @Post('bulk-acknowledge')
+  @RequirePermissions('alert.acknowledge')
+  @ApiOperation({
+    summary: 'Bulk acknowledge alerts',
+    description:
+      'Acknowledge multiple OPEN alerts in one request. Partial success: one failure does not fail the batch. Max 100 IDs.',
+  })
+  @ApiBody({ type: BulkAcknowledgeAlertsDto })
+  async bulkAcknowledge(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Body() dto: BulkAcknowledgeAlertsDto,
+  ) {
+    const result = await this.service.bulkAcknowledge(ctx, dto);
+    return ApiResponse.ok(result);
+  }
+
+  @Post('bulk-resolve')
+  @RequirePermissions('alert.resolve')
+  @ApiOperation({
+    summary: 'Bulk resolve alerts',
+    description:
+      'Resolve multiple OPEN or ACKNOWLEDGED alerts in one request. Optional resolution note applied to all. Partial success. Max 100 IDs.',
+  })
+  @ApiBody({ type: BulkResolveAlertsDto })
+  async bulkResolve(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Body() dto: BulkResolveAlertsDto,
+  ) {
+    const result = await this.service.bulkResolve(ctx, dto);
+    return ApiResponse.ok(result);
   }
 
   @Post(':id/acknowledge')

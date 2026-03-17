@@ -13,8 +13,8 @@
 
 ## 2. Supervisor / Action Layer (HIGH PRIORITY)
 
-- **Bulk acknowledge alerts** — Endpoint to acknowledge multiple alerts by ID in one request. Reduces round-trips for supervisors clearing many alerts.
-- **Bulk resolve alerts** — Endpoint to resolve multiple alerts by ID in one request. Optional resolution note applied to all.
+- ~~**Bulk acknowledge alerts**~~ — *Done.* `POST /v1/alert-events/bulk-acknowledge` with `{ alertEventIds }`.
+- ~~**Bulk resolve alerts**~~ — *Done.* `POST /v1/alert-events/bulk-resolve` with `{ alertEventIds, resolutionNote? }`.
 - **Prioritized escalation retrieval (top N)** — Lightweight endpoint returning top N escalations by severity and breach duration (e.g. longest-breached first). For dashboard widgets and quick triage.
 - **Alert assignment / ownership** *(optional future)* — Model and APIs for assigning alerts to users; ownership tracking for accountability and routing.
 
