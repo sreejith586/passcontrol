@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AlertEventsService } from './alert-events.service';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
+import { AlertSlaResolverService } from './alert-sla-resolver.service';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import { DOMAIN_EVENT_PUBLISHER } from '../../common/domain-events/contracts/domain-event-publisher.interface';
 
@@ -14,11 +15,18 @@ describe('AlertEventsService (trends)', () => {
     const mockRepo = {
       getTrends: jest.fn().mockResolvedValue([]),
     };
+    const mockSlaResolver = {
+      resolve: jest.fn().mockResolvedValue({
+        acknowledgeWithinMinutes: 60,
+        resolveWithinMinutes: 240,
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlertEventsService,
         { provide: AlertEventsRepository, useValue: mockRepo },
+        { provide: AlertSlaResolverService, useValue: mockSlaResolver },
         { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
       ],

@@ -4,12 +4,11 @@ import {
   CHECKLIST_RUN_ITEM_FAILED_EVENT,
   ChecklistRunItemFailedEvent,
 } from '../events/checklist-run-item-failed.event';
-import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
-import { AlertEventStatus } from '../../../alert-events/enums/alert-status.enum';
+import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 
 /**
  * Creates an alert event when a checklist run item transitions to FAIL.
- * Preserves behavior previously inline in ChecklistRunsService.updateRunItem.
+ * Delegates to AlertEventsService which owns SLA resolution and snapshotting.
  */
 @Injectable()
 export class ChecklistRunItemFailedCreateAlertHandler
@@ -17,23 +16,22 @@ export class ChecklistRunItemFailedCreateAlertHandler
 {
   readonly eventName = CHECKLIST_RUN_ITEM_FAILED_EVENT;
 
-  constructor(private readonly alertEventsRepo: AlertEventsRepository) {}
+  constructor(private readonly alertEventsService: AlertEventsService) {}
 
   async handle(event: ChecklistRunItemFailedEvent): Promise<void> {
     const { organizationId, payload } = event;
 
-    await this.alertEventsRepo.create({
+    await this.alertEventsService.createFromPayload({
       organizationId,
-      brandId: payload.brandId ?? null,
-      locationId: payload.locationId ?? null,
-      zoneId: payload.zoneId ?? null,
-      assetId: null,
       sourceType: 'CHECKLIST_RUN_ITEM',
       sourceId: payload.checklistRunItemSnapshotId,
       type: 'CHECKLIST_ITEM_FAIL',
-      status: AlertEventStatus.OPEN,
-      severity: payload.severity ?? null,
-      payloadJson: {
+      scope: {
+        brandId: payload.brandId ?? undefined,
+        locationId: payload.locationId ?? undefined,
+        zoneId: payload.zoneId ?? undefined,
+      },
+      payload: {
         runId: payload.checklistRunId,
         checklistRunItemSnapshotId: payload.checklistRunItemSnapshotId,
         templateNameSnapshot: payload.templateNameSnapshot,
@@ -43,6 +41,7 @@ export class ChecklistRunItemFailedCreateAlertHandler
         comment: payload.comment ?? undefined,
         severity: payload.severity,
       },
+      severity: payload.severity ?? undefined,
       triggeredAt: event.occurredAt,
     });
   }

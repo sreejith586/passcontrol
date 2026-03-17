@@ -31,6 +31,12 @@ ChecklistRun (status: PENDING | IN_PROGRESS | COMPLETED)
 - `AlertEvent.sourceType = 'CHECKLIST_RUN_ITEM'`
 - `AlertEvent.sourceId = ChecklistRunItemSnapshot.id`
 - Status: OPEN → ACKNOWLEDGED → RESOLVED
+- SLA snapshot: `acknowledgeWithinMinutes`, `resolveWithinMinutes` (resolved at creation from AlertSlaPolicy)
+
+## Alert SLA
+
+- `AlertSlaPolicy`: org-scoped policies with optional brandId/locationId/zoneId, severity, acknowledgeWithinMinutes, resolveWithinMinutes
+- Resolved at alert creation; values snapshotted onto AlertEvent
 
 ## Hierarchy
 

@@ -6,6 +6,8 @@ import { DomainEventsModule } from '../common/domain-events/domain-events.module
 import { AlertEventsController } from './controllers/alert-events.controller';
 import { AlertEventsService } from './services/alert-events.service';
 import { AlertEventsRepository } from './repositories/alert-events.repository';
+import { AlertSlaPolicyRepository } from './repositories/alert-sla-policy.repository';
+import { AlertSlaResolverService } from './services/alert-sla-resolver.service';
 
 @Module({
   imports: [
@@ -15,7 +17,16 @@ import { AlertEventsRepository } from './repositories/alert-events.repository';
     forwardRef(() => DomainEventsModule),
   ],
   controllers: [AlertEventsController],
-  providers: [AlertEventsService, AlertEventsRepository],
-  exports: [AlertEventsService, AlertEventsRepository],
+  providers: [
+    AlertEventsService,
+    AlertEventsRepository,
+    AlertSlaPolicyRepository,
+    AlertSlaResolverService,
+  ],
+  exports: [
+    AlertEventsService,
+    AlertEventsRepository,
+    AlertSlaResolverService,
+  ],
 })
 export class AlertEventsModule {}

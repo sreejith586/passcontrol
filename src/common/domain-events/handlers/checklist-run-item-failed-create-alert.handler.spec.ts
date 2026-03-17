@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChecklistRunItemFailedCreateAlertHandler } from './checklist-run-item-failed-create-alert.handler';
-import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
+import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 import {
   CHECKLIST_RUN_ITEM_FAILED_EVENT,
   createChecklistRunItemFailedEvent,
@@ -8,25 +8,22 @@ import {
 
 describe('ChecklistRunItemFailedCreateAlertHandler', () => {
   let handler: ChecklistRunItemFailedCreateAlertHandler;
-  let alertRepo: jest.Mocked<AlertEventsRepository>;
+  let alertEventsService: jest.Mocked<AlertEventsService>;
 
   beforeEach(async () => {
-    const mockAlertRepo = {
-      create: jest.fn().mockResolvedValue({ id: 'alert-1' }),
+    const mockAlertEventsService = {
+      createFromPayload: jest.fn().mockResolvedValue({ id: 'alert-1' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChecklistRunItemFailedCreateAlertHandler,
-        {
-          provide: AlertEventsRepository,
-          useValue: mockAlertRepo,
-        },
+        { provide: AlertEventsService, useValue: mockAlertEventsService },
       ],
     }).compile();
 
     handler = module.get(ChecklistRunItemFailedCreateAlertHandler);
-    alertRepo = module.get(AlertEventsRepository);
+    alertEventsService = module.get(AlertEventsService);
   });
 
   it('has correct eventName', () => {
@@ -52,17 +49,19 @@ describe('ChecklistRunItemFailedCreateAlertHandler', () => {
 
     await handler.handle(event);
 
-    expect(alertRepo.create).toHaveBeenCalledTimes(1);
-    const call = alertRepo.create.mock.calls[0][0];
+    expect(alertEventsService.createFromPayload).toHaveBeenCalledTimes(1);
+    const call = alertEventsService.createFromPayload.mock.calls[0][0];
     expect(call.organizationId).toBe('org-1');
     expect(call.sourceType).toBe('CHECKLIST_RUN_ITEM');
     expect(call.sourceId).toBe('item-1');
     expect(call.type).toBe('CHECKLIST_ITEM_FAIL');
     expect(call.severity).toBe('CRITICAL');
-    expect(call.brandId).toBe('brand-1');
-    expect(call.locationId).toBe('loc-1');
-    expect(call.zoneId).toBe('zone-1');
-    expect(call.payloadJson).toEqual({
+    expect(call.scope).toEqual({
+      brandId: 'brand-1',
+      locationId: 'loc-1',
+      zoneId: 'zone-1',
+    });
+    expect(call.payload).toEqual({
       runId: 'run-1',
       checklistRunItemSnapshotId: 'item-1',
       templateNameSnapshot: 'Daily Checklist',
@@ -72,6 +71,7 @@ describe('ChecklistRunItemFailedCreateAlertHandler', () => {
       comment: 'Out of range',
       severity: 'CRITICAL',
     });
+    expect(call.triggeredAt).toEqual(event.occurredAt);
   });
 
   it('handles null optional fields', async () => {
@@ -93,11 +93,13 @@ describe('ChecklistRunItemFailedCreateAlertHandler', () => {
 
     await handler.handle(event);
 
-    const call = alertRepo.create.mock.calls[0][0];
-    expect(call.brandId).toBeNull();
-    expect(call.locationId).toBeNull();
-    expect(call.zoneId).toBeNull();
-    expect(call.payloadJson).toMatchObject({
+    const call = alertEventsService.createFromPayload.mock.calls[0][0];
+    expect(call.scope).toEqual({
+      brandId: undefined,
+      locationId: undefined,
+      zoneId: undefined,
+    });
+    expect(call.payload).toMatchObject({
       comment: undefined,
       sectionTitle: undefined,
     });

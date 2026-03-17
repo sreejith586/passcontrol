@@ -11,13 +11,12 @@ import {
 } from '../../../common/domain-events/contracts/domain-event-publisher.interface';
 import { InMemoryDomainEventPublisher } from '../../../common/domain-events/publishers/in-memory-domain-event.publisher';
 import { ChecklistRunItemFailedCreateAlertHandler } from '../../../common/domain-events/handlers/checklist-run-item-failed-create-alert.handler';
-import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
 import { CHECKLIST_RUN_COMPLETED_EVENT } from '../../../common/domain-events/events/checklist-run-completed.event';
 
 describe('ChecklistRunsService (domain events - fail transition)', () => {
   let service: ChecklistRunsService;
   let repo: jest.Mocked<ChecklistRunsRepository>;
-  let alertEventsRepo: jest.Mocked<AlertEventsRepository>;
+  let alertEventsService: jest.Mocked<AlertEventsService>;
   let publisher: InMemoryDomainEventPublisher;
 
   const mockOrgId = 'org-1';
@@ -52,9 +51,9 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
   });
 
   beforeEach(async () => {
-    alertEventsRepo = {
-      create: jest.fn().mockResolvedValue({ id: 'alert-1' }),
-    } as unknown as jest.Mocked<AlertEventsRepository>;
+    alertEventsService = {
+      createFromPayload: jest.fn().mockResolvedValue({ id: 'alert-1' }),
+    } as unknown as jest.Mocked<AlertEventsService>;
 
     const mockRepo = {
       findRunItemById: jest.fn(),
@@ -63,7 +62,9 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
     };
 
     publisher = new InMemoryDomainEventPublisher();
-    const handler = new ChecklistRunItemFailedCreateAlertHandler(alertEventsRepo);
+    const handler = new ChecklistRunItemFailedCreateAlertHandler(
+      alertEventsService,
+    );
     publisher.registerHandler(handler);
 
     const module: TestingModule = await Test.createTestingModule({
@@ -97,8 +98,8 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
       { result: 'FAIL' },
     );
 
-    expect(alertEventsRepo.create).toHaveBeenCalledTimes(1);
-    const createCall = alertEventsRepo.create.mock.calls[0][0];
+    expect(alertEventsService.createFromPayload).toHaveBeenCalledTimes(1);
+    const createCall = alertEventsService.createFromPayload.mock.calls[0][0];
     expect(createCall.sourceType).toBe('CHECKLIST_RUN_ITEM');
     expect(createCall.sourceId).toBe(mockItemId);
     expect(createCall.type).toBe('CHECKLIST_ITEM_FAIL');
@@ -121,7 +122,7 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
       { comment: 'Updated comment' },
     );
 
-    expect(alertEventsRepo.create).not.toHaveBeenCalled();
+    expect(alertEventsService.createFromPayload).not.toHaveBeenCalled();
   });
 
   it('does NOT create alert when result is PASS', async () => {
@@ -139,7 +140,7 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
       { result: 'PASS' },
     );
 
-    expect(alertEventsRepo.create).not.toHaveBeenCalled();
+    expect(alertEventsService.createFromPayload).not.toHaveBeenCalled();
   });
 
   it('does NOT create alert when result is empty string (no transition to FAIL)', async () => {
@@ -157,7 +158,7 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
       { result: 'PASS' },
     );
 
-    expect(alertEventsRepo.create).not.toHaveBeenCalled();
+    expect(alertEventsService.createFromPayload).not.toHaveBeenCalled();
   });
 
   it('propagates handler failure (fail-fast)', async () => {
@@ -169,7 +170,7 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
       .mockResolvedValueOnce(itemAfter as never);
     repo.updateRunItem.mockResolvedValue(itemAfter as never);
 
-    alertEventsRepo.create.mockRejectedValueOnce(new Error('DB error'));
+    alertEventsService.createFromPayload.mockRejectedValueOnce(new Error('DB error'));
 
     await expect(
       service.updateRunItem(

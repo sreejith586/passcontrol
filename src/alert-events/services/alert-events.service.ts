@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
+import { AlertSlaResolverService } from './alert-sla-resolver.service';
 import { AlertEventStatus } from '../enums/alert-status.enum';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import {
@@ -28,6 +29,7 @@ import {
 export class AlertEventsService {
   constructor(
     private readonly repo: AlertEventsRepository,
+    private readonly slaResolver: AlertSlaResolverService,
     private readonly audit: AuditLogsService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
@@ -35,7 +37,7 @@ export class AlertEventsService {
 
   /**
    * Called by TemperatureReadingsService (or other sources) when a breach/event occurs.
-   * Payload is stored as-is for traceability.
+   * Payload is stored as-is for traceability. Resolves SLA at creation time.
    */
   async createFromPayload(payload: {
     organizationId: string;
@@ -45,8 +47,16 @@ export class AlertEventsService {
     scope: { brandId?: string; locationId?: string; zoneId?: string; assetId?: string };
     payload: Record<string, unknown>;
     severity?: string;
+    triggeredAt?: Date;
   }) {
-    const triggeredAt = new Date();
+    const triggeredAt = payload.triggeredAt ?? new Date();
+    const sla = await this.slaResolver.resolve({
+      organizationId: payload.organizationId,
+      brandId: payload.scope.brandId ?? null,
+      locationId: payload.scope.locationId ?? null,
+      zoneId: payload.scope.zoneId ?? null,
+      severity: payload.severity ?? 'MEDIUM',
+    });
     const created = await this.repo.create({
       organizationId: payload.organizationId,
       brandId: payload.scope.brandId ?? null,
@@ -58,6 +68,8 @@ export class AlertEventsService {
       type: payload.type,
       status: AlertEventStatus.OPEN,
       severity: payload.severity ?? null,
+      acknowledgeWithinMinutes: sla.acknowledgeWithinMinutes,
+      resolveWithinMinutes: sla.resolveWithinMinutes,
       payloadJson: payload.payload,
       triggeredAt,
     });

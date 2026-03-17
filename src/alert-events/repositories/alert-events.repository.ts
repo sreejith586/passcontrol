@@ -30,6 +30,8 @@ export class AlertEventsRepository {
     type: string;
     status: AlertStatus | string;
     severity?: string | null;
+    acknowledgeWithinMinutes: number;
+    resolveWithinMinutes: number;
     payloadJson?: Record<string, unknown> | null;
     triggeredAt: Date;
   }) {
