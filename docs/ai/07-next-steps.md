@@ -4,7 +4,7 @@
 
 ## Recommended (Priority Order)
 
-1. **Add `ae.id DESC` tie-breaker** — In summary query `latest_alerts` CTE, make ORDER BY deterministic when `created_at` ties: `ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC`. (Note: `summary-by-location` already uses this.)
+1. **Add `ae.id DESC` tie-breaker** — In checklist-run-items summary query `latest_alerts` CTE, make ORDER BY deterministic when `created_at` ties: `ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC`.
 
 2. **Handlers for published events** — Consider handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved` if downstream use cases emerge (e.g. notifications, analytics).
 

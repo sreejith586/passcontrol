@@ -32,3 +32,13 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Use `forwardRef` to resolve circular import.
 - **Rationale:** DomainEventsModule needs AlertEventsRepository for handler; AlertEventsModule needs DomainEventsModule for publisher.
+
+### Alert escalation reporting (raw SQL)
+
+- **Decision:** Use raw SQL with CTEs for escalation list and summary endpoints; compute breach flags (`ack_breached`, `res_breached`) in SQL using application-provided `now`.
+- **Rationale:** Deterministic breach logic; single query for aggregation; consistent with existing summary patterns.
+
+### Alert SLA policy admin module
+
+- **Decision:** Dedicated `AlertSlaPoliciesModule` with CRUD, conflict detection, and preview; reuse `AlertSlaResolverService` from AlertEventsModule for preview.
+- **Rationale:** Separation of admin concerns; preview uses same resolver as alert creation; service-layer conflict checking for duplicate active policies.
