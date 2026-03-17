@@ -33,6 +33,7 @@ Base: `/v1` (versioned)
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
+| GET | /alert-events/trends | alert.view | Alert lifecycle trends over time |
 | GET | /alert-events | alert.view | List alerts |
 | GET | /alert-events/:id | alert.view | Get alert |
 | POST | /alert-events/:id/acknowledge | alert.acknowledge | Acknowledge |

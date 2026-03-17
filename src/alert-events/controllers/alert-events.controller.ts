@@ -1,7 +1,8 @@
 import { Controller, Get, Param, Post, Query, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
+import { AlertTrendsQueryDto } from '../dto/alert-trends-query.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
@@ -16,6 +17,43 @@ import {
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class AlertEventsController {
   constructor(private readonly service: AlertEventsService) {}
+
+  @Get('trends')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Alert lifecycle trends over time',
+    description:
+      'Returns created, acknowledged, and resolved counts grouped by time interval. from/to apply to each lifecycle timestamp independently.',
+  })
+  @ApiQuery({ name: 'brandId', required: false, description: 'Filter by brand UUID' })
+  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
+  @ApiQuery({ name: 'zoneId', required: false, description: 'Filter by zone UUID' })
+  @ApiQuery({ name: 'severity', required: false, description: 'Filter by alert severity' })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    example: '2025-03-01',
+    description: 'Filter from date (inclusive). Applied to each lifecycle timestamp independently.',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    example: '2025-03-15',
+    description: 'Filter to date (inclusive). Applied to each lifecycle timestamp independently.',
+  })
+  @ApiQuery({
+    name: 'interval',
+    required: false,
+    enum: ['day', 'week', 'month'],
+    description: 'Time bucket interval. Default: day.',
+  })
+  async getTrends(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertTrendsQueryDto,
+  ) {
+    const trends = await this.service.getTrends(ctx, query);
+    return ApiResponse.ok(trends);
+  }
 
   @Get()
   @RequirePermissions('alert.view')

@@ -8,6 +8,10 @@ import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertEventStatus } from '../enums/alert-status.enum';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
+import {
+  AlertTrendsQueryDto,
+  ALERT_TRENDS_INTERVALS,
+} from '../dto/alert-trends-query.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import {
   DOMAIN_EVENT_PUBLISHER,
@@ -58,6 +62,37 @@ export class AlertEventsService {
       triggeredAt,
     });
     return created;
+  }
+
+  async getTrends(ctx: { organizationId: string }, query: AlertTrendsQueryDto) {
+    const interval =
+      query.interval && ALERT_TRENDS_INTERVALS.includes(query.interval)
+        ? query.interval
+        : 'day';
+    const filters = {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      severity: query.severity,
+      from: query.from,
+      to: query.to,
+    };
+    const rows = await this.repo.getTrends(
+      ctx.organizationId,
+      filters,
+      interval,
+    );
+    return {
+      interval,
+      points: rows.map((r) => ({
+        date: r.date,
+        alerts: {
+          created: r.created,
+          acknowledged: r.acknowledged,
+          resolved: r.resolved,
+        },
+      })),
+    };
   }
 
   async getById(ctx: { organizationId: string }, id: string) {

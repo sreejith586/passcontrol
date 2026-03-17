@@ -2,6 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, AlertStatus } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
+export interface AlertTrendsFilters {
+  brandId?: string;
+  locationId?: string;
+  zoneId?: string;
+  severity?: string;
+  from?: string;
+  to?: string;
+}
+
+export type AlertTrendsInterval = 'day' | 'week' | 'month';
+
+const ALERT_TRENDS_INTERVALS: AlertTrendsInterval[] = ['day', 'week', 'month'];
+
 @Injectable()
 export class AlertEventsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -168,6 +181,125 @@ export class AlertEventsRepository {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Get alert lifecycle trends over time.
+   * created: bucket by createdAt
+   * acknowledged: bucket by acknowledgedAt
+   * resolved: bucket by resolvedAt
+   * from/to applied to each lifecycle timestamp independently.
+   */
+  async getTrends(
+    organizationId: string,
+    filters: AlertTrendsFilters,
+    interval: AlertTrendsInterval,
+  ): Promise<
+    Array<{
+      date: string;
+      created: number;
+      acknowledged: number;
+      resolved: number;
+    }>
+  > {
+    const safeInterval = ALERT_TRENDS_INTERVALS.includes(interval)
+      ? interval
+      : 'day';
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = ${organizationId}`,
+    ];
+    baseConditions.push(
+      ...this.buildDimensionConditions(organizationId, filters),
+    );
+    const dimWhereClause = Prisma.join(baseConditions, ' AND ');
+
+    const fromDate = filters.from ? new Date(filters.from) : null;
+    const toDate = filters.to ? new Date(filters.to) : null;
+
+    const createdConditions: Prisma.Sql[] = [Prisma.sql`1=1`];
+    if (fromDate) createdConditions.push(Prisma.sql`ae.created_at >= ${fromDate}`);
+    if (toDate) createdConditions.push(Prisma.sql`ae.created_at <= ${toDate}`);
+    const createdWhere = Prisma.join(createdConditions, ' AND ');
+
+    const ackConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.acknowledged_at IS NOT NULL`,
+    ];
+    if (fromDate) ackConditions.push(Prisma.sql`ae.acknowledged_at >= ${fromDate}`);
+    if (toDate) ackConditions.push(Prisma.sql`ae.acknowledged_at <= ${toDate}`);
+    const ackWhere = Prisma.join(ackConditions, ' AND ');
+
+    const resConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.resolved_at IS NOT NULL`,
+    ];
+    if (fromDate) resConditions.push(Prisma.sql`ae.resolved_at >= ${fromDate}`);
+    if (toDate) resConditions.push(Prisma.sql`ae.resolved_at <= ${toDate}`);
+    const resWhere = Prisma.join(resConditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        bucket: Date;
+        created: bigint;
+        acknowledged: bigint;
+        resolved: bigint;
+      }>
+    >(Prisma.sql`
+      WITH filtered_alerts AS (
+        SELECT id, created_at, acknowledged_at, resolved_at
+        FROM alert_events ae
+        WHERE ${dimWhereClause}
+      ),
+      lifecycle_events AS (
+        SELECT ae.id, DATE_TRUNC(${safeInterval}, ae.created_at)::date AS bucket, 'created' AS event_type
+        FROM filtered_alerts ae
+        WHERE ${createdWhere}
+        UNION ALL
+        SELECT ae.id, DATE_TRUNC(${safeInterval}, ae.acknowledged_at)::date AS bucket, 'acknowledged'
+        FROM filtered_alerts ae
+        WHERE ${ackWhere}
+        UNION ALL
+        SELECT ae.id, DATE_TRUNC(${safeInterval}, ae.resolved_at)::date AS bucket, 'resolved'
+        FROM filtered_alerts ae
+        WHERE ${resWhere}
+      )
+      SELECT
+        le.bucket,
+        COUNT(*) FILTER (WHERE le.event_type = 'created')::bigint AS created,
+        COUNT(*) FILTER (WHERE le.event_type = 'acknowledged')::bigint AS acknowledged,
+        COUNT(*) FILTER (WHERE le.event_type = 'resolved')::bigint AS resolved
+      FROM lifecycle_events le
+      GROUP BY le.bucket
+      ORDER BY le.bucket ASC
+    `);
+
+    return rows.map((r) => ({
+      date:
+        r.bucket instanceof Date
+          ? r.bucket.toISOString().slice(0, 10)
+          : String(r.bucket).slice(0, 10),
+      created: Number(r.created ?? 0),
+      acknowledged: Number(r.acknowledged ?? 0),
+      resolved: Number(r.resolved ?? 0),
+    }));
+  }
+
+  private buildDimensionConditions(
+    _organizationId: string,
+    filters: AlertTrendsFilters,
+  ): Prisma.Sql[] {
+    const conditions: Prisma.Sql[] = [];
+    if (filters.brandId != null) {
+      conditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+    }
+    if (filters.locationId != null) {
+      conditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+    }
+    if (filters.zoneId != null) {
+      conditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+    }
+    if (filters.severity != null) {
+      conditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    return conditions;
   }
 
   async update(
