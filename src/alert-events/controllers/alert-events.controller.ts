@@ -12,6 +12,7 @@ import { BulkAcknowledgeAlertsDto } from '../dto/bulk-acknowledge-alerts.dto';
 import { BulkResolveAlertsDto } from '../dto/bulk-resolve-alerts.dto';
 import { AssignAlertDto } from '../dto/assign-alert.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
+import { ReopenAlertDto } from '../dto/reopen-alert.dto';
 import { CreateAlertEventCommentDto } from '../../alert-event-comments/dto/create-alert-event-comment.dto';
 import { AlertEventCommentsService } from '../../alert-event-comments/services/alert-event-comments.service';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
@@ -367,14 +368,17 @@ export class AlertEventsController {
   @RequirePermissions('alert.resolve')
   @ApiOperation({
     summary: 'Reopen a resolved alert',
-    description: 'Transition RESOLVED alert back to OPEN. Preserves assignment and SLA snapshot.',
+    description:
+      'Transition RESOLVED alert back to OPEN. Preserves assignment and SLA snapshot. Optional note stored as REOPEN_NOTE comment when provided; required when org policy enabled.',
   })
   @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  @ApiBody({ type: ReopenAlertDto, required: false })
   async reopen(
     @CurrentTenantContext() ctx: TenantContext,
     @Param('id') id: string,
+    @Body() dto?: ReopenAlertDto,
   ) {
-    const updated = await this.service.reopen(ctx, id);
+    const updated = await this.service.reopen(ctx, id, dto?.note);
     return ApiResponse.ok(updated);
   }
 }

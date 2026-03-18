@@ -4,6 +4,7 @@ import { AlertEventsService } from './alert-events.service';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
 import { AlertEventActivitiesService } from '../../alert-event-activities/services/alert-event-activities.service';
+import { AlertEventCommentsRepository } from '../../alert-event-comments/repositories/alert-event-comments.repository';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { DOMAIN_EVENT_PUBLISHER } from '../../common/domain-events/contracts/domain-event-publisher.interface';
@@ -66,6 +67,7 @@ describe('AlertEventsService (assignment)', () => {
         { provide: AlertEventsRepository, useValue: mockRepo },
         { provide: AlertSlaResolverService, useValue: mockSlaResolver },
         { provide: AlertEventActivitiesService, useValue: mockActivities },
+        { provide: AlertEventCommentsRepository, useValue: { create: jest.fn() } },
         { provide: AuditLogsService, useValue: mockAudit },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },

@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-18
+**Last updated:** 2025-03-17
 
 ## Implemented Features
 
@@ -57,10 +57,10 @@
 - [x] `GET /v1/alert-events/escalations/prioritized` (top N escalations by urgency)
 - [x] Alert assignment: `POST /v1/alert-events/:id/assign`, `POST /v1/alert-events/:id/unassign`; assignment filters on list, escalations, prioritized
 - [x] Alert activity timeline / audit trail: `AlertEventActivity` model with `CREATED`, `ACKNOWLEDGED`, `RESOLVED`, `ASSIGNED`, `UNASSIGNED`, `REASSIGNED`; `GET /v1/alert-events/:id/activities`; auto-logged on create, acknowledge, resolve, assign, unassign
-- [x] Alert comments / resolution notes: `AlertEventComment` model (COMMENT, RESOLUTION_NOTE); `GET /v1/alert-events/:id/comments`, `POST /v1/alert-events/:id/comments`; separate domain from activity timeline
-- [x] Alert reopen: `POST /v1/alert-events/:id/reopen`; RESOLVED → OPEN; preserves assignment and SLA snapshot; REOPENED activity type
-- [x] Organization-level policy: `requireResolutionNoteOnResolve`; when true, resolve requires non-empty resolution note (trimmed; whitespace-only rejected)
-- [x] Organization settings API: `GET /v1/organization-settings/alert-workflow`, `PATCH /v1/organization-settings/alert-workflow`; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`
+- [x] Alert comments / resolution notes / reopen notes: `AlertEventComment` model (COMMENT, RESOLUTION_NOTE, REOPEN_NOTE); `GET /v1/alert-events/:id/comments`, `POST /v1/alert-events/:id/comments`; REOPEN_NOTE created by reopen flow only; separate domain from activity timeline
+- [x] Alert reopen: `POST /v1/alert-events/:id/reopen`; RESOLVED → OPEN; optional body `{ note?: string }`; preserves assignment and SLA snapshot; REOPENED activity type; REOPEN_NOTE comment when note provided
+- [x] Organization-level policies: `requireResolutionNoteOnResolve`, `requireReopenNoteOnReopen`; when enabled, resolve/reopen requires non-empty note (trimmed; whitespace-only rejected)
+- [x] Organization settings API: `GET /v1/organization-settings/alert-workflow`, `PATCH /v1/organization-settings/alert-workflow`; both policy fields; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
 - [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)

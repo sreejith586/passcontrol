@@ -63,7 +63,7 @@ export class AlertEventCommentsService {
   ): Promise<
     Array<{
       id: string;
-      authorUserId: string;
+      authorUserId: string | null;
       type: string;
       body: string;
       createdAt: string;

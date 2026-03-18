@@ -17,6 +17,7 @@ export class OrganizationSettingsService {
     }
     return {
       requireResolutionNoteOnResolve: settings.requireResolutionNoteOnResolve,
+      requireReopenNoteOnReopen: settings.requireReopenNoteOnReopen,
     };
   }
 
@@ -29,25 +30,39 @@ export class OrganizationSettingsService {
       throw new NotFoundException('Organization not found');
     }
 
-    const updated = await this.repo.updateAlertWorkflowSettings(
-      ctx.organizationId,
-      { requireResolutionNoteOnResolve: dto.requireResolutionNoteOnResolve },
-    );
+    const updateData: { requireResolutionNoteOnResolve?: boolean; requireReopenNoteOnReopen?: boolean } = {};
+    if (dto.requireResolutionNoteOnResolve !== undefined) {
+      updateData.requireResolutionNoteOnResolve = dto.requireResolutionNoteOnResolve;
+    }
+    if (dto.requireReopenNoteOnReopen !== undefined) {
+      updateData.requireReopenNoteOnReopen = dto.requireReopenNoteOnReopen;
+    }
 
-    if (updated) {
+    const updated = Object.keys(updateData).length > 0
+      ? await this.repo.updateAlertWorkflowSettings(ctx.organizationId, updateData)
+      : before;
+
+    if (updated && Object.keys(updateData).length > 0) {
       await this.audit.recordWrite(
         'ORGANIZATION_SETTINGS_ALERT_WORKFLOW_UPDATE',
         ctx,
         ctx.organizationId,
         {
-          before: { requireResolutionNoteOnResolve: before.requireResolutionNoteOnResolve },
-          after: { requireResolutionNoteOnResolve: updated.requireResolutionNoteOnResolve },
+          before: {
+            requireResolutionNoteOnResolve: before.requireResolutionNoteOnResolve,
+            requireReopenNoteOnReopen: before.requireReopenNoteOnReopen,
+          },
+          after: {
+            requireResolutionNoteOnResolve: updated.requireResolutionNoteOnResolve,
+            requireReopenNoteOnReopen: updated.requireReopenNoteOnReopen,
+          },
         },
       );
     }
 
     return {
       requireResolutionNoteOnResolve: updated?.requireResolutionNoteOnResolve ?? before.requireResolutionNoteOnResolve,
+      requireReopenNoteOnReopen: updated?.requireReopenNoteOnReopen ?? before.requireReopenNoteOnReopen,
     };
   }
 }

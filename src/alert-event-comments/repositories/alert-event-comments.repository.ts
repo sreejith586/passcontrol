@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { AlertEventCommentType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 export interface CreateAlertEventCommentInput {
   organizationId: string;
   alertEventId: string;
-  authorUserId: string;
+  authorUserId: string | null;
   type: AlertEventCommentType;
   body: string;
 }
@@ -14,8 +15,9 @@ export interface CreateAlertEventCommentInput {
 export class AlertEventCommentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateAlertEventCommentInput) {
-    return this.prisma.alertEventComment.create({
+  async create(data: CreateAlertEventCommentInput, tx?: Prisma.TransactionClient) {
+    const client = (tx ?? this.prisma) as Prisma.TransactionClient;
+    return client.alertEventComment.create({
       data: {
         organizationId: data.organizationId,
         alertEventId: data.alertEventId,
@@ -32,7 +34,7 @@ export class AlertEventCommentsRepository {
   ): Promise<
     Array<{
       id: string;
-      authorUserId: string;
+      authorUserId: string | null;
       type: string;
       body: string;
       createdAt: Date;

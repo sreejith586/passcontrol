@@ -11,6 +11,8 @@ import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
 import { AlertEventActivitiesService } from '../../alert-event-activities/services/alert-event-activities.service';
+import { AlertEventCommentsRepository } from '../../alert-event-comments/repositories/alert-event-comments.repository';
+import { AlertEventCommentType } from '@prisma/client';
 import { AlertEventStatus } from '../enums/alert-status.enum';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
@@ -45,6 +47,7 @@ export class AlertEventsService {
     private readonly slaResolver: AlertSlaResolverService,
     private readonly audit: AuditLogsService,
     private readonly activities: AlertEventActivitiesService,
+    private readonly commentsRepo: AlertEventCommentsRepository,
     private readonly prisma: PrismaService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
@@ -648,6 +651,16 @@ export class AlertEventsService {
     return org?.requireResolutionNoteOnResolve ?? false;
   }
 
+  private async getRequireReopenNoteOnReopen(
+    organizationId: string,
+  ): Promise<boolean> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { requireReopenNoteOnReopen: true },
+    });
+    return org?.requireReopenNoteOnReopen ?? false;
+  }
+
   private toBulkError(err: unknown): string {
     if (err instanceof NotFoundException) return 'Alert not found';
     if (err instanceof BadRequestException) {
@@ -728,12 +741,27 @@ export class AlertEventsService {
 
   /**
    * Reopen a RESOLVED alert. Transitions to OPEN. Preserves assignment and SLA snapshot.
+   * When requireReopenNoteOnReopen is true, a non-empty note is required (stored as REOPEN_NOTE comment).
    */
-  async reopen(ctx: { organizationId: string; userId?: string }, id: string) {
+  async reopen(
+    ctx: { organizationId: string; userId?: string },
+    id: string,
+    note?: string,
+  ) {
     const existing = await this.getById(ctx, id);
     if (existing.status !== AlertEventStatus.RESOLVED) {
       throw new BadRequestException('Only RESOLVED alerts can be reopened');
     }
+
+    const requireNote = await this.getRequireReopenNoteOnReopen(ctx.organizationId);
+    const noteTrimmed = note?.trim() || null;
+
+    if (requireNote && !noteTrimmed) {
+      throw new BadRequestException(
+        'Reopen note is required when reopening alerts for this organization',
+      );
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const alert = await this.repo.update(ctx.organizationId, id, {
         status: AlertStatus.OPEN,
@@ -749,6 +777,18 @@ export class AlertEventsService {
         ctx.userId ?? null,
         tx,
       );
+      if (noteTrimmed) {
+        await this.commentsRepo.create(
+          {
+            organizationId: ctx.organizationId,
+            alertEventId: id,
+            authorUserId: ctx.userId ?? null,
+            type: AlertEventCommentType.REOPEN_NOTE,
+            body: noteTrimmed,
+          },
+          tx,
+        );
+      }
       return alert;
     });
     await this.audit.recordWrite('ALERT_REOPEN', ctx, id, {

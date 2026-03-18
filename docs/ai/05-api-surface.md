@@ -43,7 +43,7 @@ Base: `/v1` (versioned)
 | GET | /alert-events | alert.view | List alerts |
 | GET | /alert-events/:id | alert.view | Get alert |
 | GET | /alert-events/:id/activities | alert.view | Activity timeline / audit trail |
-| GET | /alert-events/:id/comments | alert.view | List comments and resolution notes |
+| GET | /alert-events/:id/comments | alert.view | List comments (COMMENT, RESOLUTION_NOTE, REOPEN_NOTE) |
 | POST | /alert-events/:id/comments | alert.view | Add comment or resolution note |
 | POST | /alert-events/bulk-acknowledge | alert.acknowledge | Bulk acknowledge (max 100 IDs) |
 | POST | /alert-events/bulk-resolve | alert.resolve | Bulk resolve (max 100 IDs, optional note; note required if org policy enabled) |
@@ -51,14 +51,14 @@ Base: `/v1` (versioned)
 | POST | /alert-events/:id/unassign | alert.assign | Unassign alert |
 | POST | /alert-events/:id/acknowledge | alert.acknowledge | Acknowledge |
 | POST | /alert-events/:id/resolve | alert.resolve | Resolve (resolution note required if org policy enabled) |
-| POST | /alert-events/:id/reopen | alert.resolve | Reopen RESOLVED alert to OPEN |
+| POST | /alert-events/:id/reopen | alert.resolve | Reopen RESOLVED alert to OPEN (optional body `{ note?: string }`; note required if org policy enabled) |
 
 ## Organization Settings (Alert Workflow)
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
-| GET | /organization-settings/alert-workflow | alert.workflow-policy.view | Get alert workflow policy settings |
-| PATCH | /organization-settings/alert-workflow | alert.workflow-policy.manage | Update alert workflow policy (requireResolutionNoteOnResolve) |
+| GET | /organization-settings/alert-workflow | alert.workflow-policy.view | Get workflow policy: `{ requireResolutionNoteOnResolve, requireReopenNoteOnReopen }` |
+| PATCH | /organization-settings/alert-workflow | alert.workflow-policy.manage | Update workflow policy (partial: both fields optional) |
 
 ## Alert SLA Policies (Admin)
 

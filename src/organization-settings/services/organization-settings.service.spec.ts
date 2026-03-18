@@ -35,25 +35,33 @@ describe('OrganizationSettingsService', () => {
   });
 
   describe('getAlertWorkflow', () => {
-    it('returns current setting for the caller organization', async () => {
+    it('returns current settings for the caller organization', async () => {
       repo.getAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: false,
       });
 
       const result = await service.getAlertWorkflow({ organizationId: orgA });
 
-      expect(result).toEqual({ requireResolutionNoteOnResolve: false });
+      expect(result).toEqual({
+        requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: false,
+      });
       expect(repo.getAlertWorkflowSettings).toHaveBeenCalledWith(orgA);
     });
 
     it('returns true when policy enabled', async () => {
       repo.getAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: true,
+        requireReopenNoteOnReopen: true,
       });
 
       const result = await service.getAlertWorkflow({ organizationId: orgA });
 
-      expect(result).toEqual({ requireResolutionNoteOnResolve: true });
+      expect(result).toEqual({
+        requireResolutionNoteOnResolve: true,
+        requireReopenNoteOnReopen: true,
+      });
     });
 
     it('throws NotFoundException when organization not found', async () => {
@@ -68,16 +76,16 @@ describe('OrganizationSettingsService', () => {
 
     it('tenant isolation: uses ctx.organizationId only', async () => {
       repo.getAlertWorkflowSettings.mockImplementation(async (orgId) => {
-        if (orgId === orgA) return { requireResolutionNoteOnResolve: false };
-        if (orgId === orgB) return { requireResolutionNoteOnResolve: true };
+        if (orgId === orgA) return { requireResolutionNoteOnResolve: false, requireReopenNoteOnReopen: false };
+        if (orgId === orgB) return { requireResolutionNoteOnResolve: true, requireReopenNoteOnReopen: true };
         return null;
       });
 
       const resultA = await service.getAlertWorkflow(mockCtxA);
       const resultB = await service.getAlertWorkflow(mockCtxB);
 
-      expect(resultA).toEqual({ requireResolutionNoteOnResolve: false });
-      expect(resultB).toEqual({ requireResolutionNoteOnResolve: true });
+      expect(resultA).toEqual({ requireResolutionNoteOnResolve: false, requireReopenNoteOnReopen: false });
+      expect(resultB).toEqual({ requireResolutionNoteOnResolve: true, requireReopenNoteOnReopen: true });
       expect(repo.getAlertWorkflowSettings).toHaveBeenCalledWith(orgA);
       expect(repo.getAlertWorkflowSettings).toHaveBeenCalledWith(orgB);
     });
@@ -87,16 +95,18 @@ describe('OrganizationSettingsService', () => {
     it('updates only the caller organization', async () => {
       repo.getAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: false,
       });
       repo.updateAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: true,
+        requireReopenNoteOnReopen: false,
       });
 
       const result = await service.updateAlertWorkflow(mockCtxA, {
         requireResolutionNoteOnResolve: true,
       });
 
-      expect(result).toEqual({ requireResolutionNoteOnResolve: true });
+      expect(result).toEqual({ requireResolutionNoteOnResolve: true, requireReopenNoteOnReopen: false });
       expect(repo.updateAlertWorkflowSettings).toHaveBeenCalledWith(orgA, {
         requireResolutionNoteOnResolve: true,
       });
@@ -105,15 +115,36 @@ describe('OrganizationSettingsService', () => {
         mockCtxA,
         orgA,
         expect.objectContaining({
-          before: { requireResolutionNoteOnResolve: false },
-          after: { requireResolutionNoteOnResolve: true },
+          before: { requireResolutionNoteOnResolve: false, requireReopenNoteOnReopen: false },
+          after: { requireResolutionNoteOnResolve: true, requireReopenNoteOnReopen: false },
         }),
       );
+    });
+
+    it('updates requireReopenNoteOnReopen', async () => {
+      repo.getAlertWorkflowSettings.mockResolvedValue({
+        requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: false,
+      });
+      repo.updateAlertWorkflowSettings.mockResolvedValue({
+        requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: true,
+      });
+
+      const result = await service.updateAlertWorkflow(mockCtxA, {
+        requireReopenNoteOnReopen: true,
+      });
+
+      expect(result).toEqual({ requireResolutionNoteOnResolve: false, requireReopenNoteOnReopen: true });
+      expect(repo.updateAlertWorkflowSettings).toHaveBeenCalledWith(orgA, {
+        requireReopenNoteOnReopen: true,
+      });
     });
 
     it('returns previous value when update affects 0 rows', async () => {
       repo.getAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: false,
       });
       repo.updateAlertWorkflowSettings.mockResolvedValue(null);
 
@@ -121,7 +152,7 @@ describe('OrganizationSettingsService', () => {
         requireResolutionNoteOnResolve: true,
       });
 
-      expect(result).toEqual({ requireResolutionNoteOnResolve: false });
+      expect(result).toEqual({ requireResolutionNoteOnResolve: false, requireReopenNoteOnReopen: false });
     });
 
     it('throws NotFoundException when organization not found', async () => {
@@ -139,9 +170,11 @@ describe('OrganizationSettingsService', () => {
     it('tenant isolation: update does not affect other orgs', async () => {
       repo.getAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: false,
+        requireReopenNoteOnReopen: false,
       });
       repo.updateAlertWorkflowSettings.mockResolvedValue({
         requireResolutionNoteOnResolve: true,
+        requireReopenNoteOnReopen: false,
       });
 
       await service.updateAlertWorkflow(mockCtxA, {

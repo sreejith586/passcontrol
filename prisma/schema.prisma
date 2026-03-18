@@ -38,6 +38,7 @@ model Organization {
   id                           String    @id @default(uuid()) @db.Uuid
   name                         String
   requireResolutionNoteOnResolve Boolean  @default(false) @map("require_resolution_note_on_resolve")
+  requireReopenNoteOnReopen      Boolean  @default(false) @map("require_reopen_note_on_reopen")
   createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt                    DateTime? @map("deleted_at") @db.Timestamptz
@@ -301,6 +302,7 @@ enum AlertEventActivityType {
 enum AlertEventCommentType {
   COMMENT
   RESOLUTION_NOTE
+  REOPEN_NOTE
 }
 
 model AlertSlaPolicy {
@@ -383,7 +385,7 @@ model AlertEventComment {
   id             String                @id @default(cuid())
   organizationId String                @map("organization_id") @db.Uuid
   alertEventId   String                @map("alert_event_id") @db.Uuid
-  authorUserId   String                @map("author_user_id") @db.Uuid
+  authorUserId   String?               @map("author_user_id") @db.Uuid
   type           AlertEventCommentType
   body           String
   createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz

@@ -80,13 +80,13 @@ Each entry: **Date | Decision | Rationale**
 
 ### Alert comments as separate domain
 
-- **Decision:** `AlertEventComment` model (COMMENT, RESOLUTION_NOTE) separate from `AlertEventActivity`; no merged timeline or reuse of activity for comments; body max 4000 chars; allowed on all statuses; no edit/delete in v1.
+- **Decision:** `AlertEventComment` model (COMMENT, RESOLUTION_NOTE, REOPEN_NOTE) separate from `AlertEventActivity`; no merged timeline or reuse of activity for comments; body max 4000 chars; allowed on all statuses; no edit/delete in v1. COMMENT and RESOLUTION_NOTE user-added; REOPEN_NOTE system-created on reopen with note.
 - **Rationale:** Keeps activity timeline and comments as distinct domains; avoids overloading activity with user-authored content.
 
 ### Alert reopen
 
-- **Decision:** Add `POST /v1/alert-events/:id/reopen`; allowed only when status is RESOLVED; transition to OPEN; clear acknowledgedAt/resolvedAt/resolutionNote; preserve assignment and SLA snapshot; log REOPENED activity; atomic with `$transaction`; use alert.resolve permission.
-- **Rationale:** Enables reopening incorrectly resolved alerts; no SLA resnapshotting or assignment clearing in v1.
+- **Decision:** Add `POST /v1/alert-events/:id/reopen`; allowed only when status is RESOLVED; optional body `{ note?: string }`; transition to OPEN; clear acknowledgedAt/resolvedAt/resolutionNote; preserve assignment and SLA snapshot; log REOPENED activity; atomic with `$transaction`; use alert.resolve permission. When `requireReopenNoteOnReopen` enabled, note required; note stored as REOPEN_NOTE comment when provided.
+- **Rationale:** Enables reopening incorrectly resolved alerts; no SLA resnapshotting or assignment clearing in v1; policy mirrors requireResolutionNoteOnResolve.
 
 ### Organization-level require-resolution-note policy
 
@@ -95,5 +95,10 @@ Each entry: **Date | Decision | Rationale**
 
 ### Organization settings API for alert workflow
 
-- **Decision:** Add `GET /v1/organization-settings/alert-workflow` and `PATCH /v1/organization-settings/alert-workflow`; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`; PATCH body `{ requireResolutionNoteOnResolve: boolean }`; tenant-scoped via ctx.organizationId.
+- **Decision:** Add `GET /v1/organization-settings/alert-workflow` and `PATCH /v1/organization-settings/alert-workflow`; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`; PATCH body `{ requireResolutionNoteOnResolve?: boolean, requireReopenNoteOnReopen?: boolean }`; tenant-scoped via ctx.organizationId.
 - **Rationale:** Minimal V1 management surface; no generic settings engine; follows alert.sla-policy.* permission pattern.
+
+### Organization-level require-reopen-note policy
+
+- **Decision:** Add `Organization.requireReopenNoteOnReopen` (boolean, default false); when true, reopen requires a non-empty note; trim before validation; reject blank/whitespace-only; BadRequestException with clear message. Store reopen note as `AlertEventComment` with `type = REOPEN_NOTE` (no reopenNote column on AlertEvent). Reopen transaction is atomic: update alert, log REOPENED activity, create REOPEN_NOTE comment when note provided.
+- **Rationale:** Mirrors requireResolutionNoteOnResolve pattern; reuses comments domain; no schema change to AlertEvent; atomic transaction preserves consistency.

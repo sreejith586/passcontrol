@@ -47,7 +47,9 @@ ChecklistRun (status: PENDING | IN_PROGRESS | COMPLETED)
 
 ## Alert Comments (separate domain)
 
-- `AlertEventComment`: type (COMMENT, RESOLUTION_NOTE), authorUserId, body (max 4000 chars), createdAt
+- `AlertEventComment`: type (COMMENT, RESOLUTION_NOTE, REOPEN_NOTE), authorUserId (nullable; null for system-created REOPEN_NOTE when no actor), body (max 4000 chars), createdAt
+- COMMENT and RESOLUTION_NOTE: user-added via `POST /v1/alert-events/:id/comments`
+- REOPEN_NOTE: system-created when reopen is called with a note; not user-addable
 - Separate from AlertEventActivity; no merged timeline
 - Allowed on OPEN, ACKNOWLEDGED, RESOLVED
 - Indexes: (organizationId, alertEventId, createdAt), (alertEventId, createdAt)
@@ -55,8 +57,8 @@ ChecklistRun (status: PENDING | IN_PROGRESS | COMPLETED)
 ## Organization-level alert policy
 
 - `Organization.requireResolutionNoteOnResolve` (boolean, default false): when true, resolving an alert requires a non-empty resolution note (trimmed; whitespace-only rejected)
-- Enforced only on resolve; reopen does not require a note in v1
-- API: `GET /v1/organization-settings/alert-workflow`, `PATCH /v1/organization-settings/alert-workflow`; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`
+- `Organization.requireReopenNoteOnReopen` (boolean, default false): when true, reopening an alert requires a non-empty note (trimmed; whitespace-only rejected); note stored as REOPEN_NOTE comment
+- API: `GET /v1/organization-settings/alert-workflow`, `PATCH /v1/organization-settings/alert-workflow`; both fields; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`
 
 ## Hierarchy
 

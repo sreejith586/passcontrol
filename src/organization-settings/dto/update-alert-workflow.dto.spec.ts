@@ -19,11 +19,27 @@ describe('UpdateAlertWorkflowDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('rejects missing requireResolutionNoteOnResolve', async () => {
+  it('accepts empty object (all optional for partial update)', async () => {
     const dto = plainToInstance(UpdateAlertWorkflowDto, {});
     const errors = await validate(dto);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].property).toBe('requireResolutionNoteOnResolve');
+    expect(errors).toHaveLength(0);
+  });
+
+  it('accepts requireReopenNoteOnReopen', async () => {
+    const dto = plainToInstance(UpdateAlertWorkflowDto, {
+      requireReopenNoteOnReopen: true,
+    });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('accepts both fields', async () => {
+    const dto = plainToInstance(UpdateAlertWorkflowDto, {
+      requireResolutionNoteOnResolve: true,
+      requireReopenNoteOnReopen: false,
+    });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
   });
 
   it('rejects string instead of boolean', async () => {
