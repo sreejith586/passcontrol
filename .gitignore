@@ -33,6 +33,11 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Frontend-specific (explicit)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # Prisma
 # (schema and migrations are committed; generated client is in node_modules)
 
