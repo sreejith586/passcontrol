@@ -317,6 +317,45 @@ describe('AlertEventsRepository', () => {
       expect(queryStr).toContain('ACKNOWLEDGED');
     });
 
+    it('passes assignedToUserId filter to query', async () => {
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ count: BigInt(0) }]);
+
+      await repo.listEscalations(
+        mockOrgId,
+        {
+          assignedToUserId: 'user-123',
+        },
+        { page: 1, limit: 25 },
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('assigned_to_user_id');
+    });
+
+    it('passes assignedToUserId null for unassigned filter', async () => {
+      prisma.$queryRaw
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ count: BigInt(0) }]);
+
+      await repo.listEscalations(
+        mockOrgId,
+        {
+          assignedToUserId: null,
+        },
+        { page: 1, limit: 25 },
+        mockNow,
+      );
+
+      const call = prisma.$queryRaw.mock.calls[0][0];
+      const queryStr = call.strings.join('');
+      expect(queryStr).toContain('assigned_to_user_id');
+      expect(queryStr).toContain('IS NULL');
+    });
+
     it('scopes query by organizationId for tenant isolation', async () => {
       prisma.$queryRaw
         .mockResolvedValueOnce([])

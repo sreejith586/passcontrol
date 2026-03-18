@@ -31,7 +31,7 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
     brandId: 'brand-1',
     locationId: 'loc-1',
     zoneId: 'zone-1',
-    status: 'IN_PROGRESS',
+    status: 'IN_PROGRESS' as const,
   };
   const mockSection = {
     id: 'sec-1',
@@ -179,6 +179,34 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
         { result: 'FAIL' },
       ),
     ).rejects.toThrow('DB error');
+  });
+
+  it('passes null as actor id when ctx.userId is undefined (actor hygiene)', async () => {
+    const itemBefore = {
+      ...createMockItem(null),
+      checklistRun: { ...mockRun, status: 'PENDING' as const },
+    };
+    const itemAfter = { ...createMockItem('PASS'), checklistRun: itemBefore.checklistRun };
+
+    repo.findRunItemById
+      .mockResolvedValueOnce(itemBefore as never)
+      .mockResolvedValueOnce(itemAfter as never);
+    repo.updateRunItem.mockResolvedValue(itemAfter as never);
+
+    await service.updateRunItem(
+      { organizationId: mockOrgId },
+      mockItemId,
+      { result: 'PASS' },
+    );
+
+    expect(repo.markRunInProgress).toHaveBeenCalledWith(mockOrgId, mockRun.id, null);
+    expect(repo.updateRunItem).toHaveBeenCalledWith(
+      mockOrgId,
+      mockItemId,
+      expect.objectContaining({
+        respondedByUserId: null,
+      }),
+    );
   });
 });
 
@@ -356,5 +384,23 @@ describe('ChecklistRunsService (domain events - run completion)', () => {
         mockRunId,
       ),
     ).rejects.toThrow('Publisher error');
+  });
+
+  it('passes null as actor id when ctx.userId is undefined (actor hygiene)', async () => {
+    const runBefore = createMockRun({ status: 'IN_PROGRESS' });
+    const submitted = createMockRun({
+      status: 'COMPLETED',
+      performedByUserId: null,
+      completedAt: new Date('2025-03-15T14:30:00Z'),
+    });
+
+    repo.findRunById.mockResolvedValue(runBefore as never);
+    repo.listRequiredUnansweredItems.mockResolvedValue([]);
+    repo.listFailedItemsWithComplianceRequirements.mockResolvedValue([]);
+    repo.submitRun.mockResolvedValue(submitted as never);
+
+    await service.submitRun({ organizationId: mockOrgId }, mockRunId);
+
+    expect(repo.submitRun).toHaveBeenCalledWith(mockOrgId, mockRunId, null);
   });
 });

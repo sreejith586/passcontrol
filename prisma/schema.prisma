@@ -52,6 +52,8 @@ model Organization {
   temperaturePolicies          TemperaturePolicy[]
   temperatureReadings          TemperatureReading[]
   alertEvents                  AlertEvent[]
+  alertEventActivities         AlertEventActivity[]
+  alertEventComments           AlertEventComment[]
   alertSlaPolicies             AlertSlaPolicy[]
   checklistRuns                ChecklistRun[]
   checklistTemplates           ChecklistTemplate[]
@@ -285,6 +287,21 @@ enum AlertStatus {
   RESOLVED
 }
 
+enum AlertEventActivityType {
+  CREATED
+  ACKNOWLEDGED
+  RESOLVED
+  REOPENED
+  ASSIGNED
+  UNASSIGNED
+  REASSIGNED
+}
+
+enum AlertEventCommentType {
+  COMMENT
+  RESOLUTION_NOTE
+}
+
 model AlertSlaPolicy {
   id                      String   @id @default(uuid()) @db.Uuid
   organizationId          String   @map("organization_id") @db.Uuid
@@ -328,10 +345,54 @@ model AlertEvent {
   resolvedByUserId         String?   @map("resolved_by_user_id") @db.Uuid
   resolutionNote           String?   @map("resolution_note")
   createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  assignedToUserId         String?   @map("assigned_to_user_id") @db.Uuid
+  assignedAt               DateTime? @map("assigned_at") @db.Timestamptz
+  assignedByUserId         String?   @map("assigned_by_user_id") @db.Uuid
 
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  activities   AlertEventActivity[]
+  comments     AlertEventComment[]
 
   @@map("alert_events")
+}
+
+model AlertEventActivity {
+  id                   String                 @id @default(cuid())
+  organizationId       String                 @map("organization_id") @db.Uuid
+  alertEventId         String                 @map("alert_event_id") @db.Uuid
+  type                 AlertEventActivityType
+  actorUserId          String?                @map("actor_user_id") @db.Uuid
+  fromStatus           AlertStatus?           @map("from_status")
+  toStatus             AlertStatus?           @map("to_status")
+  fromAssignedToUserId String?                @map("from_assigned_to_user_id") @db.Uuid
+  toAssignedToUserId   String?                @map("to_assigned_to_user_id") @db.Uuid
+  comment              String?
+  metadata             Json?                  @map("metadata")
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz
+
+  alertEvent   AlertEvent   @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, alertEventId, createdAt])
+  @@index([alertEventId, createdAt])
+  @@map("alert_event_activities")
+}
+
+model AlertEventComment {
+  id             String                @id @default(cuid())
+  organizationId String                @map("organization_id") @db.Uuid
+  alertEventId   String                @map("alert_event_id") @db.Uuid
+  authorUserId   String                @map("author_user_id") @db.Uuid
+  type           AlertEventCommentType
+  body           String
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+
+  alertEvent   AlertEvent   @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, alertEventId, createdAt])
+  @@index([alertEventId, createdAt])
+  @@map("alert_event_comments")
 }
 
 // ---- Incidents & Tasks (referenced by attachments) ----

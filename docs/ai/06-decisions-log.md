@@ -62,3 +62,28 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `GET /v1/alert-events/escalations/prioritized` with raw SQL; rank groups RESOLVE_BREACHED > ACKNOWLEDGE_BREACHED > ACTIVE_NOT_BREACHED; within group: severity, overdue minutes, createdAt; include acknowledgeOverdueMinutes and resolveOverdueMinutes in response.
 - **Rationale:** Lightweight top-N for dashboards; no pagination; scoreHint reflects overdue duration for UI.
+
+### Alert assignment
+
+- **Decision:** Add `assignedToUserId`, `assignedAt`, `assignedByUserId` to AlertEvent; assign/unassign endpoints; allow for OPEN/ACKNOWLEDGED only; reject for RESOLVED; reassignment allowed; filter precedence: unassignedOnly > assignedToMe > assignedUserId.
+- **Rationale:** Lightweight user ID attribution; no full User relation for v1; audit assignment mutations.
+
+### Alert activity timeline
+
+- **Decision:** Add `AlertEventActivity` model with types CREATED, ACKNOWLEDGED, RESOLVED, ASSIGNED, UNASSIGNED, REASSIGNED; log after successful mutation; create+CREATED in same Prisma transaction; assignment type derived from from/to assignee (null→user=ASSIGNED, user→null=UNASSIGNED, user→user=REASSIGNED).
+- **Rationale:** Audit trail for alert lifecycle; no pagination or user enrichment in v1; Prisma for CRUD (no raw SQL).
+
+### Alert mutation + activity atomicity
+
+- **Decision:** All alert mutation flows (acknowledge, resolve, assign, unassign) execute mutation and activity insert inside a single `prisma.$transaction`; repository methods accept optional `tx` for transaction client; domain events and audit logged after transaction commits.
+- **Rationale:** Eliminates consistency gap where alert mutates successfully but activity logging fails; aligns with createFromPayload pattern.
+
+### Alert comments as separate domain
+
+- **Decision:** `AlertEventComment` model (COMMENT, RESOLUTION_NOTE) separate from `AlertEventActivity`; no merged timeline or reuse of activity for comments; body max 4000 chars; allowed on all statuses; no edit/delete in v1.
+- **Rationale:** Keeps activity timeline and comments as distinct domains; avoids overloading activity with user-authored content.
+
+### Alert reopen
+
+- **Decision:** Add `POST /v1/alert-events/:id/reopen`; allowed only when status is RESOLVED; transition to OPEN; clear acknowledgedAt/resolvedAt/resolutionNote; preserve assignment and SLA snapshot; log REOPENED activity; atomic with `$transaction`; use alert.resolve permission.
+- **Rationale:** Enables reopening incorrectly resolved alerts; no SLA resnapshotting or assignment clearing in v1.

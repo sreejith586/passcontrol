@@ -315,7 +315,7 @@ export class ChecklistRunsRepository {
       valueJson?: Prisma.JsonValue;
       comment?: string;
       respondedAt: Date;
-      respondedByUserId: string;
+      respondedByUserId: string | null;
     },
   ) {
     await this.prisma.checklistRunItemSnapshot.updateMany({
@@ -334,7 +334,7 @@ export class ChecklistRunsRepository {
   async markRunInProgress(
     organizationId: string,
     runId: string,
-    userId: string,
+    userId: string | null,
   ) {
     const run = await this.prisma.checklistRun.findFirst({
       where: { id: runId, organizationId },
@@ -353,7 +353,7 @@ export class ChecklistRunsRepository {
     return this.findRunById(organizationId, runId);
   }
 
-  async submitRun(organizationId: string, runId: string, userId: string) {
+  async submitRun(organizationId: string, runId: string, userId: string | null) {
     await this.prisma.checklistRun.updateMany({
       where: { id: runId, organizationId },
       data: {

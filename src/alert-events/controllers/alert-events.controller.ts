@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Body, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AlertEventsService } from '../services/alert-events.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
@@ -10,7 +10,10 @@ import { AlertEscalationsTrendsQueryDto } from '../dto/alert-escalations-trends-
 import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
 import { BulkAcknowledgeAlertsDto } from '../dto/bulk-acknowledge-alerts.dto';
 import { BulkResolveAlertsDto } from '../dto/bulk-resolve-alerts.dto';
+import { AssignAlertDto } from '../dto/assign-alert.dto';
 import { ResolveAlertDto } from '../dto/resolve-alert.dto';
+import { CreateAlertEventCommentDto } from '../../alert-event-comments/dto/create-alert-event-comment.dto';
+import { AlertEventCommentsService } from '../../alert-event-comments/services/alert-event-comments.service';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
@@ -23,7 +26,10 @@ import {
 @Controller({ path: 'alert-events', version: '1' })
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class AlertEventsController {
-  constructor(private readonly service: AlertEventsService) {}
+  constructor(
+    private readonly service: AlertEventsService,
+    private readonly commentsService: AlertEventCommentsService,
+  ) {}
 
   @Get('sla-compliance')
   @RequirePermissions('alert.view')
@@ -202,6 +208,59 @@ export class AlertEventsController {
     return ApiResponse.ok(list);
   }
 
+  @Get(':id/activities')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Get alert activity timeline',
+    description: 'Returns activity timeline/audit trail for an alert. Enforces tenant isolation.',
+  })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  async getActivities(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const activities = await this.service.listActivities(ctx, id);
+    return ApiResponse.ok(activities);
+  }
+
+  @Get(':id/comments')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'List alert comments',
+    description: 'Returns comments and resolution notes for an alert. Oldest-first. Enforces tenant isolation.',
+  })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  async getComments(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const comments = await this.commentsService.listForAlert(ctx.organizationId, id);
+    return ApiResponse.ok(comments);
+  }
+
+  @Post(':id/comments')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Add comment or resolution note',
+    description: 'Add a COMMENT or RESOLUTION_NOTE to an alert. Body trimmed, max 4000 chars. Allowed on OPEN, ACKNOWLEDGED, RESOLVED.',
+  })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  @ApiBody({ type: CreateAlertEventCommentDto })
+  async addComment(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: CreateAlertEventCommentDto,
+  ) {
+    if (!ctx.userId) throw new UnauthorizedException('User must be authenticated to add comments');
+    const comment = await this.commentsService.addComment(
+      ctx.organizationId,
+      id,
+      ctx.userId,
+      dto,
+    );
+    return ApiResponse.created(comment);
+  }
+
   @Get(':id')
   @RequirePermissions('alert.view')
   @ApiOperation({ summary: 'Get alert event by ID' })
@@ -269,6 +328,53 @@ export class AlertEventsController {
     @Body() dto?: ResolveAlertDto,
   ) {
     const updated = await this.service.resolve(ctx, id, dto?.resolutionNote);
+    return ApiResponse.ok(updated);
+  }
+
+  @Post(':id/assign')
+  @RequirePermissions('alert.assign')
+  @ApiOperation({
+    summary: 'Assign an alert to a user',
+    description: 'Assign OPEN or ACKNOWLEDGED alert to a user. Reassignment allowed.',
+  })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  @ApiBody({ type: AssignAlertDto })
+  async assign(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: AssignAlertDto,
+  ) {
+    const result = await this.service.assign(ctx, id, dto);
+    return ApiResponse.ok(result);
+  }
+
+  @Post(':id/unassign')
+  @RequirePermissions('alert.assign')
+  @ApiOperation({
+    summary: 'Unassign an alert',
+    description: 'Remove assignment from OPEN or ACKNOWLEDGED alert.',
+  })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  async unassign(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const result = await this.service.unassign(ctx, id);
+    return ApiResponse.ok(result);
+  }
+
+  @Post(':id/reopen')
+  @RequirePermissions('alert.resolve')
+  @ApiOperation({
+    summary: 'Reopen a resolved alert',
+    description: 'Transition RESOLVED alert back to OPEN. Preserves assignment and SLA snapshot.',
+  })
+  @ApiParam({ name: 'id', description: 'Alert event UUID' })
+  async reopen(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const updated = await this.service.reopen(ctx, id);
     return ApiResponse.ok(updated);
   }
 }

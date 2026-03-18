@@ -32,11 +32,25 @@ ChecklistRun (status: PENDING | IN_PROGRESS | COMPLETED)
 - `AlertEvent.sourceId = ChecklistRunItemSnapshot.id`
 - Status: OPEN → ACKNOWLEDGED → RESOLVED
 - SLA snapshot: `acknowledgeWithinMinutes`, `resolveWithinMinutes` (resolved at creation from AlertSlaPolicy)
+- Assignment: `assignedToUserId`, `assignedAt`, `assignedByUserId` (nullable); assign/unassign for OPEN/ACKNOWLEDGED only
 
 ## Alert SLA
 
 - `AlertSlaPolicy`: org-scoped policies with optional brandId/locationId/zoneId, severity, acknowledgeWithinMinutes, resolveWithinMinutes
 - Resolved at alert creation; values snapshotted onto AlertEvent
+
+## Alert Activity Timeline
+
+- `AlertEventActivity`: type (CREATED, ACKNOWLEDGED, RESOLVED, REOPENED, ASSIGNED, UNASSIGNED, REASSIGNED), actorUserId, fromStatus, toStatus, fromAssignedToUserId, toAssignedToUserId, comment, metadata
+- Auto-logged on: create, acknowledge, resolve, assign, unassign
+- Indexes: (organizationId, alertEventId, createdAt), (alertEventId, createdAt)
+
+## Alert Comments (separate domain)
+
+- `AlertEventComment`: type (COMMENT, RESOLUTION_NOTE), authorUserId, body (max 4000 chars), createdAt
+- Separate from AlertEventActivity; no merged timeline
+- Allowed on OPEN, ACKNOWLEDGED, RESOLVED
+- Indexes: (organizationId, alertEventId, createdAt), (alertEventId, createdAt)
 
 ## Hierarchy
 

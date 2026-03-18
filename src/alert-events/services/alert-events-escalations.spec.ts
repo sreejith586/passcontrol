@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AlertEventsService } from './alert-events.service';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
+import { AlertEventActivitiesService } from '../../alert-event-activities/services/alert-event-activities.service';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
+import { PrismaService } from '../../infra/prisma/prisma.service';
 import { DOMAIN_EVENT_PUBLISHER } from '../../common/domain-events/contracts/domain-event-publisher.interface';
 
 describe('AlertEventsService (escalations)', () => {
@@ -129,13 +131,17 @@ describe('AlertEventsService (escalations)', () => {
         resolveWithinMinutes: 240,
       }),
     };
+    const mockActivities = { listForAlert: jest.fn() };
+    const mockPrisma = { $transaction: jest.fn((fn) => fn({})) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlertEventsService,
         { provide: AlertEventsRepository, useValue: mockRepo },
         { provide: AlertSlaResolverService, useValue: mockSlaResolver },
+        { provide: AlertEventActivitiesService, useValue: mockActivities },
         { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
+        { provide: PrismaService, useValue: mockPrisma },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
       ],
     }).compile();

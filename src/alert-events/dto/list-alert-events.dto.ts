@@ -7,8 +7,9 @@ import {
   Min,
   Max,
   IsDateString,
+  IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { AlertEventType } from '../enums/alert-type.enum';
 import { AlertEventStatus } from '../enums/alert-status.enum';
 
@@ -43,6 +44,20 @@ export class ListAlertEventsQueryDto {
 
   @IsOptional()
   sourceType?: string;
+
+  @IsOptional()
+  @IsUUID()
+  assignedUserId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  assignedToMe?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  unassignedOnly?: boolean;
 
   @IsOptional()
   @IsDateString()

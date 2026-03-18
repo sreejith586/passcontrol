@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { BulkAcknowledgeAlertsDto } from '../dto/bulk-acknowledge-alerts.dto';
 import { BulkResolveAlertsDto } from '../dto/bulk-resolve-alerts.dto';
+import { AssignAlertDto } from '../dto/assign-alert.dto';
 import { AlertStatus } from '@prisma/client';
 import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
+import { AlertEventActivitiesService } from '../../alert-event-activities/services/alert-event-activities.service';
 import { AlertEventStatus } from '../enums/alert-status.enum';
+import { PrismaService } from '../../infra/prisma/prisma.service';
 import { ListAlertEventsQueryDto } from '../dto/list-alert-events.dto';
 import {
   AlertTrendsQueryDto,
@@ -41,6 +44,8 @@ export class AlertEventsService {
     private readonly repo: AlertEventsRepository,
     private readonly slaResolver: AlertSlaResolverService,
     private readonly audit: AuditLogsService,
+    private readonly activities: AlertEventActivitiesService,
+    private readonly prisma: PrismaService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
   ) {}
@@ -67,7 +72,7 @@ export class AlertEventsService {
       zoneId: payload.scope.zoneId ?? null,
       severity: payload.severity ?? 'MEDIUM',
     });
-    const created = await this.repo.create({
+    const createData = {
       organizationId: payload.organizationId,
       brandId: payload.scope.brandId ?? null,
       locationId: payload.scope.locationId ?? null,
@@ -82,6 +87,11 @@ export class AlertEventsService {
       resolveWithinMinutes: sla.resolveWithinMinutes,
       payloadJson: payload.payload,
       triggeredAt,
+    };
+    const created = await this.prisma.$transaction(async (tx) => {
+      const alert = await this.repo.create(createData, tx);
+      await this.activities.logCreated(payload.organizationId, alert.id, tx);
+      return alert;
     });
     return created;
   }
@@ -227,16 +237,23 @@ export class AlertEventsService {
   }
 
   async getPrioritizedEscalations(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     query: AlertEscalationsPrioritizedQueryDto,
   ) {
     const limit = Math.min(Math.max(query.limit ?? 25, 1), 100);
+    const assignedToUserId = this.resolveAssignmentFilter(
+      query.unassignedOnly,
+      query.assignedToMe,
+      query.assignedUserId,
+      ctx.userId,
+    );
     const filters = {
       brandId: query.brandId,
       locationId: query.locationId,
       zoneId: query.zoneId,
       severity: query.severity,
       status: query.status,
+      assignedToUserId,
     };
     const items = await this.repo.listPrioritizedEscalations(
       ctx.organizationId,
@@ -271,18 +288,25 @@ export class AlertEventsService {
   }
 
   async getEscalations(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     query: AlertEscalationsQueryDto,
   ) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
     const pagination = { page, limit };
+    const assignedToUserId = this.resolveAssignmentFilter(
+      query.unassignedOnly,
+      query.assignedToMe,
+      query.assignedUserId,
+      ctx.userId,
+    );
     const filters = {
       brandId: query.brandId,
       locationId: query.locationId,
       zoneId: query.zoneId,
       severity: query.severity,
       status: query.status,
+      assignedToUserId,
       onlyBreached: query.onlyBreached === true,
     };
     const { items, total } = await this.repo.listEscalations(
@@ -323,7 +347,20 @@ export class AlertEventsService {
     return alert;
   }
 
-  async list(ctx: { organizationId: string }, query: ListAlertEventsQueryDto) {
+  /**
+   * List activity timeline for an alert. Enforces organizationId scoping.
+   */
+  async listActivities(
+    ctx: { organizationId: string },
+    id: string,
+  ) {
+    return this.activities.listForAlert(ctx.organizationId, id);
+  }
+
+  async list(
+    ctx: { organizationId: string; userId?: string },
+    query: ListAlertEventsQueryDto,
+  ) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
     const pagination = { page, limit };
@@ -333,6 +370,13 @@ export class AlertEventsService {
         : query.sort === 'triggered_at_desc'
         ? { triggeredAt: 'desc' as const }
         : { createdAt: 'desc' as const };
+
+    const assignedToUserId = this.resolveAssignmentFilter(
+      query.unassignedOnly,
+      query.assignedToMe,
+      query.assignedUserId,
+      ctx.userId,
+    );
 
     const { items, total } = await this.repo.list(
       ctx.organizationId,
@@ -345,6 +389,7 @@ export class AlertEventsService {
         status: query.status,
         severity: query.severity,
         sourceType: query.sourceType,
+        assignedToUserId,
         from: query.from,
         to: query.to,
       },
@@ -376,10 +421,21 @@ export class AlertEventsService {
     if (existing.status !== AlertEventStatus.OPEN) {
       throw new BadRequestException('Only OPEN alerts can be acknowledged');
     }
-    const updated = await this.repo.update(ctx.organizationId, id, {
-      status: AlertStatus.ACKNOWLEDGED,
-      acknowledgedAt: new Date(),
-      acknowledgedByUserId: ctx.userId ?? null,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const alert = await this.repo.update(ctx.organizationId, id, {
+        status: AlertStatus.ACKNOWLEDGED,
+        acknowledgedAt: new Date(),
+        acknowledgedByUserId: ctx.userId ?? null,
+      }, tx);
+      await this.activities.logAcknowledged(
+        ctx.organizationId,
+        id,
+        AlertStatus.OPEN,
+        AlertStatus.ACKNOWLEDGED,
+        ctx.userId ?? null,
+        tx,
+      );
+      return alert;
     });
     if (updated) {
       const event = createAlertAcknowledgedEvent(ctx.organizationId, {
@@ -486,6 +542,98 @@ export class AlertEventsService {
     };
   }
 
+  /**
+   * Resolve assignment filter from query params.
+   * Precedence: unassignedOnly > assignedToMe > assignedUserId.
+   */
+  private resolveAssignmentFilter(
+    unassignedOnly?: boolean,
+    assignedToMe?: boolean,
+    assignedUserId?: string,
+    userId?: string,
+  ): string | null | undefined {
+    if (unassignedOnly === true) return null;
+    if (assignedToMe === true && userId) return userId;
+    if (assignedUserId) return assignedUserId;
+    return undefined;
+  }
+
+  async assign(
+    ctx: { organizationId: string; userId?: string },
+    id: string,
+    dto: AssignAlertDto,
+  ) {
+    const existing = await this.getById(ctx, id);
+    if (existing.status === AlertEventStatus.RESOLVED) {
+      throw new BadRequestException('Cannot assign a resolved alert');
+    }
+    const fromAssignedToUserId = existing.assignedToUserId ?? null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const alert = await this.repo.assign(
+        ctx.organizationId,
+        id,
+        dto.assignedToUserId,
+        ctx.userId ?? null,
+        tx,
+      );
+      await this.activities.logAssignmentChanged(
+        ctx.organizationId,
+        id,
+        fromAssignedToUserId,
+        dto.assignedToUserId,
+        ctx.userId ?? null,
+        tx,
+      );
+      return alert;
+    });
+    await this.audit.recordWrite('ALERT_ASSIGN', ctx, id, {
+      before: existing,
+      after: updated,
+    });
+    return this.toAssignmentResponse(updated!);
+  }
+
+  async unassign(ctx: { organizationId: string; userId?: string }, id: string) {
+    const existing = await this.getById(ctx, id);
+    if (existing.status === AlertEventStatus.RESOLVED) {
+      throw new BadRequestException('Cannot unassign a resolved alert');
+    }
+    const fromAssignedToUserId = existing.assignedToUserId ?? null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const alert = await this.repo.unassign(ctx.organizationId, id, tx);
+      await this.activities.logAssignmentChanged(
+        ctx.organizationId,
+        id,
+        fromAssignedToUserId,
+        null,
+        ctx.userId ?? null,
+        tx,
+      );
+      return alert;
+    });
+    await this.audit.recordWrite('ALERT_UNASSIGN', ctx, id, {
+      before: existing,
+      after: updated,
+    });
+    return this.toAssignmentResponse(updated!);
+  }
+
+  private toAssignmentResponse(alert: {
+    id: string;
+    status: string;
+    assignedToUserId: string | null;
+    assignedAt: Date | null;
+    assignedByUserId: string | null;
+  }) {
+    return {
+      id: alert.id,
+      status: alert.status,
+      assignedToUserId: alert.assignedToUserId,
+      assignedAt: alert.assignedAt?.toISOString() ?? null,
+      assignedByUserId: alert.assignedByUserId,
+    };
+  }
+
   private toBulkError(err: unknown): string {
     if (err instanceof NotFoundException) return 'Alert not found';
     if (err instanceof BadRequestException) {
@@ -507,11 +655,25 @@ export class AlertEventsService {
     if (existing.status === AlertEventStatus.RESOLVED) {
       throw new BadRequestException('Alert is already resolved');
     }
-    const updated = await this.repo.update(ctx.organizationId, id, {
-      status: AlertStatus.RESOLVED,
-      resolvedAt: new Date(),
-      resolvedByUserId: ctx.userId ?? null,
-      resolutionNote: resolutionNote?.trim() || null,
+    const fromStatus = existing.status as AlertStatus;
+    const resolutionNoteTrimmed = resolutionNote?.trim() || null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const alert = await this.repo.update(ctx.organizationId, id, {
+        status: AlertStatus.RESOLVED,
+        resolvedAt: new Date(),
+        resolvedByUserId: ctx.userId ?? null,
+        resolutionNote: resolutionNoteTrimmed,
+      }, tx);
+      await this.activities.logResolved(
+        ctx.organizationId,
+        id,
+        fromStatus,
+        AlertStatus.RESOLVED,
+        ctx.userId ?? null,
+        alert?.resolutionNote ?? null,
+        tx,
+      );
+      return alert;
     });
     if (updated) {
       const event = createAlertResolvedEvent(ctx.organizationId, {
@@ -530,6 +692,38 @@ export class AlertEventsService {
       await this.domainEvents.publish(event);
     }
     await this.audit.recordWrite('ALERT_RESOLVE', ctx, id, {
+      before: existing,
+      after: updated,
+    });
+    return updated;
+  }
+
+  /**
+   * Reopen a RESOLVED alert. Transitions to OPEN. Preserves assignment and SLA snapshot.
+   */
+  async reopen(ctx: { organizationId: string; userId?: string }, id: string) {
+    const existing = await this.getById(ctx, id);
+    if (existing.status !== AlertEventStatus.RESOLVED) {
+      throw new BadRequestException('Only RESOLVED alerts can be reopened');
+    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const alert = await this.repo.update(ctx.organizationId, id, {
+        status: AlertStatus.OPEN,
+        acknowledgedAt: null,
+        acknowledgedByUserId: null,
+        resolvedAt: null,
+        resolvedByUserId: null,
+        resolutionNote: null,
+      }, tx);
+      await this.activities.logReopened(
+        ctx.organizationId,
+        id,
+        ctx.userId ?? null,
+        tx,
+      );
+      return alert;
+    });
+    await this.audit.recordWrite('ALERT_REOPEN', ctx, id, {
       before: existing,
       after: updated,
     });

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, AlertStatus } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
+export type PrismaTransactionClient = Prisma.TransactionClient;
+
 export interface AlertTrendsFilters {
   brandId?: string;
   locationId?: string;
@@ -19,23 +21,27 @@ const ALERT_TRENDS_INTERVALS: AlertTrendsInterval[] = ['day', 'week', 'month'];
 export class AlertEventsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    organizationId: string;
-    brandId?: string | null;
-    locationId?: string | null;
-    zoneId?: string | null;
-    assetId?: string | null;
-    sourceType: string;
-    sourceId: string;
-    type: string;
-    status: AlertStatus | string;
-    severity?: string | null;
-    acknowledgeWithinMinutes: number;
-    resolveWithinMinutes: number;
-    payloadJson?: Record<string, unknown> | null;
-    triggeredAt: Date;
-  }) {
-    return this.prisma.alertEvent.create({
+  async create(
+    data: {
+      organizationId: string;
+      brandId?: string | null;
+      locationId?: string | null;
+      zoneId?: string | null;
+      assetId?: string | null;
+      sourceType: string;
+      sourceId: string;
+      type: string;
+      status: AlertStatus | string;
+      severity?: string | null;
+      acknowledgeWithinMinutes: number;
+      resolveWithinMinutes: number;
+      payloadJson?: Record<string, unknown> | null;
+      triggeredAt: Date;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = (tx ?? this.prisma) as Prisma.TransactionClient;
+    return client.alertEvent.create({
       data: {
         ...data,
         status: (data.status as AlertStatus) ?? AlertStatus.OPEN,
@@ -49,8 +55,13 @@ export class AlertEventsRepository {
     });
   }
 
-  async findById(organizationId: string, id: string) {
-    return this.prisma.alertEvent.findFirst({
+  async findById(
+    organizationId: string,
+    id: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = (tx ?? this.prisma) as Prisma.TransactionClient;
+    return client.alertEvent.findFirst({
       where: { id, organizationId },
     });
   }
@@ -66,6 +77,7 @@ export class AlertEventsRepository {
       status?: string;
       severity?: string;
       sourceType?: string;
+      assignedToUserId?: string | null;
       from?: string;
       to?: string;
     },
@@ -81,6 +93,13 @@ export class AlertEventsRepository {
     if (filters.status != null) where.status = filters.status as AlertStatus;
     if (filters.severity != null) where.severity = filters.severity;
     if (filters.sourceType != null) where.sourceType = filters.sourceType;
+    if (filters.assignedToUserId !== undefined) {
+      if (filters.assignedToUserId === null) {
+        where.assignedToUserId = null;
+      } else {
+        where.assignedToUserId = filters.assignedToUserId;
+      }
+    }
     if (filters.from || filters.to) {
       where.triggeredAt = {};
       if (filters.from) (where.triggeredAt as Prisma.DateTimeFilter).gte = new Date(filters.from);
@@ -296,6 +315,7 @@ export class AlertEventsRepository {
       zoneId?: string;
       severity?: string;
       status?: 'OPEN' | 'ACKNOWLEDGED';
+      assignedToUserId?: string | null;
       onlyBreached?: boolean;
     },
     pagination: { page: number; limit: number },
@@ -344,6 +364,13 @@ export class AlertEventsRepository {
     }
     if (filters.status != null) {
       baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    if (filters.assignedToUserId !== undefined) {
+      if (filters.assignedToUserId === null) {
+        baseConditions.push(Prisma.sql`ae.assigned_to_user_id IS NULL`);
+      } else {
+        baseConditions.push(Prisma.sql`ae.assigned_to_user_id = ${filters.assignedToUserId}`);
+      }
     }
     const whereClause = Prisma.join(baseConditions, ' AND ');
 
@@ -471,6 +498,7 @@ export class AlertEventsRepository {
       zoneId?: string;
       severity?: string;
       status?: 'OPEN' | 'ACKNOWLEDGED';
+      assignedToUserId?: string | null;
     },
     limit: number,
     now: Date,
@@ -523,6 +551,13 @@ export class AlertEventsRepository {
     }
     if (filters.status != null) {
       baseConditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    if (filters.assignedToUserId !== undefined) {
+      if (filters.assignedToUserId === null) {
+        baseConditions.push(Prisma.sql`ae.assigned_to_user_id IS NULL`);
+      } else {
+        baseConditions.push(Prisma.sql`ae.assigned_to_user_id = ${filters.assignedToUserId}`);
+      }
     }
     const whereClause = Prisma.join(baseConditions, ' AND ');
 
@@ -1173,12 +1208,54 @@ export class AlertEventsRepository {
       resolvedAt?: Date | null;
       resolvedByUserId?: string | null;
       resolutionNote?: string | null;
+      assignedToUserId?: string | null;
+      assignedAt?: Date | null;
+      assignedByUserId?: string | null;
     },
+    tx?: Prisma.TransactionClient,
   ) {
-    await this.prisma.alertEvent.updateMany({
+    const client = (tx ?? this.prisma) as Prisma.TransactionClient;
+    await client.alertEvent.updateMany({
       where: { id, organizationId },
       data,
     });
-    return this.findById(organizationId, id);
+    return this.findById(organizationId, id, tx);
+  }
+
+  async assign(
+    organizationId: string,
+    id: string,
+    assignedToUserId: string,
+    assignedByUserId: string | null,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = (tx ?? this.prisma) as Prisma.TransactionClient;
+    const now = new Date();
+    await client.alertEvent.updateMany({
+      where: { id, organizationId },
+      data: {
+        assignedToUserId,
+        assignedAt: now,
+        assignedByUserId,
+      },
+    });
+    return this.findById(organizationId, id, tx);
+  }
+
+  async unassign(
+    organizationId: string,
+    id: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = (tx ?? this.prisma) as Prisma.TransactionClient;
+    await client.alertEvent.updateMany({
+      where: { id, organizationId },
+      data: {
+        assignedToUserId: null,
+        assignedAt: null,
+        assignedByUserId: null,
+      },
+    });
+    return this.findById(organizationId, id, tx);
   }
 }

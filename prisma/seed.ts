@@ -27,6 +27,7 @@ const PERMISSIONS: Array<{ key: string; name: string }> = [
   { key: 'alert.view', name: 'View alert events' },
   { key: 'alert.acknowledge', name: 'Acknowledge alert events' },
   { key: 'alert.resolve', name: 'Resolve alert events' },
+  { key: 'alert.assign', name: 'Assign and unassign alert events' },
   { key: 'alert.sla-policy.view', name: 'View alert SLA policies' },
   { key: 'alert.sla-policy.manage', name: 'Manage alert SLA policies' },
   { key: 'file.upload', name: 'Upload files' },

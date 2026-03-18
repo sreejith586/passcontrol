@@ -38,6 +38,27 @@ export class AlertEscalationsQueryDto {
   @IsIn(['OPEN', 'ACKNOWLEDGED'])
   status?: 'OPEN' | 'ACKNOWLEDGED';
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Filter by assigned user UUID' })
+  @IsOptional()
+  @IsUUID()
+  assignedUserId?: string;
+
+  @ApiPropertyOptional({
+    description: 'If true, filter to alerts assigned to the current user.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  assignedToMe?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'If true, filter to unassigned alerts only.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  unassignedOnly?: boolean;
+
   @ApiPropertyOptional({
     description: 'If true, return only alerts with acknowledge or resolve breach.',
   })

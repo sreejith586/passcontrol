@@ -42,10 +42,16 @@ Base: `/v1` (versioned)
 | GET | /alert-events/sla-compliance | alert.view | SLA compliance metrics (within-SLA/breached counts and rates) |
 | GET | /alert-events | alert.view | List alerts |
 | GET | /alert-events/:id | alert.view | Get alert |
+| GET | /alert-events/:id/activities | alert.view | Activity timeline / audit trail |
+| GET | /alert-events/:id/comments | alert.view | List comments and resolution notes |
+| POST | /alert-events/:id/comments | alert.view | Add comment or resolution note |
 | POST | /alert-events/bulk-acknowledge | alert.acknowledge | Bulk acknowledge (max 100 IDs) |
 | POST | /alert-events/bulk-resolve | alert.resolve | Bulk resolve (max 100 IDs, optional note) |
+| POST | /alert-events/:id/assign | alert.assign | Assign alert to user |
+| POST | /alert-events/:id/unassign | alert.assign | Unassign alert |
 | POST | /alert-events/:id/acknowledge | alert.acknowledge | Acknowledge |
 | POST | /alert-events/:id/resolve | alert.resolve | Resolve |
+| POST | /alert-events/:id/reopen | alert.resolve | Reopen RESOLVED alert to OPEN |
 
 ## Alert SLA Policies (Admin)
 

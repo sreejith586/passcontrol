@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-17
+**Last updated:** 2025-03-18
 
 ## Implemented Features
 
@@ -55,6 +55,10 @@
 - [x] `GET /v1/alert-events/sla-compliance` (SLA compliance metrics: within-SLA/breached counts and rates)
 - [x] `POST /v1/alert-events/bulk-acknowledge`, `POST /v1/alert-events/bulk-resolve` (bulk alert actions)
 - [x] `GET /v1/alert-events/escalations/prioritized` (top N escalations by urgency)
+- [x] Alert assignment: `POST /v1/alert-events/:id/assign`, `POST /v1/alert-events/:id/unassign`; assignment filters on list, escalations, prioritized
+- [x] Alert activity timeline / audit trail: `AlertEventActivity` model with `CREATED`, `ACKNOWLEDGED`, `RESOLVED`, `ASSIGNED`, `UNASSIGNED`, `REASSIGNED`; `GET /v1/alert-events/:id/activities`; auto-logged on create, acknowledge, resolve, assign, unassign
+- [x] Alert comments / resolution notes: `AlertEventComment` model (COMMENT, RESOLUTION_NOTE); `GET /v1/alert-events/:id/comments`, `POST /v1/alert-events/:id/comments`; separate domain from activity timeline
+- [x] Alert reopen: `POST /v1/alert-events/:id/reopen`; RESOLVED → OPEN; preserves assignment and SLA snapshot; REOPENED activity type
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
 - [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)

@@ -189,7 +189,7 @@ export class ChecklistRunsService {
       await this.repo.markRunInProgress(
         ctx.organizationId,
         run.id,
-        ctx.userId ?? '',
+        ctx.userId ?? null,
       );
     }
 
@@ -209,7 +209,7 @@ export class ChecklistRunsService {
         valueJson: dto.valueJson as Prisma.JsonValue | undefined,
         comment: dto.comment,
         respondedAt: new Date(),
-        respondedByUserId: ctx.userId ?? '',
+        respondedByUserId: ctx.userId ?? null,
       },
     );
 
@@ -300,7 +300,7 @@ export class ChecklistRunsService {
     const submitted = await this.repo.submitRun(
       ctx.organizationId,
       runId,
-      ctx.userId ?? '',
+      ctx.userId ?? null,
     );
 
     if (submitted) {

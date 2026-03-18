@@ -284,13 +284,17 @@ export class ChecklistSchedulesService {
 
     if (existingRun) return { skipped: 'duplicate' };
 
-    const maxRun = await this.prisma.checklistRun.aggregate({
-      where: { organizationId },
-      _max: { runNumber: true },
-    });
-    const runNumber = (maxRun._max.runNumber ?? 0) + 1;
-
     const run = await this.prisma.$transaction(async (tx) => {
+      // Advisory lock per org to prevent concurrent runNumber collisions.
+      // pg_advisory_xact_lock releases automatically at transaction end.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(('run_' || ${organizationId})::text))`;
+
+      const maxRun = await tx.checklistRun.aggregate({
+        where: { organizationId },
+        _max: { runNumber: true },
+      });
+      const runNumber = (maxRun._max.runNumber ?? 0) + 1;
+
       const created = await tx.checklistRun.create({
         data: {
           organizationId,
