@@ -28,6 +28,8 @@ const PERMISSIONS = [
     { key: 'alert.assign', name: 'Assign and unassign alert events' },
     { key: 'alert.sla-policy.view', name: 'View alert SLA policies' },
     { key: 'alert.sla-policy.manage', name: 'Manage alert SLA policies' },
+    { key: 'alert.workflow-policy.view', name: 'View alert workflow policy settings' },
+    { key: 'alert.workflow-policy.manage', name: 'Manage alert workflow policy settings' },
     { key: 'file.upload', name: 'Upload files' },
     { key: 'file.view', name: 'View files' },
     { key: 'attachment.create', name: 'Create attachments' },

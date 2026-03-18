@@ -71,7 +71,14 @@ describe('AlertEventsService (domain events)', () => {
       logAcknowledged: jest.fn().mockResolvedValue(undefined),
       logResolved: jest.fn().mockResolvedValue(undefined),
     };
-    const mockPrisma = { $transaction: jest.fn((fn) => fn({})) };
+    const mockPrisma = {
+      $transaction: jest.fn((fn) => fn({})),
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({
+          requireResolutionNoteOnResolve: false,
+        }),
+      },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

@@ -46,12 +46,19 @@ Base: `/v1` (versioned)
 | GET | /alert-events/:id/comments | alert.view | List comments and resolution notes |
 | POST | /alert-events/:id/comments | alert.view | Add comment or resolution note |
 | POST | /alert-events/bulk-acknowledge | alert.acknowledge | Bulk acknowledge (max 100 IDs) |
-| POST | /alert-events/bulk-resolve | alert.resolve | Bulk resolve (max 100 IDs, optional note) |
+| POST | /alert-events/bulk-resolve | alert.resolve | Bulk resolve (max 100 IDs, optional note; note required if org policy enabled) |
 | POST | /alert-events/:id/assign | alert.assign | Assign alert to user |
 | POST | /alert-events/:id/unassign | alert.assign | Unassign alert |
 | POST | /alert-events/:id/acknowledge | alert.acknowledge | Acknowledge |
-| POST | /alert-events/:id/resolve | alert.resolve | Resolve |
+| POST | /alert-events/:id/resolve | alert.resolve | Resolve (resolution note required if org policy enabled) |
 | POST | /alert-events/:id/reopen | alert.resolve | Reopen RESOLVED alert to OPEN |
+
+## Organization Settings (Alert Workflow)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /organization-settings/alert-workflow | alert.workflow-policy.view | Get alert workflow policy settings |
+| PATCH | /organization-settings/alert-workflow | alert.workflow-policy.manage | Update alert workflow policy (requireResolutionNoteOnResolve) |
 
 ## Alert SLA Policies (Admin)
 
@@ -65,7 +72,7 @@ Base: `/v1` (versioned)
 
 ## Other
 
-- `/auth`, `/files`, `/attachments`, `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`
+- `/auth`, `/files`, `/attachments`, `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`, `/organization-settings`
 
 ## Response Shape
 

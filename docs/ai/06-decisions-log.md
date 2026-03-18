@@ -87,3 +87,13 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `POST /v1/alert-events/:id/reopen`; allowed only when status is RESOLVED; transition to OPEN; clear acknowledgedAt/resolvedAt/resolutionNote; preserve assignment and SLA snapshot; log REOPENED activity; atomic with `$transaction`; use alert.resolve permission.
 - **Rationale:** Enables reopening incorrectly resolved alerts; no SLA resnapshotting or assignment clearing in v1.
+
+### Organization-level require-resolution-note policy
+
+- **Decision:** Add `Organization.requireResolutionNoteOnResolve` (boolean, default false); when true, resolve (single and bulk) requires a non-empty resolution note; trim before validation; reject blank/whitespace-only; BadRequestException with clear message.
+- **Rationale:** Small V1 policy feature; no generic rules engine; org-scoped; enforce only on resolve, not reopen.
+
+### Organization settings API for alert workflow
+
+- **Decision:** Add `GET /v1/organization-settings/alert-workflow` and `PATCH /v1/organization-settings/alert-workflow`; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`; PATCH body `{ requireResolutionNoteOnResolve: boolean }`; tenant-scoped via ctx.organizationId.
+- **Rationale:** Minimal V1 management surface; no generic settings engine; follows alert.sla-policy.* permission pattern.

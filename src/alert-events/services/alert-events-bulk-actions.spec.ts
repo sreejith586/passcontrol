@@ -38,7 +38,14 @@ describe('AlertEventsService (bulk actions)', () => {
       logAcknowledged: jest.fn().mockResolvedValue(undefined),
       logResolved: jest.fn().mockResolvedValue(undefined),
     };
-    const mockPrisma = { $transaction: jest.fn((fn) => fn({})) };
+    const mockPrisma = {
+      $transaction: jest.fn((fn) => fn({})),
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({
+          requireResolutionNoteOnResolve: false,
+        }),
+      },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -179,8 +186,12 @@ describe('AlertEventsService (bulk actions)', () => {
         ],
       });
       expect(resolveSpy).toHaveBeenCalledTimes(2);
-      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-1', undefined);
-      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-2', undefined);
+      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-1', undefined, {
+        requireResolutionNote: false,
+      });
+      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-2', undefined, {
+        requireResolutionNote: false,
+      });
     });
 
     it('resolutionNote propagation', async () => {
@@ -191,8 +202,12 @@ describe('AlertEventsService (bulk actions)', () => {
         resolutionNote: 'Resolved in bulk',
       });
 
-      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-1', 'Resolved in bulk');
-      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-2', 'Resolved in bulk');
+      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-1', 'Resolved in bulk', {
+        requireResolutionNote: false,
+      });
+      expect(resolveSpy).toHaveBeenCalledWith(mockCtx, 'id-2', 'Resolved in bulk', {
+        requireResolutionNote: false,
+      });
     });
 
     it('partial success', async () => {
@@ -225,7 +240,49 @@ describe('AlertEventsService (bulk actions)', () => {
       const ctx = { organizationId: 'org-tenant-xyz', userId: 'u1' };
       await service.bulkResolve(ctx, { alertEventIds: ['id-1'] });
 
-      expect(resolveSpy).toHaveBeenCalledWith(ctx, 'id-1', undefined);
+      expect(resolveSpy).toHaveBeenCalledWith(ctx, 'id-1', undefined, {
+        requireResolutionNote: false,
+      });
+    });
+
+    it('fails with Resolution note is required when policy enabled and no note', async () => {
+      const mockPrismaWithPolicy = {
+        $transaction: jest.fn((fn) => fn({})),
+        organization: {
+          findUnique: jest.fn().mockResolvedValue({
+            requireResolutionNoteOnResolve: true,
+          }),
+        },
+      };
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          AlertEventsService,
+          { provide: AlertEventsRepository, useValue: { findById: jest.fn() } },
+          { provide: AlertSlaResolverService, useValue: { resolve: jest.fn() } },
+          {
+            provide: AlertEventActivitiesService,
+            useValue: { logResolved: jest.fn(), logAcknowledged: jest.fn() },
+          },
+          { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
+          { provide: PrismaService, useValue: mockPrismaWithPolicy },
+          { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
+        ],
+      }).compile();
+      const svc = moduleRef.get(AlertEventsService);
+      const repoMock = moduleRef.get(AlertEventsRepository) as jest.Mocked<AlertEventsRepository>;
+      repoMock.findById.mockResolvedValue({
+        id: 'id-1',
+        organizationId: mockOrgId,
+        status: 'ACKNOWLEDGED',
+      } as never);
+
+      const result = await svc.bulkResolve(mockCtx, {
+        alertEventIds: ['id-1'],
+      });
+
+      expect(result.succeeded).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.results[0].error).toBe('Resolution note is required');
     });
   });
 });

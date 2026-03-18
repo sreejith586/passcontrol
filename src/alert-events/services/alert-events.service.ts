@@ -517,13 +517,17 @@ export class AlertEventsService {
     const requested = dto.alertEventIds.length;
     const deduplicatedIds = [...new Set(dto.alertEventIds)];
     const resolutionNote = dto.resolutionNote?.trim() || undefined;
+    const requireResolutionNote =
+      await this.getRequireResolutionNoteOnResolve(ctx.organizationId);
     const results: Array<{ alertEventId: string; success: boolean; error?: string }> = [];
     let succeeded = 0;
     let failed = 0;
 
     for (const id of deduplicatedIds) {
       try {
-        await this.resolve(ctx, id, resolutionNote);
+        await this.resolve(ctx, id, resolutionNote, {
+          requireResolutionNote,
+        });
         results.push({ alertEventId: id, success: true });
         succeeded++;
       } catch (err) {
@@ -634,6 +638,16 @@ export class AlertEventsService {
     };
   }
 
+  private async getRequireResolutionNoteOnResolve(
+    organizationId: string,
+  ): Promise<boolean> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { requireResolutionNoteOnResolve: true },
+    });
+    return org?.requireResolutionNoteOnResolve ?? false;
+  }
+
   private toBulkError(err: unknown): string {
     if (err instanceof NotFoundException) return 'Alert not found';
     if (err instanceof BadRequestException) {
@@ -641,6 +655,8 @@ export class AlertEventsService {
       if (msg?.includes('already acknowledged')) return 'Alert already acknowledged';
       if (msg?.includes('already resolved')) return 'Alert already resolved';
       if (msg?.includes('Only OPEN')) return 'Alert already acknowledged';
+      if (msg?.includes('Resolution note is required'))
+        return 'Resolution note is required';
       return msg ?? 'Bad request';
     }
     return err instanceof Error ? err.message : 'Unknown error';
@@ -650,13 +666,25 @@ export class AlertEventsService {
     ctx: { organizationId: string; userId?: string },
     id: string,
     resolutionNote?: string,
+    options?: { requireResolutionNote?: boolean },
   ) {
     const existing = await this.getById(ctx, id);
     if (existing.status === AlertEventStatus.RESOLVED) {
       throw new BadRequestException('Alert is already resolved');
     }
-    const fromStatus = existing.status as AlertStatus;
+
+    const requireNote =
+      options?.requireResolutionNote ??
+      (await this.getRequireResolutionNoteOnResolve(ctx.organizationId));
     const resolutionNoteTrimmed = resolutionNote?.trim() || null;
+
+    if (requireNote && !resolutionNoteTrimmed) {
+      throw new BadRequestException(
+        'Resolution note is required when resolving alerts for this organization',
+      );
+    }
+
+    const fromStatus = existing.status as AlertStatus;
     const updated = await this.prisma.$transaction(async (tx) => {
       const alert = await this.repo.update(ctx.organizationId, id, {
         status: AlertStatus.RESOLVED,

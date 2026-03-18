@@ -52,6 +52,12 @@ ChecklistRun (status: PENDING | IN_PROGRESS | COMPLETED)
 - Allowed on OPEN, ACKNOWLEDGED, RESOLVED
 - Indexes: (organizationId, alertEventId, createdAt), (alertEventId, createdAt)
 
+## Organization-level alert policy
+
+- `Organization.requireResolutionNoteOnResolve` (boolean, default false): when true, resolving an alert requires a non-empty resolution note (trimmed; whitespace-only rejected)
+- Enforced only on resolve; reopen does not require a note in v1
+- API: `GET /v1/organization-settings/alert-workflow`, `PATCH /v1/organization-settings/alert-workflow`; permissions `alert.workflow-policy.view`, `alert.workflow-policy.manage`
+
 ## Hierarchy
 
 - **Organization** → Brand → Location → Zone

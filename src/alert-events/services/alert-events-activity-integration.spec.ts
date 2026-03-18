@@ -61,7 +61,12 @@ describe('AlertEventsService (activity integration)', () => {
     };
     prisma = {
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({})),
-    };
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({
+          requireResolutionNoteOnResolve: false,
+        }),
+      },
+    } as unknown as { $transaction: jest.Mock };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
