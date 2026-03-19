@@ -8,6 +8,8 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   '/alerts': 'alert.view',
   '/escalations': 'alert.view',
   '/settings/alert-workflow': 'alert.workflow-policy.view',
+  '/settings/users': 'user.view',
+  '/settings/roles': 'user.view',
 };
 
 /**

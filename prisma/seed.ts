@@ -51,6 +51,8 @@ const PERMISSIONS: Array<{ key: string; name: string }> = [
   { key: 'checklist.run.generate', name: 'Generate checklist runs from schedules' },
   { key: 'checklist.run.update', name: 'Update checklist run items' },
   { key: 'checklist.run.submit', name: 'Submit checklist runs' },
+  { key: 'user.view', name: 'View users and roles' },
+  { key: 'user.invite', name: 'Invite users to organization' },
 ];
 
 async function ensureOrganization() {

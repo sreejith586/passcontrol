@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   TrendingUp,
   Settings,
+  Users,
+  Shield,
   PanelLeftClose,
   PanelLeft,
 } from 'lucide-react';
@@ -15,6 +17,8 @@ const navItems = [
   { to: '/alerts', label: 'Alerts', icon: AlertTriangle, permission: 'alert.view' as const },
   { to: '/escalations', label: 'Escalations', icon: TrendingUp, permission: 'alert.view' as const },
   { to: '/settings/alert-workflow', label: 'Settings', icon: Settings, permission: 'alert.workflow-policy.view' as const },
+  { to: '/settings/users', label: 'Users', icon: Users, permission: 'user.view' as const },
+  { to: '/settings/roles', label: 'Roles', icon: Shield, permission: 'user.view' as const },
 ];
 
 interface AppSidebarProps {

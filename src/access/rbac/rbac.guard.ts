@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../infra/prisma/prisma.service';
-import { REQUIRE_PERMISSIONS } from './permissions.decorator';
+import { REQUIRE_PERMISSIONS, REQUIRE_ANY_PERMISSION } from './permissions.decorator';
 
 @Injectable()
 export class RbacGuard implements CanActivate {
@@ -20,7 +20,14 @@ export class RbacGuard implements CanActivate {
       REQUIRE_PERMISSIONS,
       [context.getHandler(), context.getClass()],
     );
-    if (!required?.length) {
+    const requiredAny = this.reflector.getAllAndOverride<string[]>(
+      REQUIRE_ANY_PERMISSION,
+      [context.getHandler(), context.getClass()],
+    );
+
+    const hasRequired = required?.length > 0;
+    const hasRequiredAny = requiredAny?.length > 0;
+    if (!hasRequired && !hasRequiredAny) {
       throw new ForbiddenException('Missing required permissions metadata');
     }
 
@@ -40,9 +47,17 @@ export class RbacGuard implements CanActivate {
       a.role.permissions.forEach((rp) => permissions.add(rp.permission.key)),
     );
 
-    const missing = required.filter((p) => !permissions.has(p));
-    if (missing.length) {
-      throw new ForbiddenException(`Missing permissions: ${missing.join(', ')}`);
+    if (hasRequired) {
+      const missing = required.filter((p) => !permissions.has(p));
+      if (missing.length) {
+        throw new ForbiddenException(`Missing permissions: ${missing.join(', ')}`);
+      }
+    }
+    if (hasRequiredAny) {
+      const hasAny = requiredAny.some((p) => permissions.has(p));
+      if (!hasAny) {
+        throw new ForbiddenException(`Missing one of: ${requiredAny.join(', ')}`);
+      }
     }
 
     return true;

@@ -4,4 +4,7 @@ export const queryKeys = {
     list: (params: { page?: number; limit?: number }) =>
       ['users', 'list', params] as const,
   },
+  roles: {
+    all: ['roles'] as const,
+  },
 } as const;

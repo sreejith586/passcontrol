@@ -12,6 +12,8 @@ import { AlertDetailPage } from '@/features/alerts/AlertDetailPage';
 import { EscalationsPage } from '@/features/escalations/EscalationsPage';
 import { AlertWorkflowSettingsPage } from '@/features/organization-settings/AlertWorkflowSettingsPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { UsersPage } from '@/features/users/UsersPage';
+import { RolesPage } from '@/features/roles/RolesPage';
 
 function NotFoundPage() {
   return (
@@ -75,6 +77,22 @@ const router = createBrowserRouter([
             element: (
               <RoutePermissionGuard>
                 <AlertWorkflowSettingsPage />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'users',
+            element: (
+              <RoutePermissionGuard>
+                <UsersPage />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'roles',
+            element: (
+              <RoutePermissionGuard>
+                <RolesPage />
               </RoutePermissionGuard>
             ),
           },
