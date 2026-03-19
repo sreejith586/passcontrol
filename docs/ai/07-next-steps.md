@@ -4,7 +4,15 @@
 
 ---
 
-## 1. End-to-End User Journey (COMPLETE)
+## 1. Phase 8 Alert Operations (8A COMPLETE)
+
+- ~~**Phase 8A — Alert List Power Features**~~ — *Done.* Bulk acknowledge, bulk resolve, richer filters (severity, sourceType, from, to, assignedUserId), row selection, collapsible advanced filters.
+- ~~**Alert list date filter fix**~~ — *Done.* Date-only `to` now includes full UTC day; backend repository fix.
+- **Phase 8B (recommended):** Escalations filter parity (assignedToMe, unassignedOnly, assignedUserId, etc.); Comments UI RESOLUTION_NOTE support.
+
+---
+
+## 2. End-to-End User Journey (COMPLETE)
 
 - ~~**Password setup flow**~~ — *Done.* Invite → setupToken → /set-password → login. Backend: PasswordSetupToken, validate-setup-token, set-password. Frontend: SetPasswordPage, AddUserModal setup link.
 - ~~**Admin user management**~~ — *Done.* Edit roles, activate/deactivate; user.manage permission; global account status wording.
@@ -25,7 +33,7 @@
 
 ---
 
-## 3. Platform Hardening (MEDIUM PRIORITY)
+## 4. Platform Hardening (MEDIUM PRIORITY)
 
 - **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.
 - **Query/index optimization for escalation queries** — Add or tune indexes for `alert_events` escalation filters (organization_id, status, created_at, location_id). Profile and optimize raw SQL.
@@ -33,7 +41,7 @@
 
 ---
 
-## 4. Future Enhancements (LOWER PRIORITY)
+## 5. Future Enhancements (LOWER PRIORITY)
 
 - **Email delivery for invites** — Send setup link via email instead of manual copy; requires email service integration.
 - **Password reset** — Forgot-password flow for existing users with password.

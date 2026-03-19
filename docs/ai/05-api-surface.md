@@ -40,7 +40,10 @@ Base: `/v1` (versioned)
 | GET | /alert-events/escalations/trends | alert.view | Time-series escalation counts (day/week/month buckets) |
 | GET | /alert-events/escalations/prioritized | alert.view | Top N escalations by urgency (resolve/acknowledge breached, severity) |
 | GET | /alert-events/sla-compliance | alert.view | SLA compliance metrics (within-SLA/breached counts and rates) |
-| GET | /alert-events | alert.view | List alerts |
+| GET | /alert-events/insights/sla-compliance | alert.view | SLA compliance for alerts triggered in period (from, to; uses triggeredAt) |
+| GET | /alert-events/insights/escalation-trend | alert.view | Daily buckets of triggered alerts with breached counts (days, default 7) |
+| GET | /alert-events/insights/top-sources | alert.view | Top problem sources by alert count (limit, default 5) |
+| GET | /alert-events | alert.view | List alerts (query: brandId, locationId, zoneId, assetId, type, status, severity, sourceType, assignedUserId, assignedToMe, unassignedOnly, from, to, page, limit, sort). Date-only from/to YYYY-MM-DD: from=gte start of day UTC; to=through end of day UTC |
 | GET | /alert-events/:id | alert.view | Get alert |
 | GET | /alert-events/:id/activities | alert.view | Activity timeline / audit trail |
 | GET | /alert-events/:id/comments | alert.view | List comments (COMMENT, RESOLUTION_NOTE, REOPEN_NOTE) |

@@ -117,3 +117,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `PasswordSetupToken` model (userId, tokenHash, expiresAt, usedAt); store SHA-256 of token, not bcrypt; 7-day expiry; single-use. Invite returns setupToken when user has no passwordHash. Public endpoints: `POST /auth/validate-setup-token`, `POST /auth/set-password`. No auto-login after set-password.
 - **Rationale:** Token-based flow preferred over admin-set temp password; no email delivery yet (admin copies link); production-realistic; invalidate prior unused tokens on re-invite.
+
+### Alert list date-only "to" filter semantics
+
+- **Decision:** For GET /v1/alert-events list, date-only `to` (YYYY-MM-DD, length ≤10) means through end of that day UTC: convert to next day midnight UTC and use `lt` (exclusive). Full ISO datetime `to` preserves precise `lte`. `from` unchanged (gte start of day UTC).
+- **Rationale:** `new Date("YYYY-MM-DD")` parses to UTC midnight; using `lte` on that excluded almost the entire day. Users expect "to 2025-03-15" to include all alerts on March 15 UTC.

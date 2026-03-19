@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-19
+**Last updated:** 2025-03-20
 
 ## Implemented Features
 
@@ -94,6 +94,7 @@
 ### Backend (recent fixes)
 
 - [x] Escalation raw SQL: explicit `::uuid` casts for UUID parameters in listEscalations, getEscalationsSummary, listPrioritizedEscalations (fixes PostgreSQL `uuid = text` 500s)
+- [x] Alert list date filter: date-only `to` (YYYY-MM-DD) now means through end of day UTC (use `lt` next day); full ISO datetime preserves precise `lte`; `from` unchanged (start of day UTC)
 
 ### Other
 
