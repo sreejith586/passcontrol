@@ -75,12 +75,15 @@ export function AlertListPage() {
       render: (row: AlertEvent) => row.sourceType,
     },
     {
-      key: 'assignedToUserId',
+      key: 'assignedTo',
       header: 'Assigned',
       render: (row: AlertEvent) =>
         row.assignedToUserId ? (
-          <span className="block max-w-[120px] truncate" title={row.assignedToUserId}>
-            {row.assignedToUserId.slice(0, 8)}…
+          <span
+            className="block max-w-[140px] truncate"
+            title={row.assignedToUser?.name ?? 'Unknown user'}
+          >
+            {row.assignedToUser?.name ?? 'Unknown user'}
           </span>
         ) : (
           <span className="text-muted-foreground">—</span>

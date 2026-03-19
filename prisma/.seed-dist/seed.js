@@ -370,6 +370,421 @@ async function setPlatformUserToSuperAdmin(userId, organizationId, roleId) {
         data: { userId, organizationId, roleId },
     });
 }
+/**
+ * Dev-only: Create realistic demo data for local development/testing.
+ * Idempotent: skips if demo template already exists.
+ */
+async function ensureDemoData(organizationId, userId) {
+    const existingDemo = await prisma.checklistTemplate.findFirst({
+        where: { organizationId, templateKey: 'demo-opening' },
+    });
+    if (existingDemo) {
+        console.log('Demo data already exists, skipping');
+        return;
+    }
+    // Enable org workflow settings for note enforcement
+    await prisma.organization.update({
+        where: { id: organizationId },
+        data: {
+            requireResolutionNoteOnResolve: true,
+            requireReopenNoteOnReopen: true,
+        },
+    });
+    // Create SLA policies for severity-based SLA
+    await prisma.alertSlaPolicy.createMany({
+        data: [
+            { organizationId, severity: 'LOW', acknowledgeWithinMinutes: 120, resolveWithinMinutes: 480 },
+            { organizationId, severity: 'MEDIUM', acknowledgeWithinMinutes: 60, resolveWithinMinutes: 240 },
+            { organizationId, severity: 'HIGH', acknowledgeWithinMinutes: 30, resolveWithinMinutes: 120 },
+            { organizationId, severity: 'CRITICAL', acknowledgeWithinMinutes: 15, resolveWithinMinutes: 60 },
+        ],
+    });
+    // Template: Opening Checklist
+    const openingTemplate = await prisma.checklistTemplate.create({
+        data: {
+            organizationId,
+            templateKey: 'demo-opening',
+            version: 1,
+            name: 'Opening Checklist',
+            description: 'Daily opening procedures',
+            status: 'PUBLISHED',
+            isLatest: true,
+            publishedAt: new Date(),
+        },
+    });
+    const openingSection = await prisma.checklistTemplateSection.create({
+        data: {
+            organizationId,
+            checklistTemplateId: openingTemplate.id,
+            title: 'Pre-open',
+            sortOrder: 0,
+        },
+    });
+    const openingItems = await Promise.all([
+        prisma.checklistTemplateItem.create({
+            data: {
+                organizationId,
+                checklistTemplateId: openingTemplate.id,
+                checklistTemplateSectionId: openingSection.id,
+                itemType: 'BOOLEAN',
+                label: 'Temperature within range',
+                isRequired: true,
+                severity: 'CRITICAL',
+                sortOrder: 0,
+            },
+        }),
+        prisma.checklistTemplateItem.create({
+            data: {
+                organizationId,
+                checklistTemplateId: openingTemplate.id,
+                checklistTemplateSectionId: openingSection.id,
+                itemType: 'BOOLEAN',
+                label: 'Equipment checked',
+                isRequired: true,
+                severity: 'HIGH',
+                sortOrder: 1,
+            },
+        }),
+    ]);
+    // Template: Safety Checklist
+    const safetyTemplate = await prisma.checklistTemplate.create({
+        data: {
+            organizationId,
+            templateKey: 'demo-safety',
+            version: 1,
+            name: 'Safety Inspection',
+            description: 'Weekly safety checks',
+            status: 'PUBLISHED',
+            isLatest: true,
+            publishedAt: new Date(),
+        },
+    });
+    const safetySection = await prisma.checklistTemplateSection.create({
+        data: {
+            organizationId,
+            checklistTemplateId: safetyTemplate.id,
+            title: 'Inspections',
+            sortOrder: 0,
+        },
+    });
+    await prisma.checklistTemplateItem.create({
+        data: {
+            organizationId,
+            checklistTemplateId: safetyTemplate.id,
+            checklistTemplateSectionId: safetySection.id,
+            itemType: 'BOOLEAN',
+            label: 'Fire extinguisher accessible',
+            isRequired: true,
+            severity: 'HIGH',
+            sortOrder: 0,
+        },
+    });
+    const now = new Date();
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const maxRun = await prisma.checklistRun.aggregate({
+        where: { organizationId },
+        _max: { runNumber: true },
+    });
+    let runNumber = (maxRun._max.runNumber ?? 0) + 1;
+    async function createRunWithFailedItem(template, section, item, status, dueAt) {
+        const run = await prisma.checklistRun.create({
+            data: {
+                organizationId,
+                checklistTemplateId: template.id,
+                runSource: 'MANUAL',
+                status,
+                dueAt,
+                runNumber: runNumber++,
+                templateVersion: 1,
+                templateKeySnapshot: template.templateKey,
+                templateNameSnapshot: template.name,
+                startedAt: status !== 'PENDING' ? dueAt : null,
+                completedAt: status === 'COMPLETED' ? new Date(dueAt.getTime() + 30 * 60 * 1000) : null,
+                performedByUserId: status === 'COMPLETED' ? userId : null,
+            },
+        });
+        const sectionSnap = await prisma.checklistRunSectionSnapshot.create({
+            data: {
+                organizationId,
+                checklistRunId: run.id,
+                checklistTemplateSectionId: section.id,
+                titleSnapshot: section.title,
+                sortOrder: 0,
+            },
+        });
+        const passItem = await prisma.checklistRunItemSnapshot.create({
+            data: {
+                organizationId,
+                checklistRunId: run.id,
+                checklistRunSectionSnapshotId: sectionSnap.id,
+                checklistTemplateItemId: item.id,
+                itemTypeSnapshot: 'BOOLEAN',
+                labelSnapshot: 'Dummy pass item',
+                isRequiredSnapshot: true,
+                requiresEvidenceOnFailSnapshot: false,
+                requiresCommentOnFailSnapshot: false,
+                severitySnapshot: 'LOW',
+                failureCreatesIncidentSnapshot: false,
+                sortOrder: 0,
+                result: 'PASS',
+                respondedAt: status === 'COMPLETED' ? run.completedAt : null,
+                respondedByUserId: status === 'COMPLETED' ? userId : null,
+            },
+        });
+        const failItem = await prisma.checklistRunItemSnapshot.create({
+            data: {
+                organizationId,
+                checklistRunId: run.id,
+                checklistRunSectionSnapshotId: sectionSnap.id,
+                checklistTemplateItemId: item.id,
+                itemTypeSnapshot: 'BOOLEAN',
+                labelSnapshot: item.label,
+                isRequiredSnapshot: true,
+                requiresEvidenceOnFailSnapshot: false,
+                requiresCommentOnFailSnapshot: false,
+                severitySnapshot: item.severity,
+                failureCreatesIncidentSnapshot: false,
+                sortOrder: 1,
+                result: 'FAIL',
+                comment: 'Out of acceptable range',
+                respondedAt: status === 'COMPLETED' ? run.completedAt : null,
+                respondedByUserId: status === 'COMPLETED' ? userId : null,
+            },
+        });
+        return { run, failItem };
+    }
+    const openingTemplateWithKey = { ...openingTemplate, templateKey: 'demo-opening' };
+    const safetyTemplateWithKey = { ...safetyTemplate, templateKey: 'demo-safety' };
+    // Run 1: OPEN alert
+    const { failItem: fail1 } = await createRunWithFailedItem(openingTemplateWithKey, openingSection, openingItems[0], 'COMPLETED', twoHoursAgo);
+    const alertOpen = await prisma.alertEvent.create({
+        data: {
+            organizationId,
+            sourceType: 'CHECKLIST_RUN_ITEM',
+            sourceId: fail1.id,
+            type: 'CHECKLIST_ITEM_FAIL',
+            status: 'OPEN',
+            severity: 'CRITICAL',
+            acknowledgeWithinMinutes: 15,
+            resolveWithinMinutes: 60,
+            payloadJson: {
+                runId: fail1.checklistRunId,
+                label: openingItems[0].label,
+                severity: 'CRITICAL',
+                result: 'FAIL',
+            },
+            triggeredAt: twoHoursAgo,
+        },
+    });
+    await prisma.alertEventActivity.create({
+        data: {
+            organizationId,
+            alertEventId: alertOpen.id,
+            type: 'CREATED',
+            toStatus: 'OPEN',
+        },
+    });
+    await prisma.alertEventComment.create({
+        data: {
+            organizationId,
+            alertEventId: alertOpen.id,
+            type: 'COMMENT',
+            body: 'Investigating the temperature reading.',
+            authorUserId: userId,
+        },
+    });
+    // Run 2: ACKNOWLEDGED alert
+    const { failItem: fail2 } = await createRunWithFailedItem(openingTemplateWithKey, openingSection, openingItems[1], 'COMPLETED', yesterday);
+    const alertAck = await prisma.alertEvent.create({
+        data: {
+            organizationId,
+            sourceType: 'CHECKLIST_RUN_ITEM',
+            sourceId: fail2.id,
+            type: 'CHECKLIST_ITEM_FAIL',
+            status: 'ACKNOWLEDGED',
+            severity: 'HIGH',
+            acknowledgeWithinMinutes: 30,
+            resolveWithinMinutes: 120,
+            payloadJson: {
+                runId: fail2.checklistRunId,
+                label: openingItems[1].label,
+                severity: 'HIGH',
+                result: 'FAIL',
+            },
+            triggeredAt: yesterday,
+            acknowledgedAt: new Date(yesterday.getTime() + 15 * 60 * 1000),
+            acknowledgedByUserId: userId,
+        },
+    });
+    await prisma.alertEventActivity.createMany({
+        data: [
+            { organizationId, alertEventId: alertAck.id, type: 'CREATED', toStatus: 'OPEN' },
+            {
+                organizationId,
+                alertEventId: alertAck.id,
+                type: 'ACKNOWLEDGED',
+                fromStatus: 'OPEN',
+                toStatus: 'ACKNOWLEDGED',
+                actorUserId: userId,
+            },
+        ],
+    });
+    // Run 3: RESOLVED alert (with resolution note)
+    const { failItem: fail3 } = await createRunWithFailedItem(openingTemplateWithKey, openingSection, openingItems[0], 'COMPLETED', yesterday);
+    const alertResolved = await prisma.alertEvent.create({
+        data: {
+            organizationId,
+            sourceType: 'CHECKLIST_RUN_ITEM',
+            sourceId: fail3.id,
+            type: 'CHECKLIST_ITEM_FAIL',
+            status: 'RESOLVED',
+            severity: 'MEDIUM',
+            acknowledgeWithinMinutes: 60,
+            resolveWithinMinutes: 240,
+            payloadJson: {
+                runId: fail3.checklistRunId,
+                label: openingItems[0].label,
+                severity: 'MEDIUM',
+                result: 'FAIL',
+            },
+            triggeredAt: yesterday,
+            acknowledgedAt: new Date(yesterday.getTime() + 20 * 60 * 1000),
+            acknowledgedByUserId: userId,
+            resolvedAt: new Date(yesterday.getTime() + 45 * 60 * 1000),
+            resolvedByUserId: userId,
+            resolutionNote: 'Equipment recalibrated. Verified within spec.',
+        },
+    });
+    await prisma.alertEventActivity.createMany({
+        data: [
+            { organizationId, alertEventId: alertResolved.id, type: 'CREATED', toStatus: 'OPEN' },
+            {
+                organizationId,
+                alertEventId: alertResolved.id,
+                type: 'ACKNOWLEDGED',
+                fromStatus: 'OPEN',
+                toStatus: 'ACKNOWLEDGED',
+                actorUserId: userId,
+            },
+            {
+                organizationId,
+                alertEventId: alertResolved.id,
+                type: 'RESOLVED',
+                fromStatus: 'ACKNOWLEDGED',
+                toStatus: 'RESOLVED',
+                actorUserId: userId,
+                comment: 'Equipment recalibrated. Verified within spec.',
+            },
+        ],
+    });
+    await prisma.alertEventComment.create({
+        data: {
+            organizationId,
+            alertEventId: alertResolved.id,
+            type: 'RESOLUTION_NOTE',
+            body: 'Equipment recalibrated. Verified within spec.',
+            authorUserId: userId,
+        },
+    });
+    // Run 4: RESOLVED then REOPENED (now OPEN with reopen history)
+    const { failItem: fail4 } = await createRunWithFailedItem(openingTemplateWithKey, openingSection, openingItems[1], 'COMPLETED', yesterday);
+    const alertReopened = await prisma.alertEvent.create({
+        data: {
+            organizationId,
+            sourceType: 'CHECKLIST_RUN_ITEM',
+            sourceId: fail4.id,
+            type: 'CHECKLIST_ITEM_FAIL',
+            status: 'OPEN',
+            severity: 'HIGH',
+            acknowledgeWithinMinutes: 30,
+            resolveWithinMinutes: 120,
+            payloadJson: {
+                runId: fail4.checklistRunId,
+                label: openingItems[1].label,
+                severity: 'HIGH',
+                result: 'FAIL',
+            },
+            triggeredAt: yesterday,
+        },
+    });
+    await prisma.alertEventActivity.createMany({
+        data: [
+            { organizationId, alertEventId: alertReopened.id, type: 'CREATED', toStatus: 'OPEN' },
+            {
+                organizationId,
+                alertEventId: alertReopened.id,
+                type: 'ACKNOWLEDGED',
+                fromStatus: 'OPEN',
+                toStatus: 'ACKNOWLEDGED',
+                actorUserId: userId,
+            },
+            {
+                organizationId,
+                alertEventId: alertReopened.id,
+                type: 'RESOLVED',
+                fromStatus: 'ACKNOWLEDGED',
+                toStatus: 'RESOLVED',
+                actorUserId: userId,
+            },
+            {
+                organizationId,
+                alertEventId: alertReopened.id,
+                type: 'REOPENED',
+                fromStatus: 'RESOLVED',
+                toStatus: 'OPEN',
+                actorUserId: userId,
+            },
+        ],
+    });
+    await prisma.alertEventComment.create({
+        data: {
+            organizationId,
+            alertEventId: alertReopened.id,
+            type: 'REOPEN_NOTE',
+            body: 'Issue recurred after initial fix. Reopening for follow-up.',
+            authorUserId: userId,
+        },
+    });
+    // Run 5: SLA-breached OPEN alert (triggered long ago)
+    const breachedAt = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+    const { failItem: fail5 } = await createRunWithFailedItem(openingTemplateWithKey, openingSection, openingItems[0], 'COMPLETED', breachedAt);
+    const alertBreached = await prisma.alertEvent.create({
+        data: {
+            organizationId,
+            sourceType: 'CHECKLIST_RUN_ITEM',
+            sourceId: fail5.id,
+            type: 'CHECKLIST_ITEM_FAIL',
+            status: 'OPEN',
+            severity: 'CRITICAL',
+            acknowledgeWithinMinutes: 15,
+            resolveWithinMinutes: 60,
+            payloadJson: {
+                runId: fail5.checklistRunId,
+                label: openingItems[0].label,
+                severity: 'CRITICAL',
+                result: 'FAIL',
+            },
+            triggeredAt: breachedAt,
+        },
+    });
+    await prisma.alertEventActivity.create({
+        data: {
+            organizationId,
+            alertEventId: alertBreached.id,
+            type: 'CREATED',
+            toStatus: 'OPEN',
+        },
+    });
+    // Run 6: Overdue PENDING run (for dashboard)
+    await createRunWithFailedItem(openingTemplateWithKey, openingSection, openingItems[0], 'PENDING', yesterday);
+    // Run 7: Overdue PENDING run
+    const safetyItem = await prisma.checklistTemplateItem.findFirstOrThrow({
+        where: { checklistTemplateId: safetyTemplate.id },
+    });
+    await createRunWithFailedItem(safetyTemplateWithKey, safetySection, { id: safetyItem.id, label: safetyItem.label, severity: safetyItem.severity }, 'PENDING', twoHoursAgo);
+    console.log('Demo data created: templates, runs, alerts (OPEN/ACK/RESOLVED/reopened/SLA-breached), comments, org workflow settings');
+}
 async function main() {
     const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
     const orgAdminPasswordHash = await bcrypt.hash(ORG_ADMIN_USER_PASSWORD, 10);
@@ -394,6 +809,8 @@ async function main() {
     await ensureTestChecklistRun(organization.id);
     // Dev-only: one test ChecklistSchedule for generate-run testing
     await ensureTestSchedule(organization.id);
+    // Dev-only: realistic demo data for frontend exercise
+    await ensureDemoData(organization.id, superAdminUser.id);
     console.log(`Seed complete`);
     console.log(`Organization: ${organization.name}`);
     console.log(`Platform user: ${DEMO_USER_EMAIL} (Super Admin)`);

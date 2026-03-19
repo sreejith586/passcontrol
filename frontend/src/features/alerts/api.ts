@@ -69,19 +69,3 @@ export async function addComment(
 ): Promise<AlertEventComment> {
   return post<AlertEventComment>(`/alert-events/${id}/comments`, { type, body });
 }
-
-/**
- * User list for assignment. Backend does not yet expose GET /users or /organization-members.
- * Scaffolded for future integration.
- */
-export interface UserForAssignment {
-  id: string;
-  name: string | null;
-  email: string | null;
-}
-
-export async function listUsersForAssignment(): Promise<UserForAssignment[]> {
-  throw new Error(
-    'User list API not yet available. Backend needs GET /users or /organization-members.'
-  );
-}

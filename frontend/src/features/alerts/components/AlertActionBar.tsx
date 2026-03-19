@@ -4,11 +4,12 @@ import { Button } from '@/shared/ui/Button';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { ResolveModal } from './ResolveModal';
 import { ReopenModal } from './ReopenModal';
-import { AssignPlaceholder } from './AssignPlaceholder';
+import { AssignModal } from './AssignModal';
 import { toast } from '@/shared/feedback/useToast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   acknowledgeAlert,
+  assignAlert,
   resolveAlert,
   reopenAlert,
   unassignAlert,
@@ -24,12 +25,14 @@ export function AlertActionBar({ alert }: AlertActionBarProps) {
   const queryClient = useQueryClient();
   const [resolveOpen, setResolveOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [reopenError, setReopenError] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.alerts.detail(alert.id) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.list({}) });
+    queryClient.invalidateQueries({ queryKey: ['alerts', 'list'] });
     queryClient.invalidateQueries({ queryKey: queryKeys.alerts.activities(alert.id) });
   };
 
@@ -78,6 +81,21 @@ export function AlertActionBar({ alert }: AlertActionBarProps) {
     },
   });
 
+  const assignMutation = useMutation({
+    mutationFn: (assignedToUserId: string) => assignAlert(alert.id, assignedToUserId),
+    onSuccess: () => {
+      setAssignOpen(false);
+      setAssignError(null);
+      invalidate();
+      toast.success('Alert assigned');
+    },
+    onError: (err) => {
+      const msg = err instanceof ApiError ? err.message : 'Failed to assign';
+      setAssignError(msg);
+      toast.error(msg);
+    },
+  });
+
   const unassignMutation = useMutation({
     mutationFn: () => unassignAlert(alert.id),
     onSuccess: () => {
@@ -123,7 +141,14 @@ export function AlertActionBar({ alert }: AlertActionBarProps) {
         </Button>
       </PermissionGate>
       <PermissionGate permission="alert.assign">
-        <AssignPlaceholder />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setAssignOpen(true)}
+          disabled={!canAssign || assignMutation.isPending}
+        >
+          {alert.assignedToUserId ? 'Reassign' : 'Assign'}
+        </Button>
         {alert.assignedToUserId && (
           <Button
             variant="ghost"
@@ -155,6 +180,17 @@ export function AlertActionBar({ alert }: AlertActionBarProps) {
         onConfirm={(note) => reopenMutation.mutate(note)}
         loading={reopenMutation.isPending}
         error={reopenError ?? undefined}
+      />
+      <AssignModal
+        open={assignOpen}
+        onClose={() => {
+          setAssignOpen(false);
+          setAssignError(null);
+        }}
+        onConfirm={(userId) => assignMutation.mutate(userId)}
+        loading={assignMutation.isPending}
+        error={assignError ?? undefined}
+        isReassign={!!alert.assignedToUserId}
       />
     </div>
   );

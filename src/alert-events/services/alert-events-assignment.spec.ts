@@ -5,6 +5,7 @@ import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
 import { AlertEventActivitiesService } from '../../alert-event-activities/services/alert-event-activities.service';
 import { AlertEventCommentsRepository } from '../../alert-event-comments/repositories/alert-event-comments.repository';
+import { UsersService } from '../../users/services/users.service';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { DOMAIN_EVENT_PUBLISHER } from '../../common/domain-events/contracts/domain-event-publisher.interface';
@@ -59,6 +60,9 @@ describe('AlertEventsService (assignment)', () => {
     const mockActivities = {
       logAssignmentChanged: jest.fn().mockResolvedValue(undefined),
     };
+    const mockUsersService = {
+      belongsToOrganization: jest.fn().mockResolvedValue(true),
+    };
     const mockPrisma = { $transaction: jest.fn((fn) => fn({})) };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -67,6 +71,7 @@ describe('AlertEventsService (assignment)', () => {
         { provide: AlertEventsRepository, useValue: mockRepo },
         { provide: AlertSlaResolverService, useValue: mockSlaResolver },
         { provide: AlertEventActivitiesService, useValue: mockActivities },
+        { provide: UsersService, useValue: mockUsersService },
         { provide: AlertEventCommentsRepository, useValue: { create: jest.fn() } },
         { provide: AuditLogsService, useValue: mockAudit },
         { provide: PrismaService, useValue: mockPrisma },
@@ -80,6 +85,33 @@ describe('AlertEventsService (assignment)', () => {
   });
 
   describe('assign', () => {
+    it('rejects when target user does not belong to organization', async () => {
+      const mockUsersService = {
+        belongsToOrganization: jest.fn().mockResolvedValue(false),
+      };
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          AlertEventsService,
+          { provide: AlertEventsRepository, useValue: repo },
+          { provide: AlertSlaResolverService, useValue: { resolve: jest.fn() } },
+          { provide: AlertEventActivitiesService, useValue: { logAssignmentChanged: jest.fn() } },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: AlertEventCommentsRepository, useValue: { create: jest.fn() } },
+          { provide: AuditLogsService, useValue: audit },
+          { provide: PrismaService, useValue: { $transaction: jest.fn((fn) => fn({})) } },
+          { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
+        ],
+      }).compile();
+      const svc = moduleRef.get(AlertEventsService);
+      repo.findById.mockResolvedValue(mockOpenAlert as never);
+
+      await expect(
+        svc.assign(mockCtx, 'alert-1', { assignedToUserId: 'user-other-org' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(repo.assign).not.toHaveBeenCalled();
+    });
+
     it('assigns OPEN alert', async () => {
       repo.findById.mockResolvedValue(mockOpenAlert as never);
       repo.assign.mockResolvedValue(mockAssignedAlert as never);
@@ -94,6 +126,7 @@ describe('AlertEventsService (assignment)', () => {
         assignedToUserId: 'user-2',
         assignedAt: '2025-03-18T10:00:00.000Z',
         assignedByUserId: 'user-1',
+        assignedToUser: null,
       });
       expect(repo.assign).toHaveBeenCalledWith(
         mockOrgId,

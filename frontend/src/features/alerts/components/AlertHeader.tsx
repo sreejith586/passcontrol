@@ -18,7 +18,10 @@ export function AlertHeader({ alert }: AlertHeaderProps) {
         </span>
         {alert.assignedToUserId && (
           <span className="text-sm">
-            Assigned to: <code className="truncate max-w-[120px] block">{alert.assignedToUserId}</code>
+            Assigned to:{' '}
+            <span className="font-medium">
+              {alert.assignedToUser?.name ?? 'Unknown user'}
+            </span>
           </span>
         )}
       </div>

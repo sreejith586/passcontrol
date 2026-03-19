@@ -30,6 +30,7 @@ model User {
 
   roleAssignments UserRoleAssignment[]
   auditLogs       AuditLog[]           @relation("AuditActor")
+  assignedAlerts AlertEvent[]         @relation("AssignedTo")
 
   @@map("users")
 }
@@ -352,9 +353,10 @@ model AlertEvent {
   assignedAt               DateTime? @map("assigned_at") @db.Timestamptz
   assignedByUserId         String?   @map("assigned_by_user_id") @db.Uuid
 
-  organization Organization        @relation(fields: [organizationId], references: [id])
-  activities   AlertEventActivity[]
-  comments     AlertEventComment[]
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  assignedToUser User?               @relation("AssignedTo", fields: [assignedToUserId], references: [id])
+  activities     AlertEventActivity[]
+  comments       AlertEventComment[]
 
   @@map("alert_events")
 }

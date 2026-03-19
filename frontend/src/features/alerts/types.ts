@@ -25,6 +25,7 @@ export interface AlertEvent {
   assignedToUserId: string | null;
   assignedAt: string | null;
   assignedByUserId: string | null;
+  assignedToUser?: { id: string; name: string } | null;
 }
 
 export interface AlertEventActivity {

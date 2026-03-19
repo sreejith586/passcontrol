@@ -63,6 +63,11 @@ export class AlertEventsRepository {
     const client = (tx ?? this.prisma) as Prisma.TransactionClient;
     return client.alertEvent.findFirst({
       where: { id, organizationId },
+      include: {
+        assignedToUser: {
+          select: { id: true, name: true },
+        },
+      },
     });
   }
 
@@ -116,6 +121,11 @@ export class AlertEventsRepository {
         skip: (pagination.page - 1) * pagination.limit,
         take: pagination.limit,
         orderBy,
+        include: {
+          assignedToUser: {
+            select: { id: true, name: true },
+          },
+        },
       }),
       this.prisma.alertEvent.count({ where }),
     ]);

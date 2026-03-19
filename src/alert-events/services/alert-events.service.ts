@@ -12,6 +12,7 @@ import { AlertEventsRepository } from '../repositories/alert-events.repository';
 import { AlertSlaResolverService } from './alert-sla-resolver.service';
 import { AlertEventActivitiesService } from '../../alert-event-activities/services/alert-event-activities.service';
 import { AlertEventCommentsRepository } from '../../alert-event-comments/repositories/alert-event-comments.repository';
+import { UsersService } from '../../users/services/users.service';
 import { AlertEventCommentType } from '@prisma/client';
 import { AlertEventStatus } from '../enums/alert-status.enum';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -48,6 +49,7 @@ export class AlertEventsService {
     private readonly audit: AuditLogsService,
     private readonly activities: AlertEventActivitiesService,
     private readonly commentsRepo: AlertEventCommentsRepository,
+    private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
@@ -574,6 +576,15 @@ export class AlertEventsService {
     if (existing.status === AlertEventStatus.RESOLVED) {
       throw new BadRequestException('Cannot assign a resolved alert');
     }
+    const belongsToOrg = await this.usersService.belongsToOrganization(
+      dto.assignedToUserId,
+      ctx.organizationId,
+    );
+    if (!belongsToOrg) {
+      throw new BadRequestException(
+        'Target user not found or does not belong to this organization',
+      );
+    }
     const fromAssignedToUserId = existing.assignedToUserId ?? null;
     const updated = await this.prisma.$transaction(async (tx) => {
       const alert = await this.repo.assign(
@@ -631,6 +642,7 @@ export class AlertEventsService {
     assignedToUserId: string | null;
     assignedAt: Date | null;
     assignedByUserId: string | null;
+    assignedToUser?: { id: string; name: string } | null;
   }) {
     return {
       id: alert.id,
@@ -638,6 +650,9 @@ export class AlertEventsService {
       assignedToUserId: alert.assignedToUserId,
       assignedAt: alert.assignedAt?.toISOString() ?? null,
       assignedByUserId: alert.assignedByUserId,
+      assignedToUser: alert.assignedToUser
+        ? { id: alert.assignedToUser.id, name: alert.assignedToUser.name }
+        : null,
     };
   }
 
