@@ -72,6 +72,11 @@
 - [x] Auth (login/logout), session via /me, access-token only
 - [x] Alert list, detail, acknowledge, resolve, reopen, unassign
 - [x] Alert assignment: AssignModal, users list (GET /v1/users), assign/reassign; assignee display (name or "Unknown user"); query invalidation for all list variants
+- [x] Phase 3 UI polish: StatusBadge/SeverityBadge/AssigneeBadge with user-friendly labels; ErrorState/EmptyState/Skeleton; Alert Detail refinement (header, SLA breach emphasis, timeline alignment, comments); FilterBar; source type labels (CHECKLIST_RUN_ITEM → "Checklist item"); collapsible sidebar (localStorage); table consistency
+
+### Backend (recent fixes)
+
+- [x] Escalation raw SQL: explicit `::uuid` casts for UUID parameters in listEscalations, getEscalationsSummary, listPrioritizedEscalations (fixes PostgreSQL `uuid = text` 500s)
 
 ### Other
 

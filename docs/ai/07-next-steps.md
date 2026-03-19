@@ -24,6 +24,7 @@
 
 ## 3. Platform Hardening (MEDIUM PRIORITY)
 
+- ~~**Escalation raw SQL UUID casts**~~ — *Done.* Added `::uuid` casts in listEscalations, getEscalationsSummary, listPrioritizedEscalations; fixes dashboard and escalations 500s.
 - **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.
 - **Query/index optimization for escalation queries** — Add or tune indexes for `alert_events` escalation filters (organization_id, status, created_at, location_id). Profile and optimize raw SQL.
 - **Expansion of domain event handlers** — Handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved`. Extend to temperature, IoT, or other alert sources as needed.

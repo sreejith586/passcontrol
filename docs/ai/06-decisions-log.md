@@ -107,3 +107,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `GET /v1/users` (org-scoped, paginated); permission `alert.assign`; returns id, name, email. Users = those with `UserRoleAssignment` for the org. Assign endpoint validates target user belongs to org via `belongsToOrganization` before updating.
 - **Rationale:** Enables assign/reassign UI; no user search in v1; tenant safety enforced at assign time.
+
+### Raw SQL UUID parameter casts
+
+- **Decision:** When using Prisma `$queryRaw` with UUID column comparisons, cast parameters explicitly: `(${param})::uuid`. Prisma passes params as text; PostgreSQL rejects `uuid = text` without cast.
+- **Rationale:** Fixes 500s on escalation endpoints (listEscalations, getEscalationsSummary, listPrioritizedEscalations); applies to all raw SQL comparing UUID columns.

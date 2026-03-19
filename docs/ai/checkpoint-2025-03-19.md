@@ -1,28 +1,28 @@
 # Checkpoint 2025-03-19
 
 **Date:** 2025-03-19  
-**Session focus:** Alert assignment frontend, Users API, AI docs update
+**Session focus:** Phase 3 UI polish, escalation raw SQL fix
 
 ## Completed
 
-- [x] Users API: `GET /v1/users` (org-scoped, paginated; id, name, email); permission `alert.assign`
-- [x] Assign endpoint: validates target user belongs to org via `belongsToOrganization`
-- [x] Frontend: AssignModal, users list, assign/reassign; assignee display (name or "Unknown user"); query invalidation `['alerts', 'list']`
-- [x] AI docs: 02-current-progress, 05-api-surface, 06-decisions-log, 07-next-steps, checkpoint
+- [x] Phase 3 UI polish: StatusBadge/SeverityBadge/AssigneeBadge with user-friendly labels; ErrorState/EmptyState/Skeleton; Alert Detail refinement; FilterBar; source type labels; collapsible sidebar; timeline alignment
+- [x] Backend fix: `::uuid` casts in listEscalations, getEscalationsSummary, listPrioritizedEscalations (fixes dashboard and escalations 500s)
+- [x] AI docs: 02-current-progress, 06-decisions-log, 07-next-steps, checkpoint
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| docs/ai/02-current-progress.md | Date, Users API, frontend assignment |
-| docs/ai/05-api-surface.md | Added GET /users table |
-| docs/ai/06-decisions-log.md | Users list for assignment decision |
-| docs/ai/07-next-steps.md | Assignment marked done (backend + frontend) |
-| docs/ai/checkpoint-2025-03-19.md | New checkpoint |
+| frontend/src/features/alerts/components/* | StatusBadge, SeverityBadge, AssigneeBadge, ActivityTimeline, CommentsSection, AlertHeader |
+| frontend/src/shared/layout/* | ErrorState, FilterBar, EmptyState usage |
+| frontend/src/features/shell/* | Collapsible sidebar (localStorage) |
+| frontend/src/lib/* | labels.ts (getSourceTypeLabel), date.ts (deriveSlaBreach) |
+| src/alert-events/repositories/alert-events.repository.ts | ::uuid casts for UUID params in listEscalations, getEscalationsSummary, listPrioritizedEscalations |
+| docs/ai/* | 02-current-progress, 06-decisions-log, 07-next-steps, checkpoint |
 
 ## Decisions Made
 
-- Users list for assignment: `GET /v1/users` org-scoped; no user search in v1; tenant safety enforced at assign time via `belongsToOrganization`.
+- Raw SQL UUID casts: When comparing UUID columns in Prisma `$queryRaw`, use `(${param})::uuid` to avoid PostgreSQL `uuid = text` errors.
 
 ## Blockers / Open Questions
 
@@ -35,5 +35,5 @@
 
 ## Context Snapshot
 
-- Current progress: Assignment backend + frontend complete; Users module added; AI docs updated.
-- Next steps doc: Updated (assignment struck as done).
+- Current progress: Phase 3 UI polish complete; escalation/dashboard 500s fixed; operational UI ready for production use.
+- Next steps doc: Updated (UUID cast fix struck as done).
