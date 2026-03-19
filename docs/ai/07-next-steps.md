@@ -16,7 +16,7 @@
 - ~~**Bulk acknowledge alerts**~~ — *Done.* `POST /v1/alert-events/bulk-acknowledge` with `{ alertEventIds }`.
 - ~~**Bulk resolve alerts**~~ — *Done.* `POST /v1/alert-events/bulk-resolve` with `{ alertEventIds, resolutionNote? }`.
 - ~~**Prioritized escalation retrieval (top N)**~~ — *Done.* `GET /v1/alert-events/escalations/prioritized` returns top N by urgency (resolve breached, acknowledge breached, active).
-- ~~**Alert assignment / ownership**~~ — *Done.* `POST /v1/alert-events/:id/assign`, `POST /v1/alert-events/:id/unassign`; assignment filters (assignedUserId, assignedToMe, unassignedOnly) on list, escalations, prioritized.
+- ~~**Alert assignment / ownership**~~ — *Done.* Backend: assign/unassign, GET /v1/users; frontend: AssignModal, assignee display, query invalidation.
 - ~~**Alert activity timeline / audit trail**~~ — *Done.* `AlertEventActivity` model; `GET /v1/alert-events/:id/activities`; auto-logged on create, acknowledge, resolve, assign, unassign.
 - ~~**Alert reopen**~~ — *Done.* `POST /v1/alert-events/:id/reopen`; RESOLVED → OPEN; optional note; policy `requireReopenNoteOnReopen`; note stored as REOPEN_NOTE comment; preserves assignment and SLA snapshot.
 

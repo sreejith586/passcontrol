@@ -102,3 +102,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `Organization.requireReopenNoteOnReopen` (boolean, default false); when true, reopen requires a non-empty note; trim before validation; reject blank/whitespace-only; BadRequestException with clear message. Store reopen note as `AlertEventComment` with `type = REOPEN_NOTE` (no reopenNote column on AlertEvent). Reopen transaction is atomic: update alert, log REOPENED activity, create REOPEN_NOTE comment when note provided.
 - **Rationale:** Mirrors requireResolutionNoteOnResolve pattern; reuses comments domain; no schema change to AlertEvent; atomic transaction preserves consistency.
+
+### Users list for assignment
+
+- **Decision:** Add `GET /v1/users` (org-scoped, paginated); permission `alert.assign`; returns id, name, email. Users = those with `UserRoleAssignment` for the org. Assign endpoint validates target user belongs to org via `belongsToOrganization` before updating.
+- **Rationale:** Enables assign/reassign UI; no user search in v1; tenant safety enforced at assign time.

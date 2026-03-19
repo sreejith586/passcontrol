@@ -53,6 +53,12 @@ Base: `/v1` (versioned)
 | POST | /alert-events/:id/resolve | alert.resolve | Resolve (resolution note required if org policy enabled) |
 | POST | /alert-events/:id/reopen | alert.resolve | Reopen RESOLVED alert to OPEN (optional body `{ note?: string }`; note required if org policy enabled) |
 
+## Users (Assignment)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /users | alert.assign | List org-scoped users for assignment (id, name, email; paginated) |
+
 ## Organization Settings (Alert Workflow)
 
 | Method | Path | Permission | Description |

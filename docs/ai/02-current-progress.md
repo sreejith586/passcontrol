@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-17
+**Last updated:** 2025-03-19
 
 ## Implemented Features
 
@@ -56,6 +56,7 @@
 - [x] `POST /v1/alert-events/bulk-acknowledge`, `POST /v1/alert-events/bulk-resolve` (bulk alert actions)
 - [x] `GET /v1/alert-events/escalations/prioritized` (top N escalations by urgency)
 - [x] Alert assignment: `POST /v1/alert-events/:id/assign`, `POST /v1/alert-events/:id/unassign`; assignment filters on list, escalations, prioritized
+- [x] Users list for assignment: `GET /v1/users` (org-scoped, paginated; id, name, email); permission `alert.assign`; validates target user belongs to org on assign
 - [x] Alert activity timeline / audit trail: `AlertEventActivity` model with `CREATED`, `ACKNOWLEDGED`, `RESOLVED`, `ASSIGNED`, `UNASSIGNED`, `REASSIGNED`; `GET /v1/alert-events/:id/activities`; auto-logged on create, acknowledge, resolve, assign, unassign
 - [x] Alert comments / resolution notes / reopen notes: `AlertEventComment` model (COMMENT, RESOLUTION_NOTE, REOPEN_NOTE); `GET /v1/alert-events/:id/comments`, `POST /v1/alert-events/:id/comments`; REOPEN_NOTE created by reopen flow only; separate domain from activity timeline
 - [x] Alert reopen: `POST /v1/alert-events/:id/reopen`; RESOLVED → OPEN; optional body `{ note?: string }`; preserves assignment and SLA snapshot; REOPENED activity type; REOPEN_NOTE comment when note provided
@@ -65,6 +66,12 @@
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
 - [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)
 - [x] `POST /v1/checklist-run-items/:id/acknowledge-alert`, `resolve-alert`
+
+### Frontend
+
+- [x] Auth (login/logout), session via /me, access-token only
+- [x] Alert list, detail, acknowledge, resolve, reopen, unassign
+- [x] Alert assignment: AssignModal, users list (GET /v1/users), assign/reassign; assignee display (name or "Unknown user"); query invalidation for all list variants
 
 ### Other
 
