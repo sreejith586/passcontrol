@@ -1,8 +1,13 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../infra/prisma/prisma.service';
 import { AuditLogsService } from '../audit/services/audit-logs.service';
+import { PasswordSetupTokenRepository } from './repositories/password-setup-token.repository';
 import { LoginDto } from './dto/login.dto';
 
 interface JwtPayload {
@@ -16,12 +21,17 @@ interface JwtPayload {
 const DEV_ONLY_ACCESS_SECRET = 'dev-access-secret-change-me';
 const DEV_ONLY_REFRESH_SECRET = 'dev-refresh-secret-change-me';
 
+export type ValidateSetupTokenResult =
+  | { valid: true }
+  | { valid: false; reason: 'invalid' | 'expired' | 'used' };
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly audit: AuditLogsService,
+    private readonly passwordSetupTokenRepo: PasswordSetupTokenRepository,
   ) {}
 
   async hashPassword(password: string) {
@@ -139,6 +149,85 @@ export class AuthService {
       await this.audit.recordAuthEvent('TOKEN_REFRESH_FAILED', {});
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  async validateSetupToken(token: string): Promise<ValidateSetupTokenResult> {
+    const tokenHash = this.passwordSetupTokenRepo.hashToken(token);
+    const record = await this.passwordSetupTokenRepo.findByTokenHash(tokenHash);
+
+    if (!record) {
+      return { valid: false, reason: 'invalid' };
+    }
+    if (record.usedAt) {
+      return { valid: false, reason: 'used' };
+    }
+    if (record.expiresAt < new Date()) {
+      return { valid: false, reason: 'expired' };
+    }
+    if (!record.user.isActive) {
+      return { valid: false, reason: 'invalid' };
+    }
+
+    return { valid: true };
+  }
+
+  async setPassword(
+    token: string,
+    password: string,
+    passwordConfirm?: string,
+  ): Promise<{ passwordSet: true }> {
+    if (
+      passwordConfirm !== undefined &&
+      passwordConfirm !== null &&
+      passwordConfirm !== password
+    ) {
+      await this.audit.recordAuthEvent('PASSWORD_SETUP_FAILED', {
+        reason: 'password_mismatch',
+      });
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const tokenHash = this.passwordSetupTokenRepo.hashToken(token);
+    const record = await this.passwordSetupTokenRepo.findByTokenHash(tokenHash);
+
+    if (!record) {
+      await this.audit.recordAuthEvent('PASSWORD_SETUP_FAILED', {
+        reason: 'invalid',
+      });
+      throw new BadRequestException('Invalid or expired setup link');
+    }
+    if (record.usedAt) {
+      await this.audit.recordAuthEvent('PASSWORD_SETUP_FAILED', {
+        reason: 'used',
+      });
+      throw new BadRequestException('Setup link has already been used');
+    }
+    if (record.expiresAt < new Date()) {
+      await this.audit.recordAuthEvent('PASSWORD_SETUP_FAILED', {
+        reason: 'expired',
+      });
+      throw new BadRequestException('Setup link has expired');
+    }
+    if (!record.user.isActive) {
+      await this.audit.recordAuthEvent('PASSWORD_SETUP_FAILED', {
+        reason: 'inactive_user',
+        userId: record.userId,
+      });
+      throw new BadRequestException('Account is inactive');
+    }
+
+    const passwordHash = await this.hashPassword(password);
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash },
+    });
+    await this.passwordSetupTokenRepo.markUsed(record.id);
+
+    await this.audit.recordAuthEvent('PASSWORD_SETUP_SUCCESS', {
+      userId: record.userId,
+    });
+
+    return { passwordSet: true };
   }
 
   async me(userId: string, organizationId: string) {

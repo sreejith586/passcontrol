@@ -17,6 +17,7 @@ interface AddUserModalProps {
 export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   const [email, setEmail] = useState('');
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
+  const [setupLink, setSetupLink] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: roles = [], isLoading: loadingRoles } = useQuery({
@@ -36,10 +37,12 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
       let succeeded = 0;
       let failed = 0;
       let lastError: Error | null = null;
+      let lastSetupToken: string | undefined;
 
       for (const roleId of roleIds) {
         try {
-          await addUser({ email: e, roleId });
+          const res = await addUser({ email: e, roleId });
+          if (res.setupToken) lastSetupToken = res.setupToken;
           succeeded++;
         } catch (err) {
           failed++;
@@ -51,26 +54,35 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
         throw lastError;
       }
 
-      return { succeeded, failed, total: roleIds.length };
+      return {
+        succeeded,
+        failed,
+        total: roleIds.length,
+        setupToken: lastSetupToken,
+      };
     },
     onSuccess: (result, { roleIds }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
 
-      if (result.failed === 0) {
-        toast.success(
-          roleIds.length > 1
-            ? `User added with ${roleIds.length} roles`
-            : 'User added'
-        );
+      if (result.setupToken) {
+        const url = `${window.location.origin}/set-password?token=${encodeURIComponent(result.setupToken)}`;
+        setSetupLink(url);
       } else {
-        toast.info(
-          'User added, but some roles could not be assigned'
-        );
+        if (result.failed === 0) {
+          toast.success(
+            roleIds.length > 1
+              ? `User added with ${roleIds.length} roles`
+              : 'User added'
+          );
+        } else {
+          toast.info(
+            'User added, but some roles could not be assigned'
+          );
+        }
+        onSuccess();
+        setEmail('');
+        setSelectedRoleIds(new Set());
       }
-
-      onSuccess();
-      setEmail('');
-      setSelectedRoleIds(new Set());
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Failed to add user');
@@ -80,7 +92,18 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   function handleClose() {
     setEmail('');
     setSelectedRoleIds(new Set());
+    setSetupLink(null);
     onClose();
+  }
+
+  async function copySetupLink() {
+    if (!setupLink) return;
+    try {
+      await navigator.clipboard.writeText(setupLink);
+      toast.success('Setup link copied to clipboard');
+    } catch {
+      toast.error('Could not copy link');
+    }
   }
 
   function toggleRole(roleId: string) {
@@ -100,6 +123,35 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   }
 
   const hasSelection = selectedRoleIds.size > 0;
+
+  if (setupLink) {
+    return (
+      <Modal open={open} onClose={handleClose} title="User added">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This user needs to set a password before they can sign in. Share this
+            link with them. The link expires in 7 days.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={setupLink}
+              className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground"
+            />
+            <Button type="button" variant="secondary" onClick={copySetupLink}>
+              Copy link
+            </Button>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button type="button" variant="primary" onClick={handleClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={open} onClose={handleClose} title="Add user">
@@ -154,7 +206,8 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
           </div>
         </div>
         <p className="text-muted-foreground text-xs">
-          Login setup for newly added users will be enabled in a later phase.
+          New users will receive a setup link to create their password. Share the
+          link with them after adding.
         </p>
         <div className="flex justify-end gap-2 pt-2">
           <Button

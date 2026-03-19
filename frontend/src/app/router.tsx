@@ -7,6 +7,7 @@ import { AuthGuard } from '@/core/auth/auth-guard';
 import { RoutePermissionGuard } from '@/core/permissions/RoutePermissionGuard';
 import { AppShell } from '@/features/shell/AppShell';
 import { LoginPage } from '@/features/auth/LoginPage';
+import { SetPasswordPage } from '@/features/auth/SetPasswordPage';
 import { AlertListPage } from '@/features/alerts/AlertListPage';
 import { AlertDetailPage } from '@/features/alerts/AlertDetailPage';
 import { EscalationsPage } from '@/features/escalations/EscalationsPage';
@@ -101,6 +102,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: '/login', element: <LoginPage /> },
+  { path: '/set-password', element: <SetPasswordPage /> },
   { path: '*', element: <NotFoundPage /> },
 ]);
 

@@ -76,9 +76,19 @@ Base: `/v1` (versioned)
 | POST | /alert-sla-policies | alert.sla-policy.manage | Create SLA policy |
 | PATCH | /alert-sla-policies/:id | alert.sla-policy.manage | Update SLA policy |
 
+## Auth
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /auth/login | None | Login with email/password |
+| POST | /auth/refresh | None | Refresh access token |
+| POST | /auth/validate-setup-token | None | Validate password setup token; returns `{ valid, reason? }` |
+| POST | /auth/set-password | None | Set password using setup token; returns `{ passwordSet: true }` |
+| GET | /auth/me | JWT | Current user and permissions |
+
 ## Other
 
-- `/auth`, `/files`, `/attachments`, `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`, `/organization-settings`
+- `/users`, `/files`, `/attachments`, `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`, `/organization-settings`
 
 ## Response Shape
 

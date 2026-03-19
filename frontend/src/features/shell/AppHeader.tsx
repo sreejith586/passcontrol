@@ -10,7 +10,7 @@ export function AppHeader() {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
       <Link to="/alerts" className="text-lg font-semibold text-foreground">
-        Re-Checklist
+        PassControl
       </Link>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>

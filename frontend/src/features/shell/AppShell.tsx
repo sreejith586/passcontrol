@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
 
-const SIDEBAR_STORAGE_KEY = 're-checklist-sidebar-collapsed';
+const SIDEBAR_STORAGE_KEY = 'passcontrol-sidebar-collapsed';
 
 function getStoredCollapsed(): boolean {
   try {

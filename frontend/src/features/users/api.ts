@@ -13,6 +13,7 @@ export interface UserForAssignment {
   email: string;
   isActive?: boolean;
   roles?: UserRole[];
+  setupToken?: string;
 }
 
 export interface ListUsersParams {

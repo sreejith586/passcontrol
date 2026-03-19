@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersRepository } from '../repositories/users.repository';
 import { RolesService } from '../../roles/services/roles.service';
+import { PasswordSetupTokenRepository } from '../../auth/repositories/password-setup-token.repository';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { InviteUserDto } from '../dto/invite-user.dto';
 import { AddRoleDto } from '../dto/add-role.dto';
@@ -11,6 +12,7 @@ export class UsersService {
   constructor(
     private readonly repo: UsersRepository,
     private readonly rolesService: RolesService,
+    private readonly passwordSetupTokenRepo: PasswordSetupTokenRepository,
   ) {}
 
   async list(ctx: { organizationId: string }, query: ListUsersQueryDto) {
@@ -32,6 +34,7 @@ export class UsersService {
     email: string;
     isActive: boolean;
     roles: Array<{ id: string; name: string; key: string }>;
+    setupToken?: string;
   }> {
     const isAssignable = await this.rolesService.isRoleAssignableInOrg(
       dto.roleId,
@@ -62,6 +65,13 @@ export class UsersService {
     if (!result) {
       throw new BadRequestException('Failed to load user after invite');
     }
+
+    if (user.passwordHash === null) {
+      await this.passwordSetupTokenRepo.invalidateUnusedByUserId(user.id);
+      const setupToken = await this.passwordSetupTokenRepo.create(user.id);
+      return { ...result, setupToken };
+    }
+
     return result;
   }
 

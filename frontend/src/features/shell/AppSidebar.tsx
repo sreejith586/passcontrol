@@ -34,6 +34,13 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         collapsed ? 'w-16' : 'w-56'
       )}
     >
+      {!collapsed && (
+        <div className="border-b border-border px-3 py-3">
+          <span className="text-sm font-semibold text-foreground">
+            PassControl
+          </span>
+        </div>
+      )}
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {navItems.map(({ to, label, icon: Icon, permission }) => (
           <PermissionGate key={to} permission={permission}>

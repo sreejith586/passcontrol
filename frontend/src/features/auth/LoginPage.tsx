@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +21,19 @@ export function LoginPage() {
   const { login: authLogin } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
+  const locationState = location.state as
+    | { from?: { pathname: string }; passwordSetSuccess?: boolean }
+    | undefined;
+  const from = locationState?.from?.pathname ?? '/alerts';
+  const passwordSetSuccess = locationState?.passwordSetSuccess ?? false;
+
+  useEffect(() => {
+    document.title = 'Sign in - PassControl';
+    return () => {
+      document.title = 'PassControl';
+    };
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -30,8 +43,6 @@ export function LoginPage() {
     defaultValues: { email: '', password: '' },
   });
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/alerts';
-
   async function onSubmit(data: FormData) {
     setError(null);
     try {
@@ -40,7 +51,7 @@ export function LoginPage() {
         accessToken: res.accessToken,
         user: res.user,
       });
-      navigate(from, { replace: true });
+      navigate(from, { replace: true, state: { from: undefined } });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     }
@@ -49,7 +60,17 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <div className="w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-sm">
-        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">Re-Checklist</h1>
+        <h1 className="mb-6 text-center text-xl font-semibold text-foreground">
+          PassControl
+        </h1>
+        {passwordSetSuccess && (
+          <div
+            className="mb-4 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400"
+            role="status"
+          >
+            Password set successfully. You can now sign in.
+          </div>
+        )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input
             label="Email"
