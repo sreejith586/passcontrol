@@ -29,6 +29,11 @@ import {
   ALERT_ESCALATIONS_TRENDS_INTERVALS,
 } from '../dto/alert-escalations-trends-query.dto';
 import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
+import {
+  AlertInsightsSlaComplianceQueryDto,
+  AlertInsightsEscalationTrendQueryDto,
+  AlertInsightsTopSourcesQueryDto,
+} from '../dto/alert-insights-query.dto';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import {
   DOMAIN_EVENT_PUBLISHER,
@@ -167,6 +172,34 @@ export class AlertEventsService {
         complianceRate: resEvaluated > 0 ? raw.resWithinSla / resEvaluated : null,
       },
     };
+  }
+
+  async getSlaComplianceSummary(
+    ctx: { organizationId: string },
+    query: AlertInsightsSlaComplianceQueryDto,
+  ) {
+    const filters = { from: query.from, to: query.to };
+    return this.repo.getSlaComplianceSummary(
+      ctx.organizationId,
+      filters,
+      new Date(),
+    );
+  }
+
+  async getEscalationTrend(
+    ctx: { organizationId: string },
+    query: AlertInsightsEscalationTrendQueryDto,
+  ) {
+    const days = Math.min(Math.max(query.days ?? 7, 1), 90);
+    return this.repo.getEscalationTrend(ctx.organizationId, days, new Date());
+  }
+
+  async getTopProblemSources(
+    ctx: { organizationId: string },
+    query: AlertInsightsTopSourcesQueryDto,
+  ) {
+    const limit = Math.min(Math.max(query.limit ?? 5, 1), 20);
+    return this.repo.getTopProblemSources(ctx.organizationId, limit);
   }
 
   async getEscalationsTrends(

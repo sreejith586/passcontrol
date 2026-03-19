@@ -8,6 +8,11 @@ import { AlertEscalationsPrioritizedQueryDto } from '../dto/alert-escalations-pr
 import { AlertEscalationsSummaryQueryDto } from '../dto/alert-escalations-summary-query.dto';
 import { AlertEscalationsTrendsQueryDto } from '../dto/alert-escalations-trends-query.dto';
 import { AlertSlaComplianceQueryDto } from '../dto/alert-sla-compliance-query.dto';
+import {
+  AlertInsightsSlaComplianceQueryDto,
+  AlertInsightsEscalationTrendQueryDto,
+  AlertInsightsTopSourcesQueryDto,
+} from '../dto/alert-insights-query.dto';
 import { BulkAcknowledgeAlertsDto } from '../dto/bulk-acknowledge-alerts.dto';
 import { BulkResolveAlertsDto } from '../dto/bulk-resolve-alerts.dto';
 import { AssignAlertDto } from '../dto/assign-alert.dto';
@@ -196,6 +201,55 @@ export class AlertEventsController {
   ) {
     const escalations = await this.service.getEscalations(ctx, query);
     return ApiResponse.ok(escalations);
+  }
+
+  @Get('insights/sla-compliance')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'SLA compliance summary (insights)',
+    description:
+      'Returns SLA compliance counts for alerts triggered in a period. Uses triggeredAt for date range and SLA deadlines.',
+  })
+  @ApiQuery({ name: 'from', required: false, example: '2025-03-01', description: 'Filter from date (inclusive, applied to triggeredAt)' })
+  @ApiQuery({ name: 'to', required: false, example: '2025-03-15', description: 'Filter to date (inclusive, applied to triggeredAt)' })
+  async getInsightsSlaCompliance(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertInsightsSlaComplianceQueryDto,
+  ) {
+    const data = await this.service.getSlaComplianceSummary(ctx, query);
+    return ApiResponse.ok(data);
+  }
+
+  @Get('insights/escalation-trend')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Escalation trend (insights)',
+    description:
+      'Returns daily buckets of triggered alerts with total and breached counts for the last N days.',
+  })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Number of days (default 7, max 90)' })
+  async getInsightsEscalationTrend(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertInsightsEscalationTrendQueryDto,
+  ) {
+    const data = await this.service.getEscalationTrend(ctx, query);
+    return ApiResponse.ok(data);
+  }
+
+  @Get('insights/top-sources')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Top problem sources (insights)',
+    description:
+      'Returns sources (sourceType, sourceId) with the highest alert counts.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max sources to return (default 5, max 20)' })
+  async getInsightsTopSources(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Query() query: AlertInsightsTopSourcesQueryDto,
+  ) {
+    const data = await this.service.getTopProblemSources(ctx, query);
+    return ApiResponse.ok(data);
   }
 
   @Get()

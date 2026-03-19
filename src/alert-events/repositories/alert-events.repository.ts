@@ -1188,6 +1188,157 @@ export class AlertEventsRepository {
     }));
   }
 
+  /**
+   * SLA compliance summary for alerts triggered in a period.
+   * Uses triggered_at for date range and SLA deadlines (triggered_at + minutes).
+   */
+  async getSlaComplianceSummary(
+    organizationId: string,
+    filters: { from?: string; to?: string },
+    now: Date,
+  ): Promise<{
+    totalAlerts: number;
+    acknowledgedWithinSla: number;
+    acknowledgedBreached: number;
+    resolvedWithinSla: number;
+    resolvedBreached: number;
+  }> {
+    const baseConditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = (${organizationId})::uuid`,
+    ];
+    if (filters.from != null) {
+      baseConditions.push(Prisma.sql`ae.triggered_at >= ${new Date(filters.from)}`);
+    }
+    if (filters.to != null) {
+      baseConditions.push(Prisma.sql`ae.triggered_at <= ${new Date(filters.to)}`);
+    }
+    const whereClause = Prisma.join(baseConditions, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        total_alerts: bigint;
+        ack_within_sla: bigint;
+        ack_breached: bigint;
+        res_within_sla: bigint;
+        res_breached: bigint;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          ae.acknowledged_at,
+          ae.resolved_at,
+          ae.triggered_at + (ae.acknowledge_within_minutes || ' minutes')::interval AS acknowledge_by,
+          ae.triggered_at + (ae.resolve_within_minutes || ' minutes')::interval AS resolve_by
+        FROM alert_events ae
+        WHERE ${whereClause}
+      )
+      SELECT
+        COUNT(*)::bigint AS total_alerts,
+        COUNT(*) FILTER (WHERE b.acknowledged_at IS NOT NULL AND b.acknowledged_at <= b.acknowledge_by)::bigint AS ack_within_sla,
+        COUNT(*) FILTER (WHERE (b.acknowledged_at IS NOT NULL AND b.acknowledged_at > b.acknowledge_by) OR (b.acknowledged_at IS NULL AND b.acknowledge_by < ${now}))::bigint AS ack_breached,
+        COUNT(*) FILTER (WHERE b.resolved_at IS NOT NULL AND b.resolved_at <= b.resolve_by)::bigint AS res_within_sla,
+        COUNT(*) FILTER (WHERE (b.resolved_at IS NOT NULL AND b.resolved_at > b.resolve_by) OR (b.resolved_at IS NULL AND b.resolve_by < ${now}))::bigint AS res_breached
+      FROM base b
+    `);
+
+    const r = rows[0];
+    return {
+      totalAlerts: Number(r?.total_alerts ?? 0),
+      acknowledgedWithinSla: Number(r?.ack_within_sla ?? 0),
+      acknowledgedBreached: Number(r?.ack_breached ?? 0),
+      resolvedWithinSla: Number(r?.res_within_sla ?? 0),
+      resolvedBreached: Number(r?.res_breached ?? 0),
+    };
+  }
+
+  /**
+   * Escalation trend: daily buckets of triggered alerts with total and breached counts.
+   * Breached = acknowledge or resolve deadline passed.
+   */
+  async getEscalationTrend(
+    organizationId: string,
+    days: number,
+    now: Date,
+  ): Promise<
+    Array<{
+      date: string;
+      totalAlerts: number;
+      breachedAlerts: number;
+    }>
+  > {
+    const fromDate = new Date(now);
+    fromDate.setDate(fromDate.getDate() - days);
+    fromDate.setHours(0, 0, 0, 0);
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        bucket: Date;
+        total_alerts: bigint;
+        breached_alerts: bigint;
+      }>
+    >(Prisma.sql`
+      WITH base AS (
+        SELECT
+          DATE_TRUNC('day', ae.triggered_at)::date AS bucket,
+          (ae.acknowledged_at IS NULL AND ae.triggered_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now})
+            OR (ae.resolved_at IS NULL AND ae.triggered_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS breached
+        FROM alert_events ae
+        WHERE ae.organization_id = (${organizationId})::uuid
+          AND ae.triggered_at >= ${fromDate}
+      )
+      SELECT
+        base.bucket,
+        COUNT(*)::bigint AS total_alerts,
+        COUNT(*) FILTER (WHERE base.breached)::bigint AS breached_alerts
+      FROM base
+      GROUP BY base.bucket
+      ORDER BY base.bucket ASC
+    `);
+
+    return rows.map((r) => ({
+      date:
+        r.bucket instanceof Date
+          ? r.bucket.toISOString().slice(0, 10)
+          : String(r.bucket).slice(0, 10),
+      totalAlerts: Number(r.total_alerts ?? 0),
+      breachedAlerts: Number(r.breached_alerts ?? 0),
+    }));
+  }
+
+  /**
+   * Top problem sources by alert count.
+   */
+  async getTopProblemSources(
+    organizationId: string,
+    limit: number,
+  ): Promise<
+    Array<{
+      sourceType: string;
+      sourceId: string;
+      count: number;
+    }>
+  > {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ source_type: string; source_id: string; cnt: bigint }>
+    >(Prisma.sql`
+      SELECT
+        ae.source_type,
+        ae.source_id,
+        COUNT(*)::bigint AS cnt
+      FROM alert_events ae
+      WHERE ae.organization_id = (${organizationId})::uuid
+      GROUP BY ae.source_type, ae.source_id
+      ORDER BY cnt DESC
+      LIMIT ${limit}
+    `);
+
+    return rows.map((r) => ({
+      sourceType: r.source_type,
+      sourceId: r.source_id,
+      count: Number(r.cnt ?? 0),
+    }));
+  }
+
   private buildDimensionConditions(
     _organizationId: string,
     filters: AlertTrendsFilters,

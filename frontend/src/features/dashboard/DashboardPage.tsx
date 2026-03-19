@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { format, subDays } from 'date-fns';
 import {
   getChecklistMetrics,
   getEscalationSummary,
   getPrioritizedEscalations,
+  getSlaCompliance,
+  getEscalationTrend,
+  getTopProblemSources,
 } from './api';
 import { queryKeys } from './query-keys';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -16,6 +20,8 @@ import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
 import { StatusBadge } from '@/features/alerts/components/StatusBadge';
 import { getSourceTypeLabel } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
+
+const SLA_DAYS = 30;
 
 function MetricCard({
   label,
@@ -67,18 +73,53 @@ export function DashboardPage() {
     enabled: hasAlertView,
   });
 
+  const slaRange = {
+    from: format(subDays(new Date(), SLA_DAYS), 'yyyy-MM-dd'),
+    to: format(new Date(), 'yyyy-MM-dd'),
+  };
+  const slaCompliance = useQuery({
+    queryKey: queryKeys.dashboard.slaCompliance(slaRange),
+    queryFn: () => getSlaCompliance(slaRange),
+    enabled: hasAlertView,
+  });
+
+  const escalationTrend = useQuery({
+    queryKey: queryKeys.dashboard.escalationTrend(7),
+    queryFn: () => getEscalationTrend(7),
+    enabled: hasAlertView,
+  });
+
+  const topProblemSources = useQuery({
+    queryKey: queryKeys.dashboard.topProblemSources(5),
+    queryFn: () => getTopProblemSources(5),
+    enabled: hasAlertView,
+  });
+
+  const insightsQueries = [slaCompliance, escalationTrend, topProblemSources];
   const isLoading =
     (hasChecklistView && checklistMetrics.isLoading) ||
-    (hasAlertView && (escalationSummary.isLoading || prioritized.isLoading));
+    (hasAlertView &&
+      (escalationSummary.isLoading ||
+        prioritized.isLoading ||
+        insightsQueries.some((q) => q.isLoading)));
 
   const hasError =
     (hasChecklistView && checklistMetrics.isError) ||
-    (hasAlertView && (escalationSummary.isError || prioritized.isError));
+    (hasAlertView &&
+      (escalationSummary.isError ||
+        prioritized.isError ||
+        insightsQueries.some((q) => q.isError)));
   const errorQuery = checklistMetrics.isError
     ? checklistMetrics
     : escalationSummary.isError
       ? escalationSummary
-      : prioritized;
+      : prioritized.isError
+        ? prioritized
+        : slaCompliance.isError
+          ? slaCompliance
+          : escalationTrend.isError
+            ? escalationTrend
+            : topProblemSources;
 
   if (!hasChecklistView && !hasAlertView) {
     return (
@@ -126,6 +167,13 @@ export function DashboardPage() {
             <Skeleton key={i} className="h-24 rounded-lg" />
           ))}
         </div>
+        {hasAlertView && (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Skeleton className="h-40 rounded-lg" />
+            <Skeleton className="h-40 rounded-lg" />
+            <Skeleton className="h-40 rounded-lg" />
+          </div>
+        )}
         <div className="space-y-2">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-48 rounded-lg" />
@@ -203,6 +251,179 @@ export function DashboardPage() {
           </>
         )}
       </div>
+
+      {hasAlertView && (slaCompliance.data || escalationTrend.data || topProblemSources.data) && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          {slaCompliance.data && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+              <h2 className="text-sm font-medium text-foreground">
+                SLA compliance (last 30 days)
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Alerts triggered in this period
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <MetricCard label="Total alerts" value={slaCompliance.data.totalAlerts} />
+                <MetricCard
+                  label="Ack within SLA"
+                  value={slaCompliance.data.acknowledgedWithinSla}
+                  variant="default"
+                />
+                <MetricCard
+                  label="Ack breached"
+                  value={slaCompliance.data.acknowledgedBreached}
+                  variant={
+                    slaCompliance.data.acknowledgedBreached > 0
+                      ? 'destructive'
+                      : 'default'
+                  }
+                />
+                <MetricCard
+                  label="Resolved within SLA"
+                  value={slaCompliance.data.resolvedWithinSla}
+                  variant="default"
+                />
+                <MetricCard
+                  label="Resolved breached"
+                  value={slaCompliance.data.resolvedBreached}
+                  variant={
+                    slaCompliance.data.resolvedBreached > 0
+                      ? 'destructive'
+                      : 'default'
+                  }
+                />
+              </div>
+              {slaCompliance.data.totalAlerts > 0 && (() => {
+                const ackEval =
+                  slaCompliance.data.acknowledgedWithinSla +
+                  slaCompliance.data.acknowledgedBreached;
+                const resEval =
+                  slaCompliance.data.resolvedWithinSla +
+                  slaCompliance.data.resolvedBreached;
+                return (
+                  <div className="flex flex-wrap gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                    {ackEval > 0 && (
+                      <span>
+                        Ack compliance:{' '}
+                        {(
+                          (100 * slaCompliance.data.acknowledgedWithinSla) /
+                          ackEval
+                        ).toFixed(0)}
+                        %
+                      </span>
+                    )}
+                    {resEval > 0 && (
+                      <span>
+                        Resolve compliance:{' '}
+                        {(
+                          (100 * slaCompliance.data.resolvedWithinSla) /
+                          resEval
+                        ).toFixed(0)}
+                        %
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          {escalationTrend.data && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+              <h2 className="text-sm font-medium text-foreground">
+                Alerts triggered (last 7 days)
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Breached = currently past deadline
+              </p>
+              {escalationTrend.data.length > 0 ? (
+                <div className="space-y-2">
+                  {escalationTrend.data.map((point) => {
+                    const maxTotal = Math.max(
+                      ...escalationTrend.data!.map((p) => p.totalAlerts),
+                      1
+                    );
+                    const widthPct = (point.totalAlerts / maxTotal) * 100;
+                    return (
+                      <div key={point.date} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 text-xs text-muted-foreground">
+                          {format(new Date(point.date), 'MMM d')}
+                        </span>
+                        <div className="flex flex-1 items-center">
+                          <div
+                            className="flex h-5 min-w-[2px] overflow-hidden rounded"
+                            style={{ width: `${Math.max(widthPct, 2)}%` }}
+                          >
+                            <div
+                              className="h-full bg-muted-foreground/30"
+                              style={{
+                                width: `${100 - (point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0)}%`,
+                              }}
+                            />
+                            {point.breachedAlerts > 0 && (
+                              <div
+                                className="h-full flex-1 bg-destructive/60"
+                                style={{
+                                  width: `${point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0}%`,
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <span className="w-14 shrink-0 text-right text-xs tabular-nums">
+                          {point.totalAlerts}
+                          {point.breachedAlerts > 0 && (
+                            <span className="ml-1 text-destructive">
+                              ({point.breachedAlerts})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No alerts in this period
+                </p>
+              )}
+            </div>
+          )}
+          {topProblemSources.data && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+              <h2 className="text-sm font-medium text-foreground">
+                Top problem sources (all-time)
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                By total alert count
+              </p>
+              {topProblemSources.data.length > 0 ? (
+                <ol className="space-y-1">
+                  {topProblemSources.data.map((source, i) => (
+                    <li
+                      key={`${source.sourceType}-${source.sourceId}`}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <span className="flex shrink-0 font-medium text-muted-foreground">
+                        {i + 1}.
+                      </span>
+                      <span className="min-w-0 truncate">
+                        {getSourceTypeLabel(source.sourceType)}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">
+                        {source.count}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No alert sources yet
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {hasAlertView && prioritized.data && (
         <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
