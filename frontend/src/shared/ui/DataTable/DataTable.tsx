@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn';
 import { Skeleton } from '../Skeleton';
+import { EmptyState } from '@/shared/layout/EmptyState';
 import type { DataTableColumn } from './types';
 
 interface DataTableProps<T> {
@@ -7,6 +8,8 @@ interface DataTableProps<T> {
   data: T[];
   loading?: boolean;
   emptyMessage?: string;
+  emptyDescription?: string;
+  emptyAction?: React.ReactNode;
   selectable?: boolean;
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: string[]) => void;
@@ -19,6 +22,8 @@ export function DataTable<T>({
   data,
   loading = false,
   emptyMessage = 'No data',
+  emptyDescription,
+  emptyAction,
   selectable = false,
   selectedIds = new Set(),
   onSelectionChange,
@@ -87,9 +92,12 @@ export function DataTable<T>({
 
   if (data.length === 0) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center rounded-md border border-border">
-        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-      </div>
+      <EmptyState
+        title={emptyMessage}
+        description={emptyDescription}
+        action={emptyAction}
+        className="min-h-[200px]"
+      />
     );
   }
 

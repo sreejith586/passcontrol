@@ -1,5 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, AlertTriangle, TrendingUp, Settings } from 'lucide-react';
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  TrendingUp,
+  Settings,
+  PanelLeftClose,
+  PanelLeft,
+} from 'lucide-react';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { cn } from '@/lib/cn';
 
@@ -10,17 +17,29 @@ const navItems = [
   { to: '/settings/alert-workflow', label: 'Settings', icon: Settings, permission: 'alert.workflow-policy.view' as const },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   return (
-    <aside className="flex w-56 flex-col border-r border-border bg-muted/30">
+    <aside
+      className={cn(
+        'flex shrink-0 flex-col border-r border-border bg-muted/30 transition-[width] duration-200',
+        collapsed ? 'w-16' : 'w-56'
+      )}
+    >
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {navItems.map(({ to, label, icon: Icon, permission }) => (
           <PermissionGate key={to} permission={permission}>
             <NavLink
               to={to}
+              title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  collapsed && 'justify-center px-2',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -28,11 +47,29 @@ export function AppSidebar() {
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {label}
+              {!collapsed && <span>{label}</span>}
             </NavLink>
           </PermissionGate>
         ))}
       </nav>
+      <button
+        type="button"
+        onClick={onToggle}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={cn(
+          'flex items-center gap-2 border-t border-border p-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+          collapsed && 'justify-center px-2'
+        )}
+      >
+        {collapsed ? (
+          <PanelLeft className="h-5 w-5" />
+        ) : (
+          <>
+            <PanelLeftClose className="h-5 w-5" />
+            <span>Collapse</span>
+          </>
+        )}
+      </button>
     </aside>
   );
 }

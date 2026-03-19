@@ -7,9 +7,12 @@ import { addComment } from '../api';
 import { formatDateTime } from '@/lib/date';
 import { Button } from '@/shared/ui/Button';
 import { Textarea } from '@/shared/ui/Textarea';
+import { Badge } from '@/shared/ui/Badge';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
+import { EmptyState } from '@/shared/layout/EmptyState';
+import { cn } from '@/lib/cn';
 
 const schema = z.object({
   body: z.string().min(1, 'Comment cannot be empty').max(4000),
@@ -27,6 +30,8 @@ const COMMENT_TYPE_LABELS: Record<string, string> = {
   RESOLUTION_NOTE: 'Resolution note',
   REOPEN_NOTE: 'Reopen note',
 };
+
+const SECTION_CLASS = 'rounded-lg border border-border bg-muted/30 p-4';
 
 export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
   const queryClient = useQueryClient();
@@ -54,7 +59,7 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
   });
 
   return (
-    <div className="space-y-4">
+    <div className={cn(SECTION_CLASS, 'space-y-4')}>
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-foreground">Comments</h3>
         <Button
@@ -68,7 +73,8 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
       {expanded && (
         <form
           onSubmit={handleSubmit((data) => addMutation.mutate(data))}
-          className="space-y-2">
+          className="space-y-2"
+        >
           <Textarea
             label="Comment"
             {...register('body')}
@@ -80,26 +86,34 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
           </Button>
         </form>
       )}
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {comments.map((c) => (
           <li
             key={c.id}
-            className="rounded-md border border-border bg-muted/30 p-3 text-sm"
+            className="rounded-md border border-border bg-background/50 p-4 text-sm"
           >
-            <div className="flex justify-between gap-2">
-              <span className="font-medium">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-xs">
                 {COMMENT_TYPE_LABELS[c.type] ?? c.type}
-              </span>
-              <span className="text-muted-foreground">
+              </Badge>
+              {c.authorUserId && (
+                <span className="text-muted-foreground">User</span>
+              )}
+              <span className="text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground">
                 {formatDateTime(c.createdAt)}
               </span>
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-foreground">{c.body}</p>
+            <p className="mt-3 whitespace-pre-wrap text-foreground">{c.body}</p>
           </li>
         ))}
       </ul>
       {comments.length === 0 && !expanded && (
-        <p className="text-sm text-muted-foreground">No comments yet.</p>
+        <EmptyState
+          title="No comments yet"
+          description="Add a comment to document context or follow-up."
+          className="p-6"
+        />
       )}
     </div>
   );

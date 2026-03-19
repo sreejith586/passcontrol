@@ -1,13 +1,16 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { listEscalations } from './api';
 import { queryKeys } from './query-keys';
 import type { EscalationsListParams, EscalationItem } from './types';
 import { DataTable, DataTablePagination } from '@/shared/ui';
 import { PageHeader } from '@/shared/layout/PageHeader';
+import { ErrorState } from '@/shared/layout/ErrorState';
+import { FilterBar, FilterSelect, FilterCheckbox } from '@/shared/layout/FilterBar';
 import { Badge } from '@/shared/ui/Badge';
+import { Button } from '@/shared/ui/Button';
 import { formatDateTime } from '@/lib/date';
+import { getSourceTypeLabel } from '@/lib/labels';
 import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
 import { StatusBadge } from '@/features/alerts/components/StatusBadge';
 
@@ -38,7 +41,7 @@ export function EscalationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const params = parseParams(searchParams);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.escalations.list(params),
     queryFn: () => listEscalations(params),
   });
@@ -91,23 +94,31 @@ export function EscalationsPage() {
     {
       key: 'sourceType',
       header: 'Source',
-      render: (row: EscalationItem) => row.sourceType,
+      render: (row: EscalationItem) => getSourceTypeLabel(row.sourceType),
     },
     {
       key: 'createdAt',
       header: 'Created',
       render: (row: EscalationItem) => formatDateTime(row.createdAt),
     },
-    {
-      key: 'actions',
-      header: '',
-      render: (row: EscalationItem) => (
-        <Link to={`/alerts/${row.alertEventId}`}>
-          <span className="text-primary hover:underline text-sm">View</span>
-        </Link>
-      ),
-    },
   ];
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Escalations" description="Active alerts with SLA breach status" />
+        <ErrorState
+          title="Failed to load escalations"
+          description={error instanceof Error ? error.message : 'Something went wrong'}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -115,37 +126,25 @@ export function EscalationsPage() {
         title="Escalations"
         description="Active alerts with SLA breach status"
       />
-      <div className="flex flex-wrap gap-2">
-        <select
+      <FilterBar>
+        <FilterSelect
           value={params.status ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-            setParam('status', e.target.value)
-          }
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value || 'all'} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={params.onlyBreached ?? false}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setParam('onlyBreached', e.target.checked)
-            }
-            className="rounded border-border"
-          />
-          Breached only
-        </label>
-      </div>
+          onChange={(v) => setParam('status', v)}
+          options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          aria-label="Filter by status"
+        />
+        <FilterCheckbox
+          checked={params.onlyBreached ?? false}
+          onChange={(v) => setParam('onlyBreached', v)}
+          label="Breached only"
+        />
+      </FilterBar>
       <DataTable
         columns={columns}
         data={data?.items ?? []}
         loading={isLoading}
         emptyMessage="No escalations found"
+        emptyDescription="Active alerts with SLA status will appear here."
         getRowId={(row) => row.alertEventId}
         onRowClick={(row) => navigate(`/alerts/${row.alertEventId}`)}
       />

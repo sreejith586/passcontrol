@@ -1,17 +1,18 @@
-import type React from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { listAlerts } from './api';
 import { queryKeys } from './query-keys';
 import type { AlertEvent, ListAlertsParams } from './types';
 import { DataTable, DataTablePagination } from '@/shared/ui';
 import { PageHeader } from '@/shared/layout/PageHeader';
+import { ErrorState } from '@/shared/layout/ErrorState';
+import { FilterBar, FilterSelect, FilterCheckbox } from '@/shared/layout/FilterBar';
 import { StatusBadge } from './components/StatusBadge';
 import { SeverityBadge } from './components/SeverityBadge';
+import { AssigneeBadge } from './components/AssigneeBadge';
 import { formatDateTime } from '@/lib/date';
+import { getSourceTypeLabel } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
-import { PermissionGate } from '@/core/permissions/PermissionGate';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All' },
@@ -42,7 +43,7 @@ export function AlertListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const params = parseParams(searchParams);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.alerts.list(params),
     queryFn: () => listAlerts(params),
   });
@@ -72,42 +73,41 @@ export function AlertListPage() {
     {
       key: 'sourceType',
       header: 'Source',
-      render: (row: AlertEvent) => row.sourceType,
+      render: (row: AlertEvent) => getSourceTypeLabel(row.sourceType),
     },
     {
       key: 'assignedTo',
       header: 'Assigned',
-      render: (row: AlertEvent) =>
-        row.assignedToUserId ? (
-          <span
-            className="block max-w-[140px] truncate"
-            title={row.assignedToUser?.name ?? 'Unknown user'}
-          >
-            {row.assignedToUser?.name ?? 'Unknown user'}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        ),
+      render: (row: AlertEvent) => (
+        <AssigneeBadge
+          assignedToUserId={row.assignedToUserId}
+          assignedToUser={row.assignedToUser}
+        />
+      ),
     },
     {
       key: 'triggeredAt',
       header: 'Triggered',
       render: (row: AlertEvent) => formatDateTime(row.triggeredAt),
     },
-    {
-      key: 'actions',
-      header: '',
-      render: (row: AlertEvent) => (
-        <PermissionGate permission="alert.view">
-          <Link to={`/alerts/${row.id}`}>
-            <Button variant="ghost" size="sm">
-              View
-            </Button>
-          </Link>
-        </PermissionGate>
-      ),
-    },
   ];
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Alerts" description="Manage and triage operational alerts" />
+        <ErrorState
+          title="Failed to load alerts"
+          description={error instanceof Error ? error.message : 'Something went wrong'}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -115,42 +115,30 @@ export function AlertListPage() {
         title="Alerts"
         description="Manage and triage operational alerts"
       />
-      <div className="flex flex-wrap gap-2">
-        <select
+      <FilterBar>
+        <FilterSelect
           value={params.status ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setParam('status', e.target.value)}
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value || 'all'} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={params.assignedToMe ?? false}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParam('assignedToMe', e.target.checked)}
-            className="rounded border-border"
-          />
-          Assigned to me
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={params.unassignedOnly ?? false}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParam('unassignedOnly', e.target.checked)}
-            className="rounded border-border"
-          />
-          Unassigned only
-        </label>
-      </div>
+          onChange={(v) => setParam('status', v)}
+          options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          aria-label="Filter by status"
+        />
+        <FilterCheckbox
+          checked={params.assignedToMe ?? false}
+          onChange={(v) => setParam('assignedToMe', v)}
+          label="Assigned to me"
+        />
+        <FilterCheckbox
+          checked={params.unassignedOnly ?? false}
+          onChange={(v) => setParam('unassignedOnly', v)}
+          label="Unassigned only"
+        />
+      </FilterBar>
       <DataTable
         columns={columns}
         data={data?.items ?? []}
         loading={isLoading}
         emptyMessage="No alerts found"
+        emptyDescription="Alerts will appear here when checklist items fail."
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/alerts/${row.id}`)}
       />

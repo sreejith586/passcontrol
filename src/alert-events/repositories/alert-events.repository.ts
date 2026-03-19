@@ -357,17 +357,17 @@ export class AlertEventsRepository {
     total: number;
   }> {
     const baseConditions: Prisma.Sql[] = [
-      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.organization_id = (${organizationId})::uuid`,
       Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
     ];
     if (filters.brandId != null) {
-      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+      baseConditions.push(Prisma.sql`ae.brand_id = (${filters.brandId})::uuid`);
     }
     if (filters.locationId != null) {
-      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+      baseConditions.push(Prisma.sql`ae.location_id = (${filters.locationId})::uuid`);
     }
     if (filters.zoneId != null) {
-      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+      baseConditions.push(Prisma.sql`ae.zone_id = (${filters.zoneId})::uuid`);
     }
     if (filters.severity != null) {
       baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
@@ -379,7 +379,7 @@ export class AlertEventsRepository {
       if (filters.assignedToUserId === null) {
         baseConditions.push(Prisma.sql`ae.assigned_to_user_id IS NULL`);
       } else {
-        baseConditions.push(Prisma.sql`ae.assigned_to_user_id = ${filters.assignedToUserId}`);
+        baseConditions.push(Prisma.sql`ae.assigned_to_user_id = (${filters.assignedToUserId})::uuid`);
       }
     }
     const whereClause = Prisma.join(baseConditions, ' AND ');
@@ -544,17 +544,17 @@ export class AlertEventsRepository {
     }>
   > {
     const baseConditions: Prisma.Sql[] = [
-      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.organization_id = (${organizationId})::uuid`,
       Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
     ];
     if (filters.brandId != null) {
-      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+      baseConditions.push(Prisma.sql`ae.brand_id = (${filters.brandId})::uuid`);
     }
     if (filters.locationId != null) {
-      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+      baseConditions.push(Prisma.sql`ae.location_id = (${filters.locationId})::uuid`);
     }
     if (filters.zoneId != null) {
-      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+      baseConditions.push(Prisma.sql`ae.zone_id = (${filters.zoneId})::uuid`);
     }
     if (filters.severity != null) {
       baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
@@ -566,7 +566,7 @@ export class AlertEventsRepository {
       if (filters.assignedToUserId === null) {
         baseConditions.push(Prisma.sql`ae.assigned_to_user_id IS NULL`);
       } else {
-        baseConditions.push(Prisma.sql`ae.assigned_to_user_id = ${filters.assignedToUserId}`);
+        baseConditions.push(Prisma.sql`ae.assigned_to_user_id = (${filters.assignedToUserId})::uuid`);
       }
     }
     const whereClause = Prisma.join(baseConditions, ' AND ');
@@ -751,17 +751,17 @@ export class AlertEventsRepository {
     >;
   }> {
     const baseConditions: Prisma.Sql[] = [
-      Prisma.sql`ae.organization_id = ${organizationId}`,
+      Prisma.sql`ae.organization_id = (${organizationId})::uuid`,
       Prisma.sql`ae.status IN ('OPEN', 'ACKNOWLEDGED')`,
     ];
     if (filters.brandId != null) {
-      baseConditions.push(Prisma.sql`ae.brand_id = ${filters.brandId}`);
+      baseConditions.push(Prisma.sql`ae.brand_id = (${filters.brandId})::uuid`);
     }
     if (filters.locationId != null) {
-      baseConditions.push(Prisma.sql`ae.location_id = ${filters.locationId}`);
+      baseConditions.push(Prisma.sql`ae.location_id = (${filters.locationId})::uuid`);
     }
     if (filters.zoneId != null) {
-      baseConditions.push(Prisma.sql`ae.zone_id = ${filters.zoneId}`);
+      baseConditions.push(Prisma.sql`ae.zone_id = (${filters.zoneId})::uuid`);
     }
     if (filters.severity != null) {
       baseConditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
