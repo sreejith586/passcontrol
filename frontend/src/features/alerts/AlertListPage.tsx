@@ -139,6 +139,8 @@ export function AlertListPage() {
       toast.success(msg);
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+      queryClient.invalidateQueries({ queryKey: ['escalations'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => {
       const msg =
@@ -163,6 +165,8 @@ export function AlertListPage() {
       toast.success(msg);
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+      queryClient.invalidateQueries({ queryKey: ['escalations'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => {
       const msg =
