@@ -20,6 +20,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+type CommentCreateType = 'COMMENT' | 'RESOLUTION_NOTE';
+
 interface CommentsSectionProps {
   alertId: string;
   comments: AlertEventComment[];
@@ -31,19 +33,43 @@ const COMMENT_TYPE_LABELS: Record<string, string> = {
   REOPEN_NOTE: 'Reopen note',
 };
 
+const CREATE_TYPE_OPTIONS: { value: CommentCreateType; label: string }[] = [
+  { value: 'COMMENT', label: 'Comment' },
+  { value: 'RESOLUTION_NOTE', label: 'Resolution note' },
+];
+
 const SECTION_CLASS = 'rounded-lg border border-border bg-muted/30 p-4';
+
+function CommentTypeBadge({ type }: { type: string }) {
+  const label = COMMENT_TYPE_LABELS[type] ?? type;
+  const isClosureNote = type === 'RESOLUTION_NOTE' || type === 'REOPEN_NOTE';
+  return (
+    <Badge
+      variant={isClosureNote ? 'default' : 'outline'}
+      className="text-xs"
+    >
+      {label}
+    </Badge>
+  );
+}
 
 export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
+  const [createType, setCreateType] = useState<CommentCreateType>('COMMENT');
 
   const addMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      addComment(alertId, 'COMMENT', data.body),
-    onSuccess: () => {
+    mutationFn: ({
+      data,
+      type,
+    }: {
+      data: FormData;
+      type: CommentCreateType;
+    }) => addComment(alertId, type, data.body),
+    onSuccess: (_, { type }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.alerts.comments(alertId) });
       reset();
-      toast.success('Comment added');
+      toast.success(type === 'RESOLUTION_NOTE' ? 'Resolution note added' : 'Comment added');
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to add comment'),
   });
@@ -72,17 +98,32 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
       </div>
       {expanded && (
         <form
-          onSubmit={handleSubmit((data) => addMutation.mutate(data))}
+          onSubmit={handleSubmit((data) => addMutation.mutate({ data, type: createType }))}
           className="space-y-2"
         >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">Type:</span>
+            <select
+              value={createType}
+              onChange={(e) => setCreateType(e.target.value as CommentCreateType)}
+              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+              aria-label="Comment type"
+            >
+              {CREATE_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <Textarea
-            label="Comment"
+            label={createType === 'RESOLUTION_NOTE' ? 'Resolution note' : 'Comment'}
             {...register('body')}
             error={errors.body?.message}
             rows={3}
           />
           <Button type="submit" disabled={addMutation.isPending}>
-            {addMutation.isPending ? 'Adding...' : 'Add comment'}
+            {addMutation.isPending ? 'Adding...' : createType === 'RESOLUTION_NOTE' ? 'Add resolution note' : 'Add comment'}
           </Button>
         </form>
       )}
@@ -93,9 +134,7 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
             className="rounded-md border border-border bg-background/50 p-4 text-sm"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {COMMENT_TYPE_LABELS[c.type] ?? c.type}
-              </Badge>
+              <CommentTypeBadge type={c.type} />
               {c.authorUserId && (
                 <span className="text-muted-foreground">User</span>
               )}

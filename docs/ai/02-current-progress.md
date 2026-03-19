@@ -91,6 +91,7 @@
 - [x] Phase 3 UI polish: StatusBadge/SeverityBadge/AssigneeBadge with user-friendly labels; ErrorState/EmptyState/Skeleton; Alert Detail refinement (header, SLA breach emphasis, timeline alignment, comments); FilterBar; source type labels (CHECKLIST_RUN_ITEM → "Checklist item"); collapsible sidebar (localStorage); table consistency
 - [x] Phase 8A — Alert List Power Features: bulk acknowledge, bulk resolve, richer filters (severity, sourceType, from, to, assignedUserId); row selection (page-local, select-all); collapsible advanced filters; permission-gated bulk actions; partial-success toast feedback
 - [x] Phase 8B — Escalations parity: richer filters (severity, assignedToMe, unassignedOnly, assignedUserId); URL-synced filter state; assignment filter precedence (unassignedOnly > assignedToMe > assignedUserId); primary vs advanced filter grouping; row click → /alerts/:id preserved
+- [x] Phase 8C — Resolution note workflow: comments UI supports COMMENT and RESOLUTION_NOTE create; type selector (default COMMENT); clear type badges for COMMENT, RESOLUTION_NOTE, REOPEN_NOTE; resolve/reopen modals surface note-required validation errors inline; comments invalidated on resolve/reopen
 
 ### Backend (recent fixes)
 

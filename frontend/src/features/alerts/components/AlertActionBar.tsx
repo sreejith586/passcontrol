@@ -34,6 +34,7 @@ export function AlertActionBar({ alert }: AlertActionBarProps) {
     queryClient.invalidateQueries({ queryKey: queryKeys.alerts.detail(alert.id) });
     queryClient.invalidateQueries({ queryKey: ['alerts', 'list'] });
     queryClient.invalidateQueries({ queryKey: queryKeys.alerts.activities(alert.id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.comments(alert.id) });
   };
 
   const acknowledgeMutation = useMutation({
