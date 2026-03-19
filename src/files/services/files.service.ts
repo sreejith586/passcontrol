@@ -85,6 +85,19 @@ export class FilesService {
   }
 
   /**
+   * Get file content bytes for streaming. Org-scoped lookup.
+   */
+  async getContent(ctx: { organizationId: string }, id: string) {
+    const file = await this.repo.findById(ctx.organizationId, id);
+    if (!file) throw new NotFoundException('File not found');
+    if (!this.storage.readBytes) {
+      throw new BadRequestException('File content retrieval not supported');
+    }
+    const buffer = await this.storage.readBytes(file.bucket, file.objectKey);
+    return { buffer, mimeType: file.mimeType, fileName: file.fileName };
+  }
+
+  /**
    * Validate mime type and size for evidence upload (image only, 1–50 MB).
    * Throws BadRequestException if invalid.
    */

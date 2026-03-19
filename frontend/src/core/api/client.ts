@@ -30,6 +30,9 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
@@ -63,10 +66,26 @@ export async function get<T>(url: string, params?: Record<string, unknown>): Pro
 }
 
 /**
+ * GET raw blob (e.g. file content). Does not unwrap; returns Blob directly.
+ */
+export async function getBlob(url: string): Promise<Blob> {
+  const res = await apiClient.get(url, { responseType: 'blob' });
+  return res.data as Blob;
+}
+
+/**
  * POST with unwrap.
  */
 export async function post<T>(url: string, data?: unknown): Promise<T> {
   const res = await apiClient.post(url, data);
+  return unwrapResponse<T>(res.data);
+}
+
+/**
+ * POST FormData (multipart). Interceptor omits Content-Type so browser sets multipart boundary.
+ */
+export async function postForm<T>(url: string, formData: FormData): Promise<T> {
+  const res = await apiClient.post(url, formData);
   return unwrapResponse<T>(res.data);
 }
 

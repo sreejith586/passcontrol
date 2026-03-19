@@ -29,8 +29,8 @@
 - ~~**Failure/compliance UX**~~ — *Done.* Comment field when requires comment on fail; evidence requirement surfaced; attachment count reflected when available.
 - ~~**Submit flow**~~ — *Done.* POST /checklist-runs/:id/submit; validation errors surfaced; success toast and navigate to list.
 - ~~**Production hardening**~~ — *Done.* Failed tab; mutation safety (submit disabled during item updates); redundant PATCH prevention; race-condition handling; visible saving state; unsupported item types shown clearly.
-- ~~**Evidence visibility**~~ — *Done.* Read-only evidence panel; clickable "Evidence attached (N)" badge; optional delete when attachment.delete; GET /checklist-run-items/:id, DELETE /attachments/:id; no upload (backend has no multipart receive).
-- **Remaining gaps:** Attachment upload (requires backend multipart or presigned URL; init-upload returns mock metadata only).
+- ~~**Evidence visibility**~~ — *Done.* Read-only evidence panel; clickable "Evidence attached (N)" badge; optional delete when attachment.delete; GET /checklist-run-items/:id, DELETE /attachments/:id.
+- ~~**Phase 9A — Evidence upload**~~ — *Done.* Upload control in EvidencePanel; POST /checklist-run-items/:id/evidence; permission-gated (checklist.run.update); single-file; JPEG/PNG/WebP/GIF; max 50 MB; success/error toasts; query invalidation.
 
 ---
 

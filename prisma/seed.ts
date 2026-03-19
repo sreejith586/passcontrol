@@ -664,6 +664,7 @@ async function ensureDemoData(
         itemType: 'BOOLEAN',
         label: 'Temperature within range',
         isRequired: true,
+        requiresEvidenceOnFail: true,
         severity: 'CRITICAL',
         sortOrder: 0,
       },
@@ -729,7 +730,7 @@ async function ensureDemoData(
   async function createRunWithFailedItem(
     template: { id: string; templateKey: string; name: string },
     section: { id: string; title: string },
-    item: { id: string; label: string; severity: string },
+    item: { id: string; label: string; severity: string; requiresEvidenceOnFail?: boolean },
     status: string,
     dueAt: Date,
   ) {
@@ -786,7 +787,7 @@ async function ensureDemoData(
         itemTypeSnapshot: 'BOOLEAN',
         labelSnapshot: item.label,
         isRequiredSnapshot: true,
-        requiresEvidenceOnFailSnapshot: false,
+        requiresEvidenceOnFailSnapshot: item.requiresEvidenceOnFail ?? false,
         requiresCommentOnFailSnapshot: false,
         severitySnapshot: item.severity as ChecklistItemSeverity,
         failureCreatesIncidentSnapshot: false,

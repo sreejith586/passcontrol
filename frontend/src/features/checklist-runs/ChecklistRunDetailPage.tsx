@@ -33,6 +33,7 @@ export function ChecklistRunDetailPage() {
   const canSubmit = usePermission('checklist.run.submit');
   const canViewEvidence = usePermission('attachment.view');
   const canDeleteEvidence = usePermission('attachment.delete');
+  const canUploadEvidence = usePermission('checklist.run.update');
 
   const runQuery = useQuery({
     queryKey: queryKeys.detail(id!),
@@ -216,6 +217,7 @@ export function ChecklistRunDetailPage() {
                   isUpdating={updatingItemId === item.id}
                   canViewEvidence={canViewEvidence}
                   canDeleteEvidence={canDeleteEvidence}
+                  canUploadEvidence={canUploadEvidence}
                   onUpdate={handleUpdateItem}
                 />
               ))}

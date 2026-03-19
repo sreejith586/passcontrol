@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { Response } from 'express';
 import { FilesService } from '../services/files.service';
 import { InitUploadDto } from '../dto/init-upload.dto';
 import { RegisterFileDto } from '../dto/register-file.dto';
@@ -15,6 +24,26 @@ import {
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class FilesController {
   constructor(private readonly service: FilesService) {}
+
+  @Get(':id/content')
+  @RequirePermissions('file.view')
+  async getContent(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Res({ passthrough: false }) res: Response,
+  ) {
+    const { buffer, mimeType, fileName } = await this.service.getContent(
+      ctx,
+      id,
+    );
+    const safeName = fileName?.replace(/[^\w.-]/g, '_') ?? 'file';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${safeName}"`,
+    );
+    res.send(buffer);
+  }
 
   @Post('init-upload')
   @RequirePermissions('file.upload')

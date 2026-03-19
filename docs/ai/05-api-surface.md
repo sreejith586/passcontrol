@@ -107,6 +107,7 @@ Base: `/v1` (versioned)
 | POST | /files/init-upload | file.upload | Get upload intent (fileName, mimeType, sizeBytes); returns uploadIntent, suggestedFileId, bucket, objectKey |
 | POST | /files | file.upload | Register file after upload (bucket, objectKey, fileName, mimeType, sizeBytes) |
 | GET | /files/:id | file.view | Get file metadata |
+| GET | /files/:id/content | file.view | Stream file bytes (Content-Type from mimeType, Content-Disposition inline) |
 
 ## Attachments
 

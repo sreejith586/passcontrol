@@ -54,4 +54,9 @@ export class MockStorageService implements StorageServiceInterface {
   async getReadUrl(bucket: string, key: string): Promise<string> {
     return `mock://${bucket}/${key}`;
   }
+
+  async readBytes(bucket: string, objectKey: string): Promise<Buffer> {
+    const fullPath = path.join(UPLOADS_BASE, bucket, objectKey);
+    return fs.promises.readFile(fullPath);
+  }
 }

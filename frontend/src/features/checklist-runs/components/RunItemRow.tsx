@@ -60,6 +60,7 @@ interface RunItemRowProps {
   isUpdating?: boolean;
   canViewEvidence?: boolean;
   canDeleteEvidence?: boolean;
+  canUploadEvidence?: boolean;
   onUpdate: (
     itemId: string,
     data: { result?: string; valueJson?: Record<string, unknown>; comment?: string }
@@ -74,6 +75,7 @@ export function RunItemRow({
   isUpdating,
   canViewEvidence = false,
   canDeleteEvidence = false,
+  canUploadEvidence = false,
   onUpdate,
 }: RunItemRowProps) {
   const [evidencePanelOpen, setEvidencePanelOpen] = useState(false);
@@ -86,6 +88,8 @@ export function RunItemRow({
   const hasEvidence = attachmentCount > 0;
   const evidenceMissing = showEvidenceReq && !hasEvidence;
   const showEvidenceBadge = hasEvidence && canViewEvidence;
+  const canOpenEvidencePanel =
+    (showEvidenceBadge || (evidenceMissing && canUploadEvidence)) && canViewEvidence;
 
   const baseProps = {
     itemId: item.id,
@@ -172,17 +176,27 @@ export function RunItemRow({
             className={cn(
               'rounded-md border px-3 py-2 text-sm',
               evidenceMissing
-                ? 'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200'
-                : 'border-green-500/30 bg-green-500/5 text-green-800 dark:text-green-200'
+                ? 'border-amber-500/50 bg-amber-500/15 text-amber-800 dark:text-amber-400'
+                : 'border-green-500/30 bg-green-500/10 text-green-800 dark:text-green-400'
             )}
           >
             {evidenceMissing ? (
-              <span>Evidence required before submission</span>
+              canOpenEvidencePanel ? (
+                <button
+                  type="button"
+                  onClick={() => setEvidencePanelOpen(true)}
+                  className="font-medium text-amber-800 underline-offset-2 hover:underline dark:text-amber-400"
+                >
+                  Evidence required before submission — Add evidence
+                </button>
+              ) : (
+                <span>Evidence required before submission</span>
+              )
             ) : showEvidenceBadge ? (
               <button
                 type="button"
                 onClick={() => setEvidencePanelOpen(true)}
-                className="font-medium text-green-800 underline-offset-2 hover:underline dark:text-green-200"
+                className="font-medium text-green-800 underline-offset-2 hover:underline dark:text-green-400"
               >
                 Evidence attached ({attachmentCount} file{attachmentCount !== 1 ? 's' : ''})
               </button>
@@ -191,7 +205,7 @@ export function RunItemRow({
             )}
           </div>
         )}
-        {showEvidenceBadge && (
+        {canOpenEvidencePanel && (
           <EvidencePanel
             open={evidencePanelOpen}
             onClose={() => setEvidencePanelOpen(false)}
@@ -199,6 +213,7 @@ export function RunItemRow({
             itemLabel={item.labelSnapshot}
             runId={runId}
             canDelete={canDeleteEvidence}
+            canUpload={canUploadEvidence}
           />
         )}
       </div>

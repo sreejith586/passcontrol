@@ -53,4 +53,9 @@ export interface StorageServiceInterface {
     buffer: Buffer,
     contentType: string,
   ): Promise<void>;
+
+  /**
+   * Read raw bytes from storage. Used for serving file content.
+   */
+  readBytes?(bucket: string, objectKey: string): Promise<Buffer>;
 }

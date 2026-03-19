@@ -1,4 +1,4 @@
-import { get, post, patch, del } from '@/core/api/client';
+import { get, post, patch, del, postForm } from '@/core/api/client';
 import type {
   ChecklistRun,
   ChecklistRunListResponse,
@@ -6,6 +6,7 @@ import type {
   ListOverdueRunsParams,
   ListFailedRunsParams,
   RunItemDetail,
+  RunItemAttachment,
 } from './types';
 
 export async function getTodayRuns(
@@ -64,4 +65,10 @@ export async function getRunItemById(itemId: string): Promise<RunItemDetail> {
 
 export async function deleteAttachment(attachmentId: string): Promise<{ id: string; deleted: boolean }> {
   return del<{ id: string; deleted: boolean }>(`/attachments/${attachmentId}`);
+}
+
+export async function uploadEvidence(itemId: string, file: File): Promise<RunItemAttachment> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return postForm<RunItemAttachment>(`/checklist-run-items/${itemId}/evidence`, formData);
 }

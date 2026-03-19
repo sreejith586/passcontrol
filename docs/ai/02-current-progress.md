@@ -85,7 +85,9 @@
 
 - [x] Auth (login/logout), session via /me, access-token only
 - [x] Phase 7 — core execution UI: Checklist Runs list (Today/Overdue/Failed tabs), Run detail/execution page, item inputs (BOOLEAN, TEXT, TEMPERATURE, CHECKBOX), submit flow with validation error handling, success/error feedback, navigation. Production hardening: Failed tab, mutation safety, redundant PATCH prevention, race-condition handling, unsupported item types.
-- [x] Evidence visibility: Read-only evidence panel (GET /checklist-run-items/:id for attachments), clickable "Evidence attached (N)" badge, optional delete (DELETE /attachments/:id) when attachment.delete; permission-gated; no upload UI (backend has no multipart receive).
+- [x] Evidence visibility: Read-only evidence panel (GET /checklist-run-items/:id for attachments), clickable "Evidence attached (N)" badge, optional delete (DELETE /attachments/:id) when attachment.delete; permission-gated.
+- [x] Phase 9A — Evidence upload: Upload control in EvidencePanel; POST /checklist-run-items/:id/evidence (multipart); checklist.run.update for upload; attachment.view for panel access; single-file upload; success/error toasts; query invalidation for run item and run detail.
+- [x] Evidence UX hardening: Improved contrast for evidence status text (amber/green) in RunItemRow; GET /v1/files/:id/content streams file bytes; EvidencePanel "View" action for image attachments opens in new tab.
 - [x] Alert list, detail, acknowledge, resolve, reopen, unassign
 - [x] Alert assignment: AssignModal, users list (GET /v1/users), assign/reassign; assignee display (name or "Unknown user"); query invalidation for all list variants
 - [x] Phase 3 UI polish: StatusBadge/SeverityBadge/AssigneeBadge with user-friendly labels; ErrorState/EmptyState/Skeleton; Alert Detail refinement (header, SLA breach emphasis, timeline alignment, comments); FilterBar; source type labels (CHECKLIST_RUN_ITEM → "Checklist item"); collapsible sidebar (localStorage); table consistency
@@ -110,7 +112,6 @@
 
 ## Phase 7 Remaining Gaps
 
-- Attachment upload UI — backend now has `POST /checklist-run-items/:id/evidence` multipart endpoint; frontend upload UI not yet implemented; evidence visibility and delete implemented
 - Template/schedule authoring UI — not in scope for Phase 7
 
 ## Not Yet Implemented
