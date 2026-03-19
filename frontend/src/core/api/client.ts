@@ -77,3 +77,11 @@ export async function patch<T>(url: string, data?: unknown): Promise<T> {
   const res = await apiClient.patch(url, data);
   return unwrapResponse<T>(res.data);
 }
+
+/**
+ * DELETE with unwrap.
+ */
+export async function del<T>(url: string): Promise<T> {
+  const res = await apiClient.delete(url);
+  return unwrapResponse<T>(res.data);
+}

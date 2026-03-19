@@ -6,9 +6,7 @@ import { Input } from '@/shared/ui/Input';
 import { addUser, listRoles } from '../api';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
-
-const INPUT_CLASS =
-  'h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20';
+import { getRoleMetadata } from '@/features/roles/role-metadata';
 
 interface AddUserModalProps {
   open: boolean;
@@ -18,7 +16,7 @@ interface AddUserModalProps {
 
 export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   const [email, setEmail] = useState('');
-  const [roleId, setRoleId] = useState('');
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   const { data: roles = [], isLoading: loadingRoles } = useQuery({
@@ -28,13 +26,51 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   });
 
   const mutation = useMutation({
-    mutationFn: addUser,
-    onSuccess: () => {
+    mutationFn: async ({
+      email: e,
+      roleIds,
+    }: {
+      email: string;
+      roleIds: string[];
+    }) => {
+      let succeeded = 0;
+      let failed = 0;
+      let lastError: Error | null = null;
+
+      for (const roleId of roleIds) {
+        try {
+          await addUser({ email: e, roleId });
+          succeeded++;
+        } catch (err) {
+          failed++;
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+
+      if (succeeded === 0 && lastError) {
+        throw lastError;
+      }
+
+      return { succeeded, failed, total: roleIds.length };
+    },
+    onSuccess: (result, { roleIds }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
-      toast.success('User added');
+
+      if (result.failed === 0) {
+        toast.success(
+          roleIds.length > 1
+            ? `User added with ${roleIds.length} roles`
+            : 'User added'
+        );
+      } else {
+        toast.info(
+          'User added, but some roles could not be assigned'
+        );
+      }
+
       onSuccess();
       setEmail('');
-      setRoleId('');
+      setSelectedRoleIds(new Set());
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Failed to add user');
@@ -43,15 +79,27 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
 
   function handleClose() {
     setEmail('');
-    setRoleId('');
+    setSelectedRoleIds(new Set());
     onClose();
+  }
+
+  function toggleRole(roleId: string) {
+    setSelectedRoleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(roleId)) next.delete(roleId);
+      else next.add(roleId);
+      return next;
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !roleId) return;
-    mutation.mutate({ email: email.trim(), roleId });
+    const roleIds = Array.from(selectedRoleIds);
+    if (!email.trim() || roleIds.length === 0) return;
+    mutation.mutate({ email: email.trim(), roleIds });
   }
+
+  const hasSelection = selectedRoleIds.size > 0;
 
   return (
     <Modal open={open} onClose={handleClose} title="Add user">
@@ -65,37 +113,64 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
           required
           disabled={mutation.isPending}
         />
-        <div className="space-y-1">
-          <label htmlFor="role" className="block text-sm font-medium text-foreground">
-            Role
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground">
+            Roles
           </label>
-          <select
-            id="role"
-            value={roleId}
-            onChange={(e) => setRoleId(e.target.value)}
-            className={INPUT_CLASS}
-            required
-            disabled={mutation.isPending || loadingRoles}
-          >
-            <option value="">Select role</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+          <p className="text-muted-foreground text-xs">
+            Select one or more roles. User receives the combined permissions of
+            all selected roles. If the user already exists in this organization,
+            selected roles will be added to that user.
+          </p>
+          <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-muted/20 p-2">
+            {loadingRoles ? (
+              <p className="text-muted-foreground py-4 text-center text-sm">
+                Loading roles…
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {roles.map((r) => {
+                  const meta = getRoleMetadata(r.key);
+                  return (
+                    <li key={r.id}>
+                      <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                        <input
+                          type="checkbox"
+                          checked={selectedRoleIds.has(r.id)}
+                          onChange={() => toggleRole(r.id)}
+                          disabled={mutation.isPending}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <span className="font-medium">{meta.displayName}</span>
+                        <span className="text-muted-foreground text-xs">
+                          {meta.intendedUserType}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
         <p className="text-muted-foreground text-xs">
           Login setup for newly added users will be enabled in a later phase.
         </p>
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={mutation.isPending}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleClose}
+            disabled={mutation.isPending}
+          >
             Cancel
           </Button>
           <Button
             type="submit"
             variant="primary"
-            disabled={!email.trim() || !roleId || mutation.isPending || loadingRoles}
+            disabled={
+              !email.trim() || !hasSelection || mutation.isPending || loadingRoles
+            }
           >
             {mutation.isPending ? 'Adding...' : 'Add user'}
           </Button>

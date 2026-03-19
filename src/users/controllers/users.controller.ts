@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Query, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Query, Body, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiBody, ApiParam } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { InviteUserDto } from '../dto/invite-user.dto';
+import { AddRoleDto } from '../dto/add-role.dto';
+import { UpdateUserStatusDto } from '../dto/update-user-status.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions, RequireAnyPermission } from '../../access/rbac/permissions.decorator';
@@ -49,6 +51,59 @@ export class UsersController {
     @Body() dto: InviteUserDto,
   ) {
     const data = await this.service.invite(ctx, dto);
+    return ApiResponse.ok(data);
+  }
+
+  @Post(':id/roles')
+  @RequirePermissions('user.manage')
+  @ApiOperation({
+    summary: 'Add role to user',
+    description:
+      'Adds a role to an existing user in the organization. Idempotent if user already has the role.',
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiBody({ type: AddRoleDto })
+  async addRole(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: AddRoleDto,
+  ) {
+    const data = await this.service.addRole(ctx, id, dto);
+    return ApiResponse.ok(data);
+  }
+
+  @Delete(':id/roles/:roleId')
+  @RequirePermissions('user.manage')
+  @ApiOperation({
+    summary: 'Remove role from user',
+    description:
+      'Removes a role assignment from the user in the current organization. Idempotent if assignment does not exist.',
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiParam({ name: 'roleId', description: 'Role UUID to remove' })
+  async removeRole(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Param('roleId') roleId: string,
+  ) {
+    const data = await this.service.removeRole(ctx, id, roleId);
+    return ApiResponse.ok(data);
+  }
+
+  @Patch(':id/status')
+  @RequirePermissions('user.manage')
+  @ApiOperation({
+    summary: 'Update user status',
+    description: 'Activates or deactivates a user. Inactive users cannot log in.',
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiBody({ type: UpdateUserStatusDto })
+  async updateStatus(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserStatusDto,
+  ) {
+    const data = await this.service.updateStatus(ctx, id, dto);
     return ApiResponse.ok(data);
   }
 }

@@ -13,9 +13,6 @@ const SUPER_ADMIN_ROLE_SCOPE = 'ORGANIZATION';
 const ORG_ADMIN_USER_EMAIL = 'org-admin@example.com';
 const ORG_ADMIN_USER_NAME = 'Org Admin';
 const ORG_ADMIN_USER_PASSWORD = 'Password123!';
-const ORG_ADMIN_ROLE_NAME = 'Org Admin';
-const ORG_ADMIN_ROLE_KEY = 'org_admin';
-const ORG_ADMIN_ROLE_SCOPE = 'ORGANIZATION';
 const PERMISSIONS = [
     { key: 'temperature.reading.create', name: 'Create temperature readings' },
     { key: 'temperature.reading.view', name: 'View temperature readings' },
@@ -49,6 +46,9 @@ const PERMISSIONS = [
     { key: 'checklist.run.generate', name: 'Generate checklist runs from schedules' },
     { key: 'checklist.run.update', name: 'Update checklist run items' },
     { key: 'checklist.run.submit', name: 'Submit checklist runs' },
+    { key: 'user.view', name: 'View users and roles' },
+    { key: 'user.invite', name: 'Invite users to organization' },
+    { key: 'user.manage', name: 'Manage user roles and status' },
 ];
 async function ensureOrganization() {
     const organization = await prisma.organization.findFirst({
@@ -106,31 +106,6 @@ async function ensureSuperAdminRole() {
         },
     });
 }
-/** Tenant-scoped role: must have organizationId */
-async function ensureOrgAdminRole(organizationId) {
-    const role = await prisma.role.findFirst({
-        where: { organizationId, key: ORG_ADMIN_ROLE_KEY },
-    });
-    if (role) {
-        return prisma.role.update({
-            where: { id: role.id },
-            data: {
-                name: ORG_ADMIN_ROLE_NAME,
-                scope: ORG_ADMIN_ROLE_SCOPE,
-                isSystem: false,
-            },
-        });
-    }
-    return prisma.role.create({
-        data: {
-            organizationId,
-            name: ORG_ADMIN_ROLE_NAME,
-            key: ORG_ADMIN_ROLE_KEY,
-            scope: ORG_ADMIN_ROLE_SCOPE,
-            isSystem: false,
-        },
-    });
-}
 async function ensurePermissions() {
     return Promise.all(PERMISSIONS.map((permission) => prisma.permission.upsert({
         where: { key: permission.key },
@@ -153,6 +128,204 @@ async function ensureRolePermissions(roleId, permissions) {
         },
     })));
 }
+/** Replace role permissions with the given set (for idempotent re-seed). */
+async function setRolePermissions(roleId, permissions) {
+    await prisma.rolePermission.deleteMany({ where: { roleId } });
+    if (permissions.length > 0) {
+        await prisma.rolePermission.createMany({
+            data: permissions.map((p) => ({ roleId, permissionId: p.id })),
+            skipDuplicates: true,
+        });
+    }
+}
+/** Ensure org-scoped role by key. Returns role. */
+async function ensureOrgScopedRole(organizationId, key, name) {
+    const role = await prisma.role.findFirst({
+        where: { organizationId, key },
+    });
+    if (role) {
+        return prisma.role.update({
+            where: { id: role.id },
+            data: { name, scope: 'ORGANIZATION', isSystem: false },
+        });
+    }
+    return prisma.role.create({
+        data: {
+            organizationId,
+            name,
+            key,
+            scope: 'ORGANIZATION',
+            isSystem: false,
+        },
+    });
+}
+/**
+ * Restaurant-relevant role definitions.
+ * Permission keys mapped to each role (least to most privilege).
+ */
+const RESTAURANT_ROLES = [
+    {
+        key: 'viewer',
+        name: 'Viewer',
+        permissionKeys: [
+            'checklist.template.view',
+            'checklist.schedule.view',
+            'checklist.run.view',
+            'alert.view',
+            'temperature.reading.view',
+            'temperature.policy.view',
+            'file.view',
+            'attachment.view',
+        ],
+    },
+    {
+        key: 'auditor',
+        name: 'Auditor',
+        permissionKeys: [
+            'checklist.template.view',
+            'checklist.schedule.view',
+            'checklist.run.view',
+            'alert.view',
+            'temperature.reading.view',
+            'temperature.policy.view',
+            'file.view',
+            'attachment.view',
+        ],
+    },
+    {
+        key: 'operator',
+        name: 'Operator',
+        permissionKeys: [
+            'checklist.template.view',
+            'checklist.schedule.view',
+            'checklist.run.view',
+            'checklist.run.update',
+            'checklist.run.submit',
+            'alert.view',
+            'temperature.reading.view',
+            'temperature.policy.view',
+            'file.view',
+            'attachment.view',
+            'attachment.create',
+        ],
+    },
+    {
+        key: 'shift_lead',
+        name: 'Shift Lead',
+        permissionKeys: [
+            'checklist.template.view',
+            'checklist.schedule.view',
+            'checklist.run.view',
+            'checklist.run.update',
+            'checklist.run.submit',
+            'alert.view',
+            'alert.acknowledge',
+            'alert.resolve',
+            'alert.assign',
+            'temperature.reading.view',
+            'temperature.policy.view',
+            'file.view',
+            'attachment.view',
+            'attachment.create',
+        ],
+    },
+    {
+        key: 'kitchen_supervisor',
+        name: 'Kitchen Supervisor',
+        permissionKeys: [
+            'checklist.template.view',
+            'checklist.schedule.view',
+            'checklist.run.view',
+            'checklist.run.update',
+            'checklist.run.submit',
+            'alert.view',
+            'alert.acknowledge',
+            'alert.resolve',
+            'alert.assign',
+            'temperature.reading.create',
+            'temperature.reading.view',
+            'temperature.policy.view',
+            'temperature.policy.update',
+            'file.view',
+            'attachment.view',
+            'attachment.create',
+        ],
+    },
+    {
+        key: 'restaurant_manager',
+        name: 'Restaurant Manager',
+        permissionKeys: [
+            'checklist.template.view',
+            'checklist.schedule.view',
+            'checklist.schedule.create',
+            'checklist.schedule.update',
+            'checklist.schedule.activate',
+            'checklist.schedule.deactivate',
+            'checklist.run.view',
+            'checklist.run.generate',
+            'checklist.run.update',
+            'checklist.run.submit',
+            'alert.view',
+            'alert.acknowledge',
+            'alert.resolve',
+            'alert.assign',
+            'alert.sla-policy.view',
+            'alert.workflow-policy.view',
+            'temperature.reading.create',
+            'temperature.reading.view',
+            'temperature.policy.view',
+            'temperature.policy.update',
+            'file.upload',
+            'file.view',
+            'attachment.view',
+            'attachment.create',
+        ],
+    },
+    {
+        key: 'area_manager',
+        name: 'Area Manager',
+        permissionKeys: [
+            'checklist.template.create',
+            'checklist.template.view',
+            'checklist.template.update',
+            'checklist.template.publish',
+            'checklist.template.archive',
+            'checklist.schedule.view',
+            'checklist.schedule.create',
+            'checklist.schedule.update',
+            'checklist.schedule.activate',
+            'checklist.schedule.deactivate',
+            'checklist.run.view',
+            'checklist.run.generate',
+            'checklist.run.update',
+            'checklist.run.submit',
+            'alert.view',
+            'alert.acknowledge',
+            'alert.resolve',
+            'alert.assign',
+            'alert.sla-policy.view',
+            'alert.sla-policy.manage',
+            'alert.workflow-policy.view',
+            'alert.workflow-policy.manage',
+            'temperature.reading.create',
+            'temperature.reading.view',
+            'temperature.policy.create',
+            'temperature.policy.view',
+            'temperature.policy.update',
+            'file.upload',
+            'file.view',
+            'attachment.view',
+            'attachment.create',
+            'attachment.delete',
+            'user.view',
+        ],
+    },
+    {
+        key: 'org_admin',
+        name: 'Org Admin',
+        permissionKeys: PERMISSIONS.map((p) => p.key),
+    },
+];
 async function ensureUserRoleAssignment(userId, organizationId, roleId) {
     const assignment = await prisma.userRoleAssignment.findFirst({
         where: {
@@ -797,9 +970,20 @@ async function main() {
     // Remove ALL assignments (including stale org_admin in other orgs), then assign only Super Admin
     const superAdminUser = await ensureUser(DEMO_USER_EMAIL, DEMO_USER_NAME, passwordHash);
     await setPlatformUserToSuperAdmin(superAdminUser.id, organization.id, superAdminRole.id);
-    // Org Admin: tenant-scoped role, all permissions
-    const orgAdminRole = await ensureOrgAdminRole(organization.id);
-    await ensureRolePermissions(orgAdminRole.id, permissions);
+    // Restaurant-relevant roles (org-scoped, assignable in org)
+    const permByKey = Object.fromEntries(permissions.map((p) => [p.key, p]));
+    for (const r of RESTAURANT_ROLES) {
+        const role = await ensureOrgScopedRole(organization.id, r.key, r.name);
+        const perms = r.permissionKeys
+            .map((k) => permByKey[k])
+            .filter((p) => p != null);
+        await setRolePermissions(role.id, perms);
+    }
+    const orgAdminRole = await prisma.role.findFirst({
+        where: { organizationId: organization.id, key: 'org_admin' },
+    });
+    if (!orgAdminRole)
+        throw new Error('org_admin role not created');
     // Explicitly ensure checklist.run.generate is assigned (handles stale compiled seed)
     await ensureChecklistRunGenerateAssigned(superAdminRole.id, orgAdminRole.id);
     // org-admin@example.com → Org Admin (tenant-scoped testing)

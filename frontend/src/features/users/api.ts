@@ -1,4 +1,4 @@
-import { get, post } from '@/core/api/client';
+import { get, post, patch, del } from '@/core/api/client';
 import type { PaginatedData } from '@/core/api/types';
 
 export interface UserRole {
@@ -11,6 +11,7 @@ export interface UserForAssignment {
   id: string;
   name: string;
   email: string;
+  isActive?: boolean;
   roles?: UserRole[];
 }
 
@@ -55,4 +56,34 @@ export async function listRoles(): Promise<Role[]> {
  */
 export async function addUser(dto: InviteUserDto): Promise<UserForAssignment> {
   return post<UserForAssignment>('/users/invite', dto);
+}
+
+/**
+ * Add role to user. Backend POST /v1/users/:id/roles.
+ */
+export async function addUserRole(
+  userId: string,
+  roleId: string
+): Promise<UserForAssignment> {
+  return post<UserForAssignment>(`/users/${userId}/roles`, { roleId });
+}
+
+/**
+ * Remove role from user. Backend DELETE /v1/users/:id/roles/:roleId.
+ */
+export async function removeUserRole(
+  userId: string,
+  roleId: string
+): Promise<UserForAssignment> {
+  return del<UserForAssignment>(`/users/${userId}/roles/${roleId}`);
+}
+
+/**
+ * Update user status. Backend PATCH /v1/users/:id/status.
+ */
+export async function updateUserStatus(
+  userId: string,
+  isActive: boolean
+): Promise<UserForAssignment> {
+  return patch<UserForAssignment>(`/users/${userId}/status`, { isActive });
 }

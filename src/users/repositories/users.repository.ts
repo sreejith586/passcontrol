@@ -11,6 +11,7 @@ export interface ListUsersResult {
     id: string;
     name: string;
     email: string;
+    isActive: boolean;
     roles: Array<{ id: string; name: string; key: string }>;
   }>;
   total: number;
@@ -34,14 +35,14 @@ export class UsersRepository {
       where: { organizationId },
       select: {
         userId: true,
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, isActive: true } },
         role: { select: { id: true, name: true, key: true } },
       },
     });
 
     const userMap = new Map<
       string,
-      { id: string; name: string; email: string; roles: Map<string, { id: string; name: string; key: string }> }
+      { id: string; name: string; email: string; isActive: boolean; roles: Map<string, { id: string; name: string; key: string }> }
     >();
     for (const a of assignments) {
       const existing = userMap.get(a.userId);
@@ -53,6 +54,7 @@ export class UsersRepository {
           id: a.user.id,
           name: a.user.name,
           email: a.user.email,
+          isActive: a.user.isActive,
           roles: new Map([[a.role.id, role]]),
         });
       }
@@ -62,6 +64,7 @@ export class UsersRepository {
       id: u.id,
       name: u.name,
       email: u.email,
+      isActive: u.isActive,
       roles: Array.from(u.roles.values()),
     }));
     uniqueUsers.sort((a, b) => a.name.localeCompare(b.name));
@@ -123,7 +126,7 @@ export class UsersRepository {
   }
 
   /**
-   * Get user with roles in org. Used for invite response.
+   * Get user with roles in org.
    */
   async getUserWithRoles(userId: string, organizationId: string) {
     const assignments = await this.prisma.userRoleAssignment.findMany({
@@ -133,6 +136,63 @@ export class UsersRepository {
     if (assignments.length === 0) return null;
     const user = assignments[0].user;
     const roles = assignments.map((a) => a.role);
-    return { id: user.id, name: user.name, email: user.email, roles };
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive,
+      roles,
+    };
+  }
+
+  async findById(userId: string) {
+    return this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
+  }
+
+  async updateIsActive(userId: string, isActive: boolean) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+    });
+  }
+
+  async removeRoleAssignment(
+    userId: string,
+    organizationId: string,
+    roleId: string,
+  ) {
+    await this.prisma.userRoleAssignment.deleteMany({
+      where: { userId, organizationId, roleId },
+    });
+  }
+
+  /**
+   * Get user with roles in org. Returns user with empty roles if no assignments.
+   */
+  async getUserWithRolesOrMinimal(
+    userId: string,
+    organizationId: string,
+  ): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    isActive: boolean;
+    roles: Array<{ id: string; name: string; key: string }>;
+  } | null> {
+    const user = await this.findById(userId);
+    if (!user) return null;
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: { userId, organizationId },
+      include: { role: { select: { id: true, name: true, key: true } } },
+    });
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isActive: user.isActive,
+      roles: assignments.map((a) => a.role),
+    };
   }
 }
