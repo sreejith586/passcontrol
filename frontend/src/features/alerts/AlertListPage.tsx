@@ -1,18 +1,34 @@
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { listAlerts } from './api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  listAlerts,
+  bulkAcknowledgeAlerts,
+  bulkResolveAlerts,
+} from './api';
 import { queryKeys } from './query-keys';
 import type { AlertEvent, ListAlertsParams } from './types';
 import { DataTable, DataTablePagination } from '@/shared/ui';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
-import { FilterBar, FilterSelect, FilterCheckbox } from '@/shared/layout/FilterBar';
+import {
+  FilterBar,
+  FilterSelect,
+  FilterCheckbox,
+  FilterInput,
+} from '@/shared/layout/FilterBar';
 import { StatusBadge } from './components/StatusBadge';
 import { SeverityBadge } from './components/SeverityBadge';
 import { AssigneeBadge } from './components/AssigneeBadge';
+import { BulkResolveModal } from './components/BulkResolveModal';
 import { formatDateTime } from '@/lib/date';
 import { getSourceTypeLabel } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
+import { PermissionGate } from '@/core/permissions/PermissionGate';
+import { toast } from '@/shared/feedback/useToast';
+import { listUsers } from '@/features/users/api';
+import { queryKeys as usersQueryKeys } from '@/features/users/query-keys';
+import { ApiError } from '@/core/api/errors';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All' },
@@ -21,32 +37,75 @@ const STATUS_OPTIONS = [
   { value: 'RESOLVED', label: 'Resolved' },
 ] as const;
 
+const SEVERITY_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'CRITICAL', label: 'Critical' },
+] as const;
+
+const SOURCE_TYPE_OPTIONS = [
+  { value: '', label: 'All' },
+  { value: 'CHECKLIST_RUN_ITEM', label: 'Checklist item' },
+  { value: 'TEMPERATURE_READING', label: 'Temperature reading' },
+  { value: 'OTHER', label: 'Other' },
+] as const;
+
 function parseParams(searchParams: URLSearchParams): ListAlertsParams {
   const page = searchParams.get('page');
   const limit = searchParams.get('limit');
   const status = searchParams.get('status');
   const assignedToMe = searchParams.get('assignedToMe');
   const unassignedOnly = searchParams.get('unassignedOnly');
+  const severity = searchParams.get('severity');
+  const sourceType = searchParams.get('sourceType');
+  const from = searchParams.get('from');
+  const to = searchParams.get('to');
+  const assignedUserId = searchParams.get('assignedUserId');
   return {
     page: page ? parseInt(page, 10) : 1,
     limit: limit ? parseInt(limit, 10) : 25,
-    status: status && ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'].includes(status)
-      ? (status as ListAlertsParams['status'])
-      : undefined,
+    status:
+      status && ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'].includes(status)
+        ? (status as ListAlertsParams['status'])
+        : undefined,
     assignedToMe: assignedToMe === 'true',
     unassignedOnly: unassignedOnly === 'true',
+    severity: severity || undefined,
+    sourceType: sourceType || undefined,
+    from: from || undefined,
+    to: to || undefined,
+    assignedUserId: assignedUserId || undefined,
   };
 }
 
 export function AlertListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const params = parseParams(searchParams);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkResolveOpen, setBulkResolveOpen] = useState(false);
+  const [bulkResolveError, setBulkResolveError] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.alerts.list(params),
     queryFn: () => listAlerts(params),
   });
+
+  const { data: usersData } = useQuery({
+    queryKey: usersQueryKeys.users.list({ page: 1, limit: 100 }),
+    queryFn: () => listUsers({ page: 1, limit: 100 }),
+    enabled: advancedFiltersOpen,
+  });
+
+  const items = data?.items ?? [];
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchParams]);
 
   function setParam(key: string, value: string | number | boolean) {
     const next = new URLSearchParams(searchParams);
@@ -58,6 +117,67 @@ export function AlertListPage() {
     next.set('page', '1');
     setSearchParams(next);
   }
+
+  function handleSelectionChange(ids: string[]) {
+    setSelectedIds(new Set(ids));
+  }
+
+  const selectedItems = items.filter((r) => selectedIds.has(r.id));
+  const openSelected = selectedItems.filter((r) => r.status === 'OPEN');
+  const resolveEligibleSelected = selectedItems.filter(
+    (r) => r.status === 'OPEN' || r.status === 'ACKNOWLEDGED'
+  );
+
+  const bulkAcknowledgeMutation = useMutation({
+    mutationFn: () =>
+      bulkAcknowledgeAlerts(openSelected.map((r) => r.id)),
+    onSuccess: (result) => {
+      const msg =
+        result.failed > 0
+          ? `Acknowledged ${result.succeeded} of ${result.processed}. ${result.failed} failed.`
+          : `Acknowledged ${result.succeeded} alert(s).`;
+      toast.success(msg);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiError ? err.message : 'Failed to acknowledge alerts';
+      toast.error(msg);
+    },
+  });
+
+  const bulkResolveMutation = useMutation({
+    mutationFn: (note: string) =>
+      bulkResolveAlerts(
+        resolveEligibleSelected.map((r) => r.id),
+        note || undefined
+      ),
+    onSuccess: (result) => {
+      setBulkResolveOpen(false);
+      setBulkResolveError(null);
+      const msg =
+        result.failed > 0
+          ? `Resolved ${result.succeeded} of ${result.processed}. ${result.failed} failed.`
+          : `Resolved ${result.succeeded} alert(s).`;
+      toast.success(msg);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiError ? err.message : 'Failed to resolve alerts';
+      if (
+        msg.toLowerCase().includes('note') ||
+        msg.toLowerCase().includes('required')
+      ) {
+        setBulkResolveError(msg);
+      } else {
+        toast.error(msg);
+        setBulkResolveOpen(false);
+      }
+    },
+  });
 
   const columns = [
     {
@@ -95,10 +215,15 @@ export function AlertListPage() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Alerts" description="Manage and triage operational alerts" />
+        <PageHeader
+          title="Alerts"
+          description="Manage and triage operational alerts"
+        />
         <ErrorState
           title="Failed to load alerts"
-          description={error instanceof Error ? error.message : 'Something went wrong'}
+          description={
+            error instanceof Error ? error.message : 'Something went wrong'
+          }
           action={
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
               Try again
@@ -115,33 +240,142 @@ export function AlertListPage() {
         title="Alerts"
         description="Manage and triage operational alerts"
       />
-      <FilterBar>
-        <FilterSelect
-          value={params.status ?? ''}
-          onChange={(v) => setParam('status', v)}
-          options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          aria-label="Filter by status"
-        />
-        <FilterCheckbox
-          checked={params.assignedToMe ?? false}
-          onChange={(v) => setParam('assignedToMe', v)}
-          label="Assigned to me"
-        />
-        <FilterCheckbox
-          checked={params.unassignedOnly ?? false}
-          onChange={(v) => setParam('unassignedOnly', v)}
-          label="Unassigned only"
-        />
-      </FilterBar>
+
+      <div className="space-y-3">
+        <FilterBar>
+          <FilterSelect
+            value={params.status ?? ''}
+            onChange={(v) => setParam('status', v)}
+            options={STATUS_OPTIONS.map((o) => ({
+              value: o.value,
+              label: o.label,
+            }))}
+            aria-label="Filter by status"
+          />
+          <FilterCheckbox
+            checked={params.assignedToMe ?? false}
+            onChange={(v) => setParam('assignedToMe', v)}
+            label="Assigned to me"
+          />
+          <FilterCheckbox
+            checked={params.unassignedOnly ?? false}
+            onChange={(v) => setParam('unassignedOnly', v)}
+            label="Unassigned only"
+          />
+          <button
+            type="button"
+            onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
+            className="text-sm text-primary hover:underline"
+          >
+            {advancedFiltersOpen ? 'Fewer filters' : 'More filters'}
+          </button>
+        </FilterBar>
+
+        {advancedFiltersOpen && (
+          <FilterBar>
+            <FilterSelect
+              value={params.severity ?? ''}
+              onChange={(v) => setParam('severity', v)}
+              options={SEVERITY_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
+              aria-label="Filter by severity"
+            />
+            <FilterSelect
+              value={params.sourceType ?? ''}
+              onChange={(v) => setParam('sourceType', v)}
+              options={SOURCE_TYPE_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
+              aria-label="Filter by source type"
+            />
+            <FilterInput
+              type="date"
+              value={params.from ?? ''}
+              onChange={(v) => setParam('from', v)}
+              aria-label="From date"
+            />
+            <FilterInput
+              type="date"
+              value={params.to ?? ''}
+              onChange={(v) => setParam('to', v)}
+              aria-label="To date"
+            />
+            <FilterSelect
+              value={params.assignedUserId ?? ''}
+              onChange={(v) => setParam('assignedUserId', v)}
+              options={[
+                { value: '', label: 'Any assignee' },
+                ...(usersData?.items ?? []).map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                })),
+              ]}
+              aria-label="Filter by assigned user"
+            />
+          </FilterBar>
+        )}
+      </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
+          <span className="text-sm font-medium text-foreground">
+            {selectedIds.size} selected
+          </span>
+          <PermissionGate permission="alert.acknowledge">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => bulkAcknowledgeMutation.mutate()}
+              disabled={
+                openSelected.length === 0 || bulkAcknowledgeMutation.isPending
+              }
+            >
+              {bulkAcknowledgeMutation.isPending
+                ? 'Acknowledging...'
+                : `Acknowledge ${openSelected.length} (Open only)`}
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="alert.resolve">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setBulkResolveError(null);
+                setBulkResolveOpen(true);
+              }}
+              disabled={
+                resolveEligibleSelected.length === 0 || bulkResolveMutation.isPending
+              }
+            >
+              Resolve {resolveEligibleSelected.length}
+            </Button>
+          </PermissionGate>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear selection
+          </Button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
-        data={data?.items ?? []}
+        data={items}
         loading={isLoading}
         emptyMessage="No alerts found"
         emptyDescription="Alerts will appear here when checklist items fail."
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/alerts/${row.id}`)}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={handleSelectionChange}
       />
+
       {data && data.total > 0 && (
         <DataTablePagination
           page={data.page}
@@ -150,6 +384,18 @@ export function AlertListPage() {
           onPageChange={(page) => setParam('page', page)}
         />
       )}
+
+      <BulkResolveModal
+        open={bulkResolveOpen}
+        onClose={() => {
+          setBulkResolveOpen(false);
+          setBulkResolveError(null);
+        }}
+        onConfirm={(note) => bulkResolveMutation.mutate(note)}
+        loading={bulkResolveMutation.isPending}
+        error={bulkResolveError ?? undefined}
+        eligibleCount={resolveEligibleSelected.length}
+      />
     </div>
   );
 }

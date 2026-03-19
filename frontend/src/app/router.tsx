@@ -13,6 +13,8 @@ import { AlertDetailPage } from '@/features/alerts/AlertDetailPage';
 import { EscalationsPage } from '@/features/escalations/EscalationsPage';
 import { AlertWorkflowSettingsPage } from '@/features/organization-settings/AlertWorkflowSettingsPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { ChecklistRunsListPage } from '@/features/checklist-runs/ChecklistRunsListPage';
+import { ChecklistRunDetailPage } from '@/features/checklist-runs/ChecklistRunDetailPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
 
@@ -42,6 +44,22 @@ const router = createBrowserRouter([
         element: (
           <RoutePermissionGuard>
             <DashboardPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-runs',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistRunsListPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-runs/:id',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistRunDetailPage />
           </RoutePermissionGuard>
         ),
       },

@@ -8,6 +8,9 @@ const RUN_INCLUDE = {
     include: {
       itemSnapshots: {
         orderBy: { sortOrder: 'asc' as const },
+        include: {
+          _count: { select: { attachments: true } },
+        },
       },
     },
   },

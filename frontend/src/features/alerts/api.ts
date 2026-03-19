@@ -69,3 +69,37 @@ export async function addComment(
 ): Promise<AlertEventComment> {
   return post<AlertEventComment>(`/alert-events/${id}/comments`, { type, body });
 }
+
+export interface BulkAcknowledgeResult {
+  requested: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  results: Array<{ alertEventId: string; success: boolean; error?: string }>;
+}
+
+export interface BulkResolveResult {
+  requested: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  results: Array<{ alertEventId: string; success: boolean; error?: string }>;
+}
+
+export async function bulkAcknowledgeAlerts(
+  alertEventIds: string[]
+): Promise<BulkAcknowledgeResult> {
+  return post<BulkAcknowledgeResult>('/alert-events/bulk-acknowledge', {
+    alertEventIds,
+  });
+}
+
+export async function bulkResolveAlerts(
+  alertEventIds: string[],
+  resolutionNote?: string
+): Promise<BulkResolveResult> {
+  return post<BulkResolveResult>('/alert-events/bulk-resolve', {
+    alertEventIds,
+    resolutionNote: resolutionNote?.trim() || undefined,
+  });
+}

@@ -85,3 +85,32 @@ export function FilterCheckbox({
     </label>
   );
 }
+
+interface FilterInputProps {
+  type?: 'text' | 'date';
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  'aria-label'?: string;
+}
+
+export function FilterInput({
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  'aria-label': ariaLabel,
+}: FilterInputProps) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+        onChange(e.target.value)
+      }
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className={INPUT_CLASS}
+    />
+  );
+}

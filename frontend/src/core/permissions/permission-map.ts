@@ -5,6 +5,7 @@
  */
 export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   '/dashboard': ['checklist.run.view', 'alert.view'],
+  '/checklist-runs': 'checklist.run.view',
   '/alerts': 'alert.view',
   '/escalations': 'alert.view',
   '/settings/alert-workflow': 'alert.workflow-policy.view',

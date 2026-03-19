@@ -4,13 +4,20 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 
 describe('AlertEventsRepository', () => {
   let repo: AlertEventsRepository;
-  let prisma: { $queryRaw: jest.Mock };
+  let prisma: {
+    $queryRaw: jest.Mock;
+    alertEvent?: { findMany: jest.Mock; count: jest.Mock };
+  };
 
   const mockOrgId = 'org-123';
 
   beforeEach(async () => {
     prisma = {
       $queryRaw: jest.fn(),
+      alertEvent: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -163,6 +170,58 @@ describe('AlertEventsRepository', () => {
 
       expect(result).toEqual([]);
       expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('list', () => {
+    it('date-only from: uses gte start of day UTC', async () => {
+      await repo.list(mockOrgId, { from: '2025-03-15' }, { page: 1, limit: 25 }, { triggeredAt: 'desc' });
+
+      expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
+      const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
+      expect(where.triggeredAt).toBeDefined();
+      expect(where.triggeredAt.gte).toEqual(new Date('2025-03-15T00:00:00.000Z'));
+      expect(where.triggeredAt.lte).toBeUndefined();
+      expect(where.triggeredAt.lt).toBeUndefined();
+    });
+
+    it('date-only to: uses lt next day UTC (through end of day)', async () => {
+      await repo.list(mockOrgId, { to: '2025-03-15' }, { page: 1, limit: 25 }, { triggeredAt: 'desc' });
+
+      expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
+      const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
+      expect(where.triggeredAt).toBeDefined();
+      expect(where.triggeredAt.lt).toEqual(new Date('2025-03-16T00:00:00.000Z'));
+      expect(where.triggeredAt.lte).toBeUndefined();
+      expect(where.triggeredAt.gte).toBeUndefined();
+    });
+
+    it('date-only from and to: includes full UTC day', async () => {
+      await repo.list(
+        mockOrgId,
+        { from: '2025-03-15', to: '2025-03-15' },
+        { page: 1, limit: 25 },
+        { triggeredAt: 'desc' },
+      );
+
+      expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
+      const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
+      expect(where.triggeredAt.gte).toEqual(new Date('2025-03-15T00:00:00.000Z'));
+      expect(where.triggeredAt.lt).toEqual(new Date('2025-03-16T00:00:00.000Z'));
+    });
+
+    it('full ISO datetime to: preserves precise lte', async () => {
+      await repo.list(
+        mockOrgId,
+        { to: '2025-03-15T10:30:00.000Z' },
+        { page: 1, limit: 25 },
+        { triggeredAt: 'desc' },
+      );
+
+      expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
+      const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
+      expect(where.triggeredAt.lte).toEqual(new Date('2025-03-15T10:30:00.000Z'));
+      expect(where.triggeredAt.lt).toBeUndefined();
     });
   });
 

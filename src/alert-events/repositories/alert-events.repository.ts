@@ -108,7 +108,16 @@ export class AlertEventsRepository {
     if (filters.from || filters.to) {
       where.triggeredAt = {};
       if (filters.from) (where.triggeredAt as Prisma.DateTimeFilter).gte = new Date(filters.from);
-      if (filters.to) (where.triggeredAt as Prisma.DateTimeFilter).lte = new Date(filters.to);
+      if (filters.to) {
+        const toDate = new Date(filters.to);
+        // Date-only YYYY-MM-DD: treat as through end of day UTC (use lt next day)
+        if (filters.to.length <= 10) {
+          toDate.setUTCDate(toDate.getUTCDate() + 1);
+          (where.triggeredAt as Prisma.DateTimeFilter).lt = toDate;
+        } else {
+          (where.triggeredAt as Prisma.DateTimeFilter).lte = toDate;
+        }
+      }
     }
 
     const orderBy = sort.triggeredAt

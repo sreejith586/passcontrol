@@ -53,11 +53,21 @@ Base: `/v1` (versioned)
 | POST | /alert-events/:id/resolve | alert.resolve | Resolve (resolution note required if org policy enabled) |
 | POST | /alert-events/:id/reopen | alert.resolve | Reopen RESOLVED alert to OPEN (optional body `{ note?: string }`; note required if org policy enabled) |
 
-## Users (Assignment)
+## Roles
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
-| GET | /users | alert.assign | List org-scoped users for assignment (id, name, email; paginated) |
+| GET | /roles | user.view | List org-scoped roles with permissions (for invite, role visibility) |
+
+## Users
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /users | user.view or alert.assign | List org-scoped users (id, name, email, isActive, roles; paginated) |
+| POST | /users/invite | user.invite | Invite user by email; creates if new; assigns role; returns setupToken? when passwordHash is null |
+| POST | /users/:id/roles | user.manage | Add role to user |
+| DELETE | /users/:id/roles/:roleId | user.manage | Remove role from user |
+| PATCH | /users/:id/status | user.manage | Activate/deactivate user (global account status) |
 
 ## Organization Settings (Alert Workflow)
 
@@ -86,9 +96,26 @@ Base: `/v1` (versioned)
 | POST | /auth/set-password | None | Set password using setup token; returns `{ passwordSet: true }` |
 | GET | /auth/me | JWT | Current user and permissions |
 
+## Files
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| POST | /files/init-upload | file.upload | Get upload intent (fileName, mimeType, sizeBytes); returns uploadIntent, suggestedFileId, bucket, objectKey |
+| POST | /files | file.upload | Register file after upload (bucket, objectKey, fileName, mimeType, sizeBytes) |
+| GET | /files/:id | file.view | Get file metadata |
+
+## Attachments
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| POST | /attachments | attachment.create | Create attachment (fileId, attachmentType, exactly one of: incidentId, taskId, checklistRunId, checklistRunResponseId, assetId) |
+| GET | /attachments | attachment.view | List attachments (requires filter: incidentId, taskId, checklistRunId, checklistRunResponseId, or assetId) |
+| GET | /attachments/:id | attachment.view | Get attachment with file metadata |
+| DELETE | /attachments/:id | attachment.delete | Delete attachment |
+
 ## Other
 
-- `/users`, `/files`, `/attachments`, `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`, `/organization-settings`
+- `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`, `/organization-settings`
 
 ## Response Shape
 

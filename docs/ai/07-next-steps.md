@@ -4,27 +4,37 @@
 
 ---
 
-## 1. Advanced Operational Intelligence (HIGH PRIORITY)
+## 1. End-to-End User Journey (COMPLETE)
 
-- ~~**Escalation trends (time-based)**~~ — *Done.* `GET /v1/alert-events/escalations/trends` returns breach counts and active-alert counts over time buckets (day/week/month).
-- ~~**SLA compliance metrics**~~ — *Done.* `GET /v1/alert-events/sla-compliance` returns within-SLA/breached counts and compliance rates for acknowledgment and resolution.
+- ~~**Password setup flow**~~ — *Done.* Invite → setupToken → /set-password → login. Backend: PasswordSetupToken, validate-setup-token, set-password. Frontend: SetPasswordPage, AddUserModal setup link.
+- ~~**Admin user management**~~ — *Done.* Edit roles, activate/deactivate; user.manage permission; global account status wording.
+- ~~**PassControl branding**~~ — *Done.* Header, sidebar, login, set-password, document title.
 
 ---
 
-## 2. Supervisor / Action Layer (HIGH PRIORITY)
+## 2. Phase 7 Checklist Execution UI (core implemented, enhancements pending)
 
-- ~~**Bulk acknowledge alerts**~~ — *Done.* `POST /v1/alert-events/bulk-acknowledge` with `{ alertEventIds }`.
-- ~~**Bulk resolve alerts**~~ — *Done.* `POST /v1/alert-events/bulk-resolve` with `{ alertEventIds, resolutionNote? }`.
-- ~~**Prioritized escalation retrieval (top N)**~~ — *Done.* `GET /v1/alert-events/escalations/prioritized` returns top N by urgency (resolve breached, acknowledge breached, active).
-- ~~**Alert assignment / ownership**~~ — *Done.* Backend: assign/unassign, GET /v1/users; frontend: AssignModal, assignee display, query invalidation.
-- ~~**Alert activity timeline / audit trail**~~ — *Done.* `AlertEventActivity` model; `GET /v1/alert-events/:id/activities`; auto-logged on create, acknowledge, resolve, assign, unassign.
-- ~~**Alert reopen**~~ — *Done.* `POST /v1/alert-events/:id/reopen`; RESOLVED → OPEN; optional note; policy `requireReopenNoteOnReopen`; note stored as REOPEN_NOTE comment; preserves assignment and SLA snapshot.
+- ~~**Checklist Runs list**~~ — *Done.* Route /checklist-runs, Today/Overdue/Failed tabs; GET /checklist-runs/today, /overdue, /failed; checklist name, due time, status, progress; row click → detail.
+- ~~**Run detail / execution**~~ — *Done.* GET /checklist-runs/:id; template name, run number, status, due time, sections, items; required items highlighted.
+- ~~**Item inputs**~~ — *Done.* BOOLEAN, TEXT, TEMPERATURE, CHECKBOX; Pass/Fail for BOOLEAN/CHECKBOX; save on blur for TEXT/TEMPERATURE; PATCH /checklist-run-items/:id.
+- ~~**Failure/compliance UX**~~ — *Done.* Comment field when requires comment on fail; evidence requirement surfaced; attachment count reflected when available.
+- ~~**Submit flow**~~ — *Done.* POST /checklist-runs/:id/submit; validation errors surfaced; success toast and navigate to list.
+- ~~**Production hardening**~~ — *Done.* Failed tab; mutation safety (submit disabled during item updates); redundant PATCH prevention; race-condition handling; visible saving state; unsupported item types shown clearly.
+- ~~**Evidence visibility**~~ — *Done.* Read-only evidence panel; clickable "Evidence attached (N)" badge; optional delete when attachment.delete; GET /checklist-run-items/:id, DELETE /attachments/:id; no upload (backend has no multipart receive).
+- **Remaining gaps:** Attachment upload (requires backend multipart or presigned URL; init-upload returns mock metadata only).
 
 ---
 
 ## 3. Platform Hardening (MEDIUM PRIORITY)
 
-- ~~**Escalation raw SQL UUID casts**~~ — *Done.* Added `::uuid` casts in listEscalations, getEscalationsSummary, listPrioritizedEscalations; fixes dashboard and escalations 500s.
 - **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.
 - **Query/index optimization for escalation queries** — Add or tune indexes for `alert_events` escalation filters (organization_id, status, created_at, location_id). Profile and optimize raw SQL.
 - **Expansion of domain event handlers** — Handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved`. Extend to temperature, IoT, or other alert sources as needed.
+
+---
+
+## 4. Future Enhancements (LOWER PRIORITY)
+
+- **Email delivery for invites** — Send setup link via email instead of manual copy; requires email service integration.
+- **Password reset** — Forgot-password flow for existing users with password.
+- **Edit user profile** — Name, email update; delete user.

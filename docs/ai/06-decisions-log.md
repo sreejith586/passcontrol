@@ -112,3 +112,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** When using Prisma `$queryRaw` with UUID column comparisons, cast parameters explicitly: `(${param})::uuid`. Prisma passes params as text; PostgreSQL rejects `uuid = text` without cast.
 - **Rationale:** Fixes 500s on escalation endpoints (listEscalations, getEscalationsSummary, listPrioritizedEscalations); applies to all raw SQL comparing UUID columns.
+
+### Password setup token for invited users
+
+- **Decision:** Add `PasswordSetupToken` model (userId, tokenHash, expiresAt, usedAt); store SHA-256 of token, not bcrypt; 7-day expiry; single-use. Invite returns setupToken when user has no passwordHash. Public endpoints: `POST /auth/validate-setup-token`, `POST /auth/set-password`. No auto-login after set-password.
+- **Rationale:** Token-based flow preferred over admin-set temp password; no email delivery yet (admin copies link); production-realistic; invalidate prior unused tokens on re-invite.

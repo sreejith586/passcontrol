@@ -8,6 +8,10 @@ export function formatDate(date: string | Date): string {
   return format(new Date(date), 'MMM d, yyyy');
 }
 
+export function formatTime(date: string | Date): string {
+  return format(new Date(date), 'HH:mm');
+}
+
 export function formatRelative(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
 }

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
+  ClipboardList,
   AlertTriangle,
   TrendingUp,
   Settings,
@@ -14,6 +15,7 @@ import { cn } from '@/lib/cn';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: ['checklist.run.view', 'alert.view'] as const },
+  { to: '/checklist-runs', label: 'Checklist Runs', icon: ClipboardList, permission: 'checklist.run.view' as const },
   { to: '/alerts', label: 'Alerts', icon: AlertTriangle, permission: 'alert.view' as const },
   { to: '/escalations', label: 'Escalations', icon: TrendingUp, permission: 'alert.view' as const },
   { to: '/settings/alert-workflow', label: 'Settings', icon: Settings, permission: 'alert.workflow-policy.view' as const },
