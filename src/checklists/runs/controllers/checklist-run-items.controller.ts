@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -6,8 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -34,6 +38,7 @@ import {
   CurrentTenantContext,
   TenantContext,
 } from '../../../access/decorators/current-tenant.decorator';
+import type { EvidenceUploadFile } from '../types/uploaded-file.interface';
 
 @Controller({ path: 'checklist-run-items', version: '1' })
 @UseGuards(JwtAuthGuard, RbacGuard)
@@ -256,6 +261,28 @@ export class ChecklistRunItemsController {
   ) {
     const attachment = await this.service.linkAttachmentToRunItem(ctx, id, dto);
     return ApiResponse.ok(attachment);
+  }
+
+  @Post(':id/evidence')
+  @RequirePermissions('checklist.run.update')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload evidence file for run item',
+    description:
+      'Multipart upload. Creates File and Attachment linked to the checklist run item snapshot. Allowed mime types: image/jpeg, image/png, image/webp, image/gif. Max size: 50 MB.',
+  })
+  @ApiParam({ name: 'id', description: 'Run item snapshot UUID' })
+  @ApiResponseDecorator({ status: 201, description: 'Attachment with nested file metadata' })
+  async uploadEvidence(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @UploadedFile() file: EvidenceUploadFile | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    const attachment = await this.service.uploadEvidence(ctx, id, file);
+    return ApiResponse.created(attachment);
   }
 
   @Post(':id/temperature-readings')

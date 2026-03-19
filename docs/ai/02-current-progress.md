@@ -98,6 +98,10 @@
 - [x] Escalation raw SQL: explicit `::uuid` casts for UUID parameters in listEscalations, getEscalationsSummary, listPrioritizedEscalations (fixes PostgreSQL `uuid = text` 500s)
 - [x] Alert list date filter: date-only `to` (YYYY-MM-DD) now means through end of day UTC (use `lt` next day); full ISO datetime preserves precise `lte`; `from` unchanged (start of day UTC)
 
+### Phase 9 — Evidence Upload Backend
+
+- [x] `POST /v1/checklist-run-items/:id/evidence` — multipart upload; creates File + Attachment (EVIDENCE) in one request; storage.saveBytes; image mime types only; max 50 MB; run must be PENDING or IN_PROGRESS
+
 ### Other
 
 - [x] Temperature policies, readings, breach handling
@@ -106,7 +110,7 @@
 
 ## Phase 7 Remaining Gaps
 
-- Attachment upload UI — backend has no multipart receive; init-upload returns mock metadata only; evidence visibility and delete implemented
+- Attachment upload UI — backend now has `POST /checklist-run-items/:id/evidence` multipart endpoint; frontend upload UI not yet implemented; evidence visibility and delete implemented
 - Template/schedule authoring UI — not in scope for Phase 7
 
 ## Not Yet Implemented

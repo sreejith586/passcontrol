@@ -84,6 +84,14 @@ export class FilesService {
     return file;
   }
 
+  /**
+   * Validate mime type and size for evidence upload (image only, 1–50 MB).
+   * Throws BadRequestException if invalid.
+   */
+  validateEvidenceFile(mimeType: string, sizeBytes: number): void {
+    this.validateMimeAndSize(mimeType, sizeBytes, true);
+  }
+
   private validateMimeAndSize(
     mimeType: string,
     sizeBytes: number,

@@ -44,3 +44,6 @@ frontend/.vite/
 # Misc
 *.tgz
 .cache/
+
+# Local uploads (mock storage)
+uploads/

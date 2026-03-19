@@ -43,4 +43,14 @@ export interface StorageServiceInterface {
    * Get a read URL for the object (signed or public). Optional for MVP.
    */
   getReadUrl?(bucket: string, key: string, expiresInSeconds?: number): Promise<string>;
+
+  /**
+   * Save raw bytes to storage. Used for multipart uploads where backend receives the file.
+   */
+  saveBytes?(
+    bucket: string,
+    objectKey: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<void>;
 }

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { Prisma } from '@prisma/client';
+import { v4 as uuid } from 'uuid';
 import { ChecklistRunsRepository } from '../repositories/checklist-runs.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
@@ -21,6 +22,11 @@ import {
   createChecklistRunCompletedEvent,
 } from '../../../common/domain-events/events/checklist-run-completed.event';
 import { AttachmentsService } from '../../../attachments/services/attachments.service';
+import { AttachmentType } from '../../../attachments/enums/attachment-type.enum';
+import { FilesService } from '../../../files/services/files.service';
+import { STORAGE_SERVICE } from '../../../files/storage/storage.interface';
+import type { StorageServiceInterface } from '../../../files/storage/storage.interface';
+import type { EvidenceUploadFile } from '../types/uploaded-file.interface';
 import { TemperatureReadingsService } from '../../../temperature/services/temperature-readings.service';
 import { ListTodayRunsQueryDto } from '../dto/list-today-runs.dto';
 import { ListOverdueRunsQueryDto } from '../dto/list-overdue-runs.dto';
@@ -40,6 +46,9 @@ export class ChecklistRunsService {
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
     private readonly attachments: AttachmentsService,
+    private readonly filesService: FilesService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storage: StorageServiceInterface,
     private readonly temperatureReadings: TemperatureReadingsService,
   ) {}
 
@@ -353,6 +362,62 @@ export class ChecklistRunsService {
       dto.attachmentId,
       itemId,
     );
+  }
+
+  /**
+   * Upload evidence file for a checklist run item. Persists bytes, creates File and Attachment.
+   */
+  async uploadEvidence(
+    ctx: { organizationId: string; userId?: string },
+    itemId: string,
+    file: EvidenceUploadFile,
+  ) {
+    const item = await this.repo.findRunItemById(ctx.organizationId, itemId);
+    if (!item) throw new NotFoundException('Checklist run item not found');
+
+    const run = item.checklistRun;
+    if (run.status === 'COMPLETED') {
+      throw new BadRequestException(
+        'Cannot upload evidence: run is already completed',
+      );
+    }
+    if (run.status !== 'PENDING' && run.status !== 'IN_PROGRESS') {
+      throw new BadRequestException(
+        `Cannot upload evidence: run status is ${run.status}`,
+      );
+    }
+
+    this.filesService.validateEvidenceFile(file.mimetype, file.size);
+
+    const bucket = 'uploads';
+    const objectKey = `org/${ctx.organizationId}/${uuid()}/${file.originalname ?? 'file'}`;
+
+    if (this.storage.saveBytes) {
+      await this.storage.saveBytes(
+        bucket,
+        objectKey,
+        file.buffer,
+        file.mimetype,
+      );
+    } else {
+      throw new BadRequestException(
+        'Storage does not support direct file upload',
+      );
+    }
+
+    const fileRecord = await this.filesService.registerFile(ctx, {
+      bucket,
+      objectKey,
+      fileName: file.originalname ?? 'file',
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+    });
+
+    return this.attachments.create(ctx, {
+      fileId: fileRecord.id,
+      attachmentType: AttachmentType.EVIDENCE,
+      checklistRunResponseId: itemId,
+    });
   }
 
   async createTemperatureReadingForRunItem(

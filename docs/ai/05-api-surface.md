@@ -25,6 +25,7 @@ Base: `/v1` (versioned)
 | GET | /checklist-run-items/:id | checklist.run.view | Item with context |
 | PATCH | /checklist-run-items/:id | checklist.run.update | Update item response |
 | POST | /checklist-run-items/:id/attachments | checklist.run.update | Link attachment |
+| POST | /checklist-run-items/:id/evidence | checklist.run.update | Multipart upload: create File + Attachment (EVIDENCE) linked to item. Field: file. Mime: image/jpeg, image/png, image/webp, image/gif. Max 50 MB. Run must be PENDING or IN_PROGRESS. |
 | POST | /checklist-run-items/:id/temperature-readings | checklist.run.update | Add temperature reading |
 | POST | /checklist-run-items/:id/acknowledge-alert | alert.acknowledge | Acknowledge related alert |
 | POST | /checklist-run-items/:id/resolve-alert | alert.resolve | Resolve related alert |

@@ -4,6 +4,8 @@ import { ChecklistRunsRepository } from '../repositories/checklist-runs.reposito
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
 import { AttachmentsService } from '../../../attachments/services/attachments.service';
+import { FilesService } from '../../../files/services/files.service';
+import { STORAGE_SERVICE } from '../../../files/storage/storage.interface';
 import { TemperatureReadingsService } from '../../../temperature/services/temperature-readings.service';
 import {
   DOMAIN_EVENT_PUBLISHER,
@@ -75,6 +77,8 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
         { provide: AlertEventsService, useValue: {} },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: publisher },
         { provide: AttachmentsService, useValue: {} },
+        { provide: FilesService, useValue: { validateEvidenceFile: jest.fn() } },
+        { provide: STORAGE_SERVICE, useValue: {} },
         { provide: TemperatureReadingsService, useValue: {} },
       ],
     }).compile();
@@ -269,6 +273,8 @@ describe('ChecklistRunsService (domain events - run completion)', () => {
         { provide: AlertEventsService, useValue: {} },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: publisher },
         { provide: AttachmentsService, useValue: {} },
+        { provide: FilesService, useValue: { validateEvidenceFile: jest.fn() } },
+        { provide: STORAGE_SERVICE, useValue: {} },
         { provide: TemperatureReadingsService, useValue: {} },
       ],
     }).compile();

@@ -19,6 +19,6 @@ import { STORAGE_SERVICE } from './storage/storage.interface';
       useClass: MockStorageService,
     },
   ],
-  exports: [FilesService],
+  exports: [FilesService, STORAGE_SERVICE],
 })
 export class FilesModule {}
