@@ -8,7 +8,8 @@
 
 - ~~**Phase 8A — Alert List Power Features**~~ — *Done.* Bulk acknowledge, bulk resolve, richer filters (severity, sourceType, from, to, assignedUserId), row selection, collapsible advanced filters.
 - ~~**Alert list date filter fix**~~ — *Done.* Date-only `to` now includes full UTC day; backend repository fix.
-- **Phase 8B (recommended):** Escalations filter parity (assignedToMe, unassignedOnly, assignedUserId, etc.); Comments UI RESOLUTION_NOTE support.
+- ~~**Phase 8B — Escalations filter parity**~~ — *Done.* Richer filters (severity, assignedToMe, unassignedOnly, assignedUserId); URL-synced state; assignment precedence.
+- **Comments UI RESOLUTION_NOTE support** — Remaining.
 
 ---
 
