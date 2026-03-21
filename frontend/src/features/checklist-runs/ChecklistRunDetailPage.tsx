@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { KeyboardEvent } from 'react';
 import { useRef, useEffect, useState } from 'react';
 import { getRunById, updateRunItem, submitRun } from './api';
 import { queryKeys } from './query-keys';
@@ -46,6 +47,8 @@ export function ChecklistRunDetailPage() {
     enabled: !!id,
   });
 
+  const flatItemIdsRef = useRef<string[]>([]);
+
   const updateItemMutation = useMutation({
     mutationFn: ({ itemId, data }: UpdateItemVariables) =>
       updateRunItem(itemId, data),
@@ -64,6 +67,12 @@ export function ChecklistRunDetailPage() {
       const latest = latestMutationIdByItem.current.get(itemId);
       if (latest === mutationId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.detail(id!) });
+        const ids = flatItemIdsRef.current;
+        const idx = ids.indexOf(itemId);
+        if (idx >= 0 && idx < ids.length - 1) {
+          const nextEl = document.getElementById(`run-item-${ids[idx + 1]}`);
+          (nextEl as HTMLElement)?.focus();
+        }
       }
     },
     onError: (err) => {
@@ -173,8 +182,59 @@ export function ChecklistRunDetailPage() {
   const run = runQuery.data;
   const isCompleted = run.status === 'COMPLETED';
 
-  // Progress counts derived from itemSnapshots (matches frontend validation rules)
+  // Progress counts and flat item list derived from itemSnapshots
   const allItems = run.sectionSnapshots?.flatMap((s) => s.itemSnapshots ?? []) ?? [];
+  flatItemIdsRef.current = allItems.map((i) => i.id);
+
+  function focusNextItem(itemId: string) {
+    const ids = flatItemIdsRef.current;
+    const idx = ids.indexOf(itemId);
+    if (idx >= 0 && idx < ids.length - 1) {
+      const el = document.getElementById(`run-item-${ids[idx + 1]}`);
+      (el as HTMLElement)?.focus();
+    }
+  }
+
+  function focusPrevItem(itemId: string) {
+    const ids = flatItemIdsRef.current;
+    const idx = ids.indexOf(itemId);
+    if (idx > 0) {
+      const el = document.getElementById(`run-item-${ids[idx - 1]}`);
+      (el as HTMLElement)?.focus();
+    }
+  }
+
+  function handleItemKeyDown(
+    item: (typeof allItems)[0],
+    e: KeyboardEvent<HTMLDivElement>
+  ) {
+    const target = e.target as HTMLElement;
+    if (target.closest('input, textarea, select')) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusNextItem(item.id);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusPrevItem(item.id);
+      return;
+    }
+    if (['BOOLEAN', 'CHECKBOX'].includes(item.itemTypeSnapshot)) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleUpdateItem(item.id, { result: 'PASS' });
+        return;
+      }
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleUpdateItem(item.id, { result: 'FAIL' });
+        return;
+      }
+    }
+  }
+
   const totalItems = allItems.length;
   const completedItems = allItems.filter((i) => i.respondedAt != null).length;
   const failedItems = allItems.filter((i) => i.result === 'FAIL').length;
@@ -253,10 +313,14 @@ export function ChecklistRunDetailPage() {
                 <div
                   key={item.id}
                   id={`run-item-${item.id}`}
+                  tabIndex={0}
+                  role="group"
+                  aria-label={item.labelSnapshot}
+                  onKeyDown={(e) => handleItemKeyDown(item, e)}
                   className={cn(
-                    'transition-[box-shadow] duration-300',
+                    'transition-[box-shadow] duration-300 outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg',
                     highlightedItemId === item.id &&
-                      'rounded-lg ring-2 ring-primary/50 ring-offset-2 ring-offset-background'
+                      'ring-2 ring-primary/50 ring-offset-2 ring-offset-background'
                   )}
                 >
                   <RunItemRow

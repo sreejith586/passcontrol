@@ -1,3 +1,4 @@
+import type { FocusEvent, KeyboardEvent } from 'react';
 import { useCallback, useState, useEffect } from 'react';
 import { Input } from '@/shared/ui/Input';
 
@@ -27,18 +28,31 @@ export function TemperatureItemInput({
     setLocalValue(initialValue);
   }, [initialValue]);
 
-  const handleBlur = useCallback(() => {
-    const trimmed = localValue.trim();
-    if (trimmed === '') return;
-    const num = parseFloat(trimmed);
-    if (Number.isNaN(num)) return;
-    const serverNum =
-      typeof rawValue === 'number'
-        ? rawValue
-        : parseFloat(String(rawValue ?? ''));
-    if (!Number.isNaN(serverNum) && num === serverNum) return;
-    onUpdate(itemId, { valueJson: { value: num, unit } });
-  }, [itemId, localValue, rawValue, unit, onUpdate]);
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>) => {
+      const trimmed = (e.target.value ?? '').trim();
+      if (trimmed === '') return;
+      const num = parseFloat(trimmed);
+      if (Number.isNaN(num)) return;
+      const serverNum =
+        typeof rawValue === 'number'
+          ? rawValue
+          : parseFloat(String(rawValue ?? ''));
+      if (!Number.isNaN(serverNum) && num === serverNum) return;
+      onUpdate(itemId, { valueJson: { value: num, unit } });
+    },
+    [itemId, rawValue, unit, onUpdate]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        (e.target as HTMLInputElement).blur();
+      }
+    },
+    []
+  );
 
   return (
     <div className="flex items-center gap-2">
@@ -48,6 +62,7 @@ export function TemperatureItemInput({
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
         disabled={disabled || isUpdating}
         placeholder={`Enter temperature (${unit})`}
         className="max-w-[140px]"

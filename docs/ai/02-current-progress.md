@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-21 (Phase 10C)
+**Last updated:** 2025-03-21 (Phase 10B)
 
 ## Implemented Features
 
@@ -96,6 +96,7 @@
 - [x] Phase 8C — Resolution note workflow: comments UI supports COMMENT and RESOLUTION_NOTE create; type selector (default COMMENT); clear type badges for COMMENT, RESOLUTION_NOTE, REOPEN_NOTE; resolve/reopen modals surface note-required validation errors inline; comments invalidated on resolve/reopen
 - [x] Phase 10A — Alert to checklist deep linking: "View checklist item" button on alert detail (checklist-originated alerts only); navigates to run with `?itemId=`; run detail scrolls to and briefly highlights the item
 - [x] Phase 10C — Checklist run detail two-column layout: desktop two-column workspace (main execution ~65%, right context rail ~35%); mobile stacks rail below; Run Summary, Progress, Section Jump, and Submission Readiness cards in rail
+- [x] Phase 10B — Operational UX polish: keyboard navigation (ArrowUp/Down between items; Enter=Pass, Shift+Enter=Fail for BOOLEAN/CHECKBOX; Enter saves and moves for TEXT/TEMPERATURE); focus moves to next item after successful update; inline "Upload evidence" for failed items requiring evidence (opens panel with file picker)
 
 ### Backend (recent fixes)
 

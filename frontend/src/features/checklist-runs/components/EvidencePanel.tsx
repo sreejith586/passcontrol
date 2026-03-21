@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRunItemById, deleteAttachment, uploadEvidence } from '../api';
 import { queryKeys } from '../query-keys';
@@ -24,6 +24,8 @@ interface EvidencePanelProps {
   runId: string;
   canDelete: boolean;
   canUpload: boolean;
+  /** When true and canUpload, triggers file picker on open (for inline evidence shortcut) */
+  triggerFilePickerOnOpen?: boolean;
 }
 
 function AttachmentRow({
@@ -97,9 +99,17 @@ export function EvidencePanel({
   runId,
   canDelete,
   canUpload,
+  triggerFilePickerOnOpen = false,
 }: EvidencePanelProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open && triggerFilePickerOnOpen && canUpload) {
+      const t = setTimeout(() => fileInputRef.current?.click(), 100);
+      return () => clearTimeout(t);
+    }
+  }, [open, triggerFilePickerOnOpen, canUpload]);
 
   const itemQuery = useQuery({
     queryKey: queryKeys.runItemDetail(itemId),

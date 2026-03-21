@@ -182,13 +182,16 @@ export function RunItemRow({
           >
             {evidenceMissing ? (
               canOpenEvidencePanel ? (
-                <button
-                  type="button"
-                  onClick={() => setEvidencePanelOpen(true)}
-                  className="font-medium text-amber-800 underline-offset-2 hover:underline dark:text-amber-400"
-                >
-                  Evidence required before submission — Add evidence
-                </button>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span>Evidence required before submission</span>
+                  <button
+                    type="button"
+                    onClick={() => setEvidencePanelOpen(true)}
+                    className="font-medium text-amber-800 underline-offset-2 hover:underline dark:text-amber-400 shrink-0"
+                  >
+                    Upload evidence
+                  </button>
+                </span>
               ) : (
                 <span>Evidence required before submission</span>
               )
@@ -214,6 +217,7 @@ export function RunItemRow({
             runId={runId}
             canDelete={canDeleteEvidence}
             canUpload={canUploadEvidence}
+            triggerFilePickerOnOpen={evidenceMissing && canUploadEvidence}
           />
         )}
       </div>
