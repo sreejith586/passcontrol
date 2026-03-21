@@ -16,7 +16,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     status === 'OPEN'
       ? 'destructive'
       : status === 'ACKNOWLEDGED'
-        ? 'warning'
+        ? 'info'
         : 'success';
   return <Badge variant={variant}>{STATUS_LABELS[status] ?? status}</Badge>;
 }

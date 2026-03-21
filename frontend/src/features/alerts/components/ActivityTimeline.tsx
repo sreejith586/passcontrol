@@ -1,7 +1,7 @@
 import type { AlertEventActivity } from '../types';
 import { formatDateTime } from '@/lib/date';
 import { EmptyState } from '@/shared/layout/EmptyState';
-import { cn } from '@/lib/cn';
+import { Card } from '@/shared/ui/Card';
 
 interface ActivityTimelineProps {
   activities: AlertEventActivity[];
@@ -17,24 +17,22 @@ const ACTIVITY_LABELS: Record<string, string> = {
   REOPENED: 'Reopened',
 };
 
-const SECTION_CLASS = 'rounded-lg border border-border bg-muted/30 p-4';
-
 export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   if (activities.length === 0) {
     return (
-      <div className={cn(SECTION_CLASS, 'space-y-4')}>
+      <Card variant="soft" className="space-y-4 p-4">
         <h3 className="font-medium text-foreground">Activity</h3>
         <EmptyState
           title="No activity yet"
           description="Acknowledge, resolve, or assign to log activity."
           className="p-6"
         />
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className={cn(SECTION_CLASS, 'space-y-4')}>
+    <Card variant="soft" className="space-y-4 p-4">
       <h3 className="font-medium text-foreground">Activity</h3>
       <div className="relative">
         {/* Vertical line – centered in 24px timeline column */}
@@ -68,6 +66,6 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
           ))}
         </ul>
       </div>
-    </div>
+    </Card>
   );
 }

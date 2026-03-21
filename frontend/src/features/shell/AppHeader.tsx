@@ -8,7 +8,7 @@ export function AppHeader() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
       <Link to="/alerts" className="text-lg font-semibold text-foreground">
         PassControl
       </Link>

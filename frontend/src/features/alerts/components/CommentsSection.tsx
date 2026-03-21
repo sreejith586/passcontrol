@@ -12,7 +12,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
 import { EmptyState } from '@/shared/layout/EmptyState';
-import { cn } from '@/lib/cn';
+import { Card } from '@/shared/ui/Card';
 
 const schema = z.object({
   body: z.string().min(1, 'Comment cannot be empty').max(4000),
@@ -37,8 +37,6 @@ const CREATE_TYPE_OPTIONS: { value: CommentCreateType; label: string }[] = [
   { value: 'COMMENT', label: 'Comment' },
   { value: 'RESOLUTION_NOTE', label: 'Resolution note' },
 ];
-
-const SECTION_CLASS = 'rounded-lg border border-border bg-muted/30 p-4';
 
 function CommentTypeBadge({ type }: { type: string }) {
   const label = COMMENT_TYPE_LABELS[type] ?? type;
@@ -85,7 +83,7 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
   });
 
   return (
-    <div className={cn(SECTION_CLASS, 'space-y-4')}>
+    <Card variant="soft" className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-foreground">Comments</h3>
         <Button
@@ -154,6 +152,6 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
           className="p-6"
         />
       )}
-    </div>
+    </Card>
   );
 }

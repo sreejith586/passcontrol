@@ -5,14 +5,11 @@ import { SeverityBadge } from './SeverityBadge';
 import { AssigneeBadge } from './AssigneeBadge';
 import { formatDateTime, deriveSlaBreach } from '@/lib/date';
 import { Badge } from '@/shared/ui/Badge';
-import { cn } from '@/lib/cn';
+import { Card } from '@/shared/ui/Card';
 
 interface AlertHeaderProps {
   alert: AlertEvent;
 }
-
-const SECTION_CLASS =
-  'rounded-lg border border-border bg-muted/30 p-4';
 
 export function AlertHeader({ alert }: AlertHeaderProps) {
   const { ackBreached, resolveBreached } = deriveSlaBreach(alert);
@@ -20,7 +17,7 @@ export function AlertHeader({ alert }: AlertHeaderProps) {
   return (
     <div className="space-y-4">
       {/* Primary status row – operational at a glance */}
-      <div className={cn(SECTION_CLASS, 'space-y-4')}>
+      <Card variant="soft" className="space-y-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={alert.status} />
           <SeverityBadge severity={alert.severity} />
@@ -61,7 +58,7 @@ export function AlertHeader({ alert }: AlertHeaderProps) {
             {alert.resolveWithinMinutes}m
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -26,12 +26,14 @@ export function AppShell() {
   }, [collapsed]);
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-slate-100">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto bg-slate-50/80">
+          <div className="mx-auto max-w-[1400px] px-6 py-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

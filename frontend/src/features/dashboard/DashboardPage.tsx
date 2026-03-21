@@ -19,6 +19,7 @@ import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
 import { StatusBadge } from '@/features/alerts/components/StatusBadge';
 import { getSourceTypeLabel } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
+import { Card } from '@/shared/ui/Card';
 
 const SLA_DAYS = 30;
 
@@ -32,21 +33,22 @@ function MetricCard({
   variant?: 'default' | 'warning' | 'destructive';
 }) {
   return (
-    <div
+    <Card
+      variant="soft"
       className={cn(
-        'rounded-lg border p-4 transition-colors',
-        variant === 'destructive' && 'border-destructive/50 bg-destructive/5',
-        variant === 'warning' && 'border-amber-500/50 bg-amber-500/5',
-        variant === 'default' && 'border-border bg-muted/30'
+        'p-4',
+        variant === 'destructive' && 'border-destructive/30 bg-destructive/5',
+        variant === 'warning' && 'border-amber-500/30 bg-amber-500/5',
+        variant === 'default' && 'border-border'
       )}
     >
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+      <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
         {value}
       </p>
-    </div>
+    </Card>
   );
 }
 
@@ -240,7 +242,7 @@ export function DashboardPage() {
               onRetry={() => slaCompliance.refetch()}
             />
           ) : slaCompliance.data ? (
-            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+            <Card variant="soft" className="space-y-3 p-4">
               <h2 className="text-sm font-medium text-foreground">
                 SLA compliance (last 30 days)
               </h2>
@@ -310,7 +312,7 @@ export function DashboardPage() {
                   </div>
                 );
               })()}
-            </div>
+            </Card>
           ) : null}
           {escalationTrend.isLoading ? (
             <Skeleton className="h-48 rounded-lg" />
@@ -324,7 +326,7 @@ export function DashboardPage() {
               onRetry={() => escalationTrend.refetch()}
             />
           ) : escalationTrend.data ? (
-            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+            <Card variant="soft" className="space-y-3 p-4">
               <h2 className="text-sm font-medium text-foreground">
                 Alerts triggered (last 7 days)
               </h2>
@@ -382,7 +384,7 @@ export function DashboardPage() {
                   No alerts in this period
                 </p>
               )}
-            </div>
+            </Card>
           ) : null}
           {topProblemSources.isLoading ? (
             <Skeleton className="h-48 rounded-lg" />
@@ -396,7 +398,7 @@ export function DashboardPage() {
               onRetry={() => topProblemSources.refetch()}
             />
           ) : topProblemSources.data ? (
-            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+            <Card variant="soft" className="space-y-3 p-4">
               <h2 className="text-sm font-medium text-foreground">
                 Top problem sources (all-time)
               </h2>
@@ -427,7 +429,7 @@ export function DashboardPage() {
                   No alert sources yet
                 </p>
               )}
-            </div>
+            </Card>
           ) : null}
         </div>
       )}
@@ -451,7 +453,7 @@ export function DashboardPage() {
             />
           </div>
         ) : prioritized.data ? (
-        <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+        <Card variant="soft" className="space-y-4 p-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium text-foreground">Top priorities</h2>
             <Link
@@ -463,13 +465,13 @@ export function DashboardPage() {
           </div>
           {prioritized.data.items.length > 0 ? (
             <>
-              <div className="overflow-hidden rounded-md border border-border bg-background">
-                <ul className="divide-y divide-border">
+              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <ul className="divide-y divide-slate-100">
                   {prioritized.data.items.slice(0, 10).map((item) => (
                     <li key={item.alertEventId}>
                       <Link
                         to={`/alerts/${item.alertEventId}`}
-                        className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted/50"
+                        className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50"
                       >
                         <span className="flex shrink-0 items-center gap-2 truncate text-sm">
                           <SeverityBadge severity={item.severity} />
@@ -505,7 +507,7 @@ export function DashboardPage() {
               }
             />
           )}
-        </div>
+        </Card>
         ) : null)}
     </div>
   );

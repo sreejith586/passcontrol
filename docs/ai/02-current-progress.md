@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-21 (Phase 10B)
+**Last updated:** 2025-03-21 (Phase 11B)
 
 ## Implemented Features
 
@@ -97,6 +97,8 @@
 - [x] Phase 10A — Alert to checklist deep linking: "View checklist item" button on alert detail (checklist-originated alerts only); navigates to run with `?itemId=`; run detail scrolls to and briefly highlights the item
 - [x] Phase 10C — Checklist run detail two-column layout: desktop two-column workspace (main execution ~65%, right context rail ~35%); mobile stacks rail below; Run Summary, Progress, Section Jump, and Submission Readiness cards in rail
 - [x] Phase 10B — Operational UX polish: keyboard navigation (ArrowUp/Down between items; Enter=Pass, Shift+Enter=Fail for BOOLEAN/CHECKBOX; Enter saves and moves for TEXT/TEMPERATURE); focus moves to next item after successful update; inline "Upload evidence" for failed items requiring evidence (opens panel with file picker)
+- [x] Phase 11A — Design system standardization: Badge variants (success/warning/destructive/info/outline) with semantic colors (emerald, amber, sky); shared Card/RailCard for soft surfaces; StatusBadge ACKNOWLEDGED→info; SeverityBadge uses Badge variants; KPI cards use Card with subtle tint; FilterBar lighter bg; checklist detail right-rail, alert detail cards, dashboard sections standardized
+- [x] Phase 11B — App shell & core visual refactor: dark charcoal (slate-900) left sidebar; light neutral canvas (slate-50); white header with shadow; max-w content framing; Card/table rounded-xl, border-slate-200; FilterBar and action bar white with shadow; checklist tabs as segmented control; RunItemRow cards refined; DataTable cleaner container
 
 ### Backend (recent fixes)
 

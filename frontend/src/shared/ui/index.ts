@@ -2,6 +2,7 @@ export { Button } from './Button';
 export { Input } from './Input';
 export { Textarea } from './Textarea';
 export { Badge } from './Badge';
+export { Card, RailCard } from './Card';
 export { Spinner } from './Spinner';
 export { Skeleton } from './Skeleton';
 export { Modal } from './Modal';

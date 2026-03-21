@@ -16,6 +16,7 @@ import { toast } from '@/shared/feedback/useToast';
 import { ApiError, isNotFoundError } from '@/core/api/errors';
 import { usePermission } from '@/core/permissions/use-permission';
 import { cn } from '@/lib/cn';
+import { RailCard } from '@/shared/ui/Card';
 
 type UpdateItemVariables = {
   itemId: string;
@@ -378,11 +379,8 @@ export function ChecklistRunDetailPage() {
         </div>
 
         <aside className="space-y-4">
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">
-              Run summary
-            </h3>
-            <dl className="space-y-2 text-sm">
+          <RailCard title="Run summary">
+            <dl className="space-y-2">
               <div>
                 <dt className="text-muted-foreground">Status</dt>
                 <dd>
@@ -404,13 +402,10 @@ export function ChecklistRunDetailPage() {
                 </div>
               )}
             </dl>
-          </div>
+          </RailCard>
 
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">
-              Progress
-            </h3>
-            <dl className="space-y-2 text-sm">
+          <RailCard title="Progress">
+            <dl className="space-y-2">
               <div>
                 <dt className="text-muted-foreground">Completed</dt>
                 <dd className="font-medium">{completedItems} / {totalItems}</dd>
@@ -440,13 +435,10 @@ export function ChecklistRunDetailPage() {
                 </div>
               )}
             </dl>
-          </div>
+          </RailCard>
 
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">
-              Jump to section
-            </h3>
-            <ul className="space-y-1 text-sm">
+          <RailCard title="Jump to section">
+            <ul className="space-y-1">
               {run.sectionSnapshots?.map((section) => (
                 <li key={section.id}>
                   <button
@@ -459,25 +451,22 @@ export function ChecklistRunDetailPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </RailCard>
 
           {!isCompleted && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground">
-                Submission readiness
-              </h3>
+            <RailCard title="Submission readiness">
               {blockers.length === 0 ? (
-                <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                <p className="text-emerald-700 dark:text-emerald-400 font-medium">
                   Ready to submit
                 </p>
               ) : (
-                <ul className="space-y-1 text-sm text-amber-700 dark:text-amber-400">
+                <ul className="space-y-1 text-amber-700 dark:text-amber-500">
                   {blockers.map((b, idx) => (
                     <li key={idx}>{b}</li>
                   ))}
                 </ul>
               )}
-            </div>
+            </RailCard>
           )}
         </aside>
       </div>

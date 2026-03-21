@@ -2,7 +2,7 @@ import type React from 'react';
 import { cn } from '@/lib/cn';
 
 const INPUT_CLASS =
-  'h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20';
+  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400';
 
 interface FilterBarProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export function FilterBar({ children, className }: FilterBarProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/20 p-3',
+        'flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm',
         className
       )}
     >

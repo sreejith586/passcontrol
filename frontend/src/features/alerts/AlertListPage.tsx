@@ -324,7 +324,7 @@ export function AlertListPage() {
       </div>
 
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <span className="text-sm font-medium text-foreground">
             {selectedIds.size} selected
           </span>

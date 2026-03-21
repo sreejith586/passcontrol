@@ -163,7 +163,7 @@ export function AlertDetailPage() {
       />
       <div className="space-y-4">
         <AlertHeader alert={alert} />
-        <div className="rounded-lg border border-border bg-muted/30 p-4">
+        <div className="rounded-lg border border-border bg-muted/20 p-4 shadow-sm">
           <AlertActionBar alert={alert} />
         </div>
       </div>

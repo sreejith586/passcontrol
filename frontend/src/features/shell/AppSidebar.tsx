@@ -32,18 +32,21 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        'flex shrink-0 flex-col border-r border-border bg-muted/30 transition-[width] duration-200',
+        'flex shrink-0 flex-col bg-slate-900 transition-[width] duration-200',
         collapsed ? 'w-16' : 'w-56'
       )}
     >
-      {!collapsed && (
-        <div className="border-b border-border px-3 py-3">
-          <span className="text-sm font-semibold text-foreground">
-            PassControl
-          </span>
-        </div>
-      )}
-      <nav className="flex flex-1 flex-col gap-1 p-2">
+      <div
+        className={cn(
+          'flex shrink-0 items-center border-b border-slate-700/50',
+          collapsed ? 'justify-center px-2 py-4' : 'px-4 py-4'
+        )}
+      >
+        <span className="text-sm font-semibold text-white tracking-tight">
+          PassControl
+        </span>
+      </div>
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {navItems.map(({ to, label, icon: Icon, permission }) => (
           <PermissionGate key={to} permission={permission}>
             <NavLink
@@ -51,11 +54,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                   collapsed && 'justify-center px-2',
                   isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-white/10 text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 )
               }
             >
@@ -70,15 +73,15 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         onClick={onToggle}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'flex items-center gap-2 border-t border-border p-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+          'flex items-center gap-3 border-t border-slate-700/50 p-3 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200',
           collapsed && 'justify-center px-2'
         )}
       >
         {collapsed ? (
-          <PanelLeft className="h-5 w-5" />
+          <PanelLeft className="h-5 w-5 shrink-0" />
         ) : (
           <>
-            <PanelLeftClose className="h-5 w-5" />
+            <PanelLeftClose className="h-5 w-5 shrink-0" />
             <span>Collapse</span>
           </>
         )}

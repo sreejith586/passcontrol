@@ -135,43 +135,22 @@ export function ChecklistRunsListPage() {
         title="Checklist Runs"
         description="Execute and submit checklist runs"
       />
-      <div className="flex gap-2 border-b border-border">
-        <button
-          type="button"
-          onClick={() => setTab('today')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-            tab === 'today'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          Today
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('overdue')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-            tab === 'overdue'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          Overdue
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('failed')}
-          className={cn(
-            'border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-            tab === 'failed'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          Failed
-        </button>
+      <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm w-fit">
+        {(['today', 'overdue', 'failed'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={cn(
+              'rounded-md px-4 py-2 text-sm font-medium transition-colors',
+              tab === t
+                ? 'bg-sky-100 text-sky-700'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            )}
+          >
+            {t === 'today' ? 'Today' : t === 'overdue' ? 'Overdue' : 'Failed'}
+          </button>
+        ))}
       </div>
       <DataTable
         columns={columns}

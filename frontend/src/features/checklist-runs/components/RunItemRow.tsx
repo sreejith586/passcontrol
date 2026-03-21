@@ -136,10 +136,10 @@ export function RunItemRow({
   return (
     <div
       className={cn(
-        'rounded-lg border p-4',
+        'rounded-xl border p-4',
         item.isRequiredSnapshot
-          ? 'border-primary/30 bg-primary/5'
-          : 'border-border bg-muted/20'
+          ? 'border-sky-200 bg-sky-50/50'
+          : 'border-slate-200 bg-white shadow-sm'
       )}
     >
       <div className="flex flex-col gap-3">
@@ -180,8 +180,8 @@ export function RunItemRow({
             className={cn(
               'rounded-md border px-3 py-2 text-sm',
               evidenceMissing
-                ? 'border-amber-500/50 bg-amber-500/15 text-amber-800 dark:text-amber-400'
-                : 'border-green-500/30 bg-green-500/10 text-green-800 dark:text-green-400'
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-500'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
             )}
           >
             {evidenceMissing ? (
@@ -191,7 +191,7 @@ export function RunItemRow({
                   <button
                     type="button"
                     onClick={() => setEvidencePanelOpen(true)}
-                    className="font-medium text-amber-800 underline-offset-2 hover:underline dark:text-amber-400 shrink-0"
+                    className="font-medium text-amber-700 underline-offset-2 hover:underline dark:text-amber-500 shrink-0"
                   >
                     Upload evidence
                   </button>
@@ -203,7 +203,7 @@ export function RunItemRow({
               <button
                 type="button"
                 onClick={() => setEvidencePanelOpen(true)}
-                className="font-medium text-green-800 underline-offset-2 hover:underline dark:text-green-400"
+                className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
               >
                 Evidence attached ({attachmentCount} file{attachmentCount !== 1 ? 's' : ''})
               </button>
