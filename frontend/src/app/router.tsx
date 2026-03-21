@@ -16,6 +16,8 @@ import { AlertWorkflowSettingsPage } from '@/features/organization-settings/Aler
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ChecklistRunsListPage } from '@/features/checklist-runs/ChecklistRunsListPage';
 import { ChecklistRunDetailPage } from '@/features/checklist-runs/ChecklistRunDetailPage';
+import { ChecklistTemplatesListPage } from '@/features/checklist-templates/ChecklistTemplatesListPage';
+import { ChecklistTemplateEditorPage } from '@/features/checklist-templates/ChecklistTemplateEditorPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
 
@@ -62,6 +64,30 @@ const router = createBrowserRouter([
         element: (
           <RoutePermissionGuard>
             <ChecklistRunDetailPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-templates',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistTemplatesListPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-templates/new',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistTemplateEditorPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-templates/:id',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistTemplateEditorPage />
           </RoutePermissionGuard>
         ),
       },

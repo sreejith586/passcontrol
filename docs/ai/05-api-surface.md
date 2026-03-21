@@ -124,9 +124,20 @@ Base: `/v1` (versioned)
 | GET | /attachments/:id | attachment.view | Get attachment with file metadata |
 | DELETE | /attachments/:id | attachment.delete | Delete attachment |
 
+## Checklist Templates
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /checklist-templates | checklist.template.view | List templates (query: status, brandId, locationId, zoneId, page, limit) |
+| GET | /checklist-templates/:id | checklist.template.view | Get template with sections and items |
+| POST | /checklist-templates | checklist.template.create | Create template (DRAFT) |
+| PATCH | /checklist-templates/:id | checklist.template.update | Update template (DRAFT only) |
+| POST | /checklist-templates/:id/publish | checklist.template.publish | Publish template (DRAFT → PUBLISHED) |
+| POST | /checklist-templates/:id/archive | checklist.template.archive | Archive template |
+
 ## Other
 
-- `/temperature-policies`, `/temperature-readings`, `/checklist-templates`, `/checklist-schedules`, `/organization-settings`
+- `/temperature-policies`, `/temperature-readings`, `/checklist-schedules`, `/organization-settings`
 
 ## Response Shape
 

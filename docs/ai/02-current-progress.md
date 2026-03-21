@@ -104,6 +104,7 @@
 - [x] Phase 11E.1 — Seed stability & demo foundation: AlertSlaPolicy idempotency (ensureDemoSlaPolicies: create only missing severities); demo gating (DEMO_TEMPLATE_KEYS, demoDataExists); optional reset-demo (SEED_RESET_DEMO=true, deleteDemoData, npm run prisma:seed:reset-demo)
 - [x] Phase 12A.1 — Checklist detail actionable blockers & guided navigation: Jump to first blocker button; Submission readiness shows specific blocking items (label, type) with click-to-scroll; Jump to section shows per-section health (completed/total, blocker count); sections with blockers visually emphasized (amber); run-metrics.ts reused for counts and new helpers (getBlockingItems, getFirstBlockerItemId, getSectionHealth)
 - [x] Phase 13B.1 — Guided First Value onboarding: default landing /dashboard; Get Started panel when totalRuns === 0; POST /onboarding/quick-setup (template + schedule + run); Start setup CTA on Dashboard and Checklist Runs; improved empty states (Alerts: "Go to checklist runs"); product explanation "Templates → Runs → Alerts"
+- [x] Phase 14A — Checklist Template Management: list page (/checklist-templates), create/edit page (/checklist-templates/new, /checklist-templates/:id); sections and items editor; create (POST), update (PATCH), publish (POST :id/publish); validation (name, ≥1 section, ≥1 item per section)
 
 ### Backend (recent fixes)
 

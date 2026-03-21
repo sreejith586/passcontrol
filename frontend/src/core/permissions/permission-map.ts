@@ -6,6 +6,7 @@
 export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   '/dashboard': ['checklist.run.view', 'alert.view'],
   '/checklist-runs': 'checklist.run.view',
+  '/checklist-templates': ['checklist.template.view', 'checklist.template.create'],
   '/alerts': 'alert.view',
   '/escalations': 'alert.view',
   '/settings/alert-workflow': 'alert.workflow-policy.view',
@@ -37,6 +38,7 @@ export function getRoutePermission(pathname: string): string | string[] | undefi
 /** Routes to check for fallback, in order of preference. */
 const FALLBACK_ROUTE_ORDER: (keyof typeof ROUTE_PERMISSIONS)[] = [
   '/dashboard',
+  '/checklist-templates',
   '/checklist-runs',
   '/alerts',
   '/escalations',

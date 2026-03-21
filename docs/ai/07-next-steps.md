@@ -37,7 +37,8 @@
 ## 3. Phase 13 First Customer Experience (13B.1 COMPLETE)
 
 - ~~**Phase 13B.1 — Guided First Value onboarding**~~ — *Done.* Default landing /dashboard; Get Started panel when no runs; quick-setup endpoint creates template+schedule+run; Start setup CTAs; improved empty states; product explanation.
-- **Phase 13B.2+** — Optional: onboarding for orgs with template/schedule but no runs; smart landing (Dashboard vs Alerts based on context); template/schedule authoring UI (larger scope).
+- **Phase 13B.2+** — Optional: onboarding for orgs with template/schedule but no runs; smart landing (Dashboard vs Alerts based on context).
+- ~~**Phase 14A — Checklist Template Management**~~ — *Done.* List page, create/edit page, sections and items editor, Save, Publish.
 
 ---
 
