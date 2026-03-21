@@ -8,3 +8,18 @@ export function getSourceTypeLabel(sourceType: string | null | undefined): strin
   if (!sourceType) return '—';
   return SOURCE_TYPE_LABELS[sourceType] ?? sourceType;
 }
+
+/** Format source for display with optional sourceId for differentiation.
+ *  Avoids repetitive "Checklist item" when sourceId can add context. */
+export function formatSourceDisplay(
+  sourceType: string | null | undefined,
+  sourceId?: string | null
+): string {
+  const label = getSourceTypeLabel(sourceType);
+  if (!sourceId || sourceId.length < 8) return label;
+  const shortId = sourceId.slice(0, 8);
+  if (sourceType === 'CHECKLIST_RUN_ITEM') {
+    return `${label} · ${shortId}`;
+  }
+  return label;
+}

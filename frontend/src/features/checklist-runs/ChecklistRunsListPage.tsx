@@ -27,6 +27,28 @@ function computeProgress(run: ChecklistRun): string | null {
   return `${answered}/${total}`;
 }
 
+function computeFailedCount(run: ChecklistRun): number {
+  if (!run.sectionSnapshots?.length) return 0;
+  let count = 0;
+  for (const section of run.sectionSnapshots) {
+    for (const item of section.itemSnapshots) {
+      if (item.result === 'FAIL') count++;
+    }
+  }
+  return count;
+}
+
+function computeAttachmentCount(run: ChecklistRun): number {
+  if (!run.sectionSnapshots?.length) return 0;
+  let count = 0;
+  for (const section of run.sectionSnapshots) {
+    for (const item of section.itemSnapshots) {
+      count += item._count?.attachments ?? 0;
+    }
+  }
+  return count;
+}
+
 export function ChecklistRunsListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -80,31 +102,75 @@ export function ChecklistRunsListPage() {
     setSearchParams(next);
   }
 
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      PENDING: 'Not started',
+      IN_PROGRESS: 'In progress',
+      COMPLETED: 'Completed',
+    };
+    return map[status] ?? status;
+  };
+
   const columns = [
     {
       key: 'template',
       header: 'Checklist',
       render: (row: ChecklistRun) => (
-        <span className="font-medium">{row.templateNameSnapshot}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="font-semibold text-slate-900">
+            {row.templateNameSnapshot}
+          </span>
+          <span className="text-xs text-slate-500">
+            Run #{row.runNumber}
+          </span>
+        </div>
       ),
     },
     {
       key: 'due',
       header: 'Due',
-      render: (row: ChecklistRun) =>
-        row.dueAt ? formatDateTime(row.dueAt) : '—',
+      render: (row: ChecklistRun) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-slate-900">
+            {row.dueAt ? formatDateTime(row.dueAt) : '—'}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (row: ChecklistRun) => <RunStatusBadge status={row.status} />,
+      render: (row: ChecklistRun) => (
+        <div className="flex flex-col gap-1">
+          <RunStatusBadge status={row.status} />
+          <span className="text-xs text-slate-500">
+            {statusLabel(row.status)}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'progress',
-      header: 'Progress',
+      header: 'Execution',
       render: (row: ChecklistRun) => {
-        const p = computeProgress(row);
-        return p ? <span className="text-muted-foreground">{p}</span> : '—';
+        const progress = computeProgress(row);
+        const failed = computeFailedCount(row);
+        const attachments = computeAttachmentCount(row);
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium text-slate-900">
+              {progress ?? '—'}
+            </span>
+            <div className="flex flex-wrap gap-x-2 text-xs text-slate-500">
+              {failed > 0 && (
+                <span className="text-amber-600 font-medium">{failed} failed</span>
+              )}
+              {attachments > 0 && (
+                <span>{attachments} attachment{attachments !== 1 ? 's' : ''}</span>
+              )}
+            </div>
+          </div>
+        );
       },
     },
   ];

@@ -284,15 +284,15 @@ export function ChecklistRunDetailPage() {
           },
         ]}
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
-        <div className="min-w-0 space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+        <div className="min-w-0 space-y-8">
           <PageHeader
             title={`${run.templateNameSnapshot} #${run.runNumber}`}
             description={
               <>
                 <RunStatusBadge status={run.status} />
                 {run.dueAt && (
-                  <span className="ml-2 text-muted-foreground">
+                  <span className="ml-2 text-slate-500">
                     Due {formatDateTime(run.dueAt)}
                   </span>
                 )}
@@ -301,24 +301,30 @@ export function ChecklistRunDetailPage() {
             actions={
               <Link
                 to="/checklist-runs"
-                className="text-sm text-primary hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 ← Back to list
               </Link>
             }
           />
-          <div className="space-y-6">
+          <div className="space-y-8">
         {run.sectionSnapshots?.map((section) => (
-          <section key={section.id} id={`section-${section.id}`}>
-            <h2 className="mb-3 text-lg font-semibold text-foreground">
-              {section.titleSnapshot}
-            </h2>
-            {section.descriptionSnapshot && (
-              <p className="mb-3 text-sm text-muted-foreground">
-                {section.descriptionSnapshot}
-              </p>
-            )}
-            <div className="space-y-3">
+          <section
+            key={section.id}
+            id={`section-${section.id}`}
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div className="mb-4 border-b border-slate-200 pb-3">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {section.titleSnapshot}
+              </h2>
+              {section.descriptionSnapshot && (
+                <p className="mt-1 text-sm text-slate-500">
+                  {section.descriptionSnapshot}
+                </p>
+              )}
+            </div>
+            <div className="space-y-4">
               {section.itemSnapshots?.map((item) => (
                 <div
                   key={item.id}
@@ -351,100 +357,109 @@ export function ChecklistRunDetailPage() {
         ))}
       </div>
       {!isCompleted && canSubmit && (
-        <div className="flex flex-col items-end gap-2 border-t border-border pt-4">
-          {(updateItemMutation.isPending || submitMutation.isPending) && (
-            <span className="text-sm text-muted-foreground">
-              {updateItemMutation.isPending
-                ? 'Saving changes...'
-                : 'Submitting...'}
-            </span>
-          )}
-          <Button
-            onClick={() => submitMutation.mutate()}
-            disabled={
-              updateItemMutation.isPending ||
-              submitMutation.isPending ||
-              blockers.length > 0
-            }
-            title={
-              blockers.length > 0
-                ? 'Resolve all required items before submitting'
-                : undefined
-            }
-          >
-            {submitMutation.isPending ? 'Submitting...' : 'Submit run'}
-          </Button>
+        <div className="rounded-xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:w-auto">
+              {(updateItemMutation.isPending || submitMutation.isPending) && (
+                <span className="text-sm text-slate-500">
+                  {updateItemMutation.isPending
+                    ? 'Saving changes...'
+                    : 'Submitting...'}
+                </span>
+              )}
+              {blockers.length > 0 && (
+                <p className="text-sm text-amber-600">
+                  {blockers.length} blocker{blockers.length !== 1 ? 's' : ''} to resolve
+                </p>
+              )}
+            </div>
+            <Button
+              onClick={() => submitMutation.mutate()}
+              disabled={
+                updateItemMutation.isPending ||
+                submitMutation.isPending ||
+                blockers.length > 0
+              }
+              title={
+                blockers.length > 0
+                  ? 'Resolve all required items before submitting'
+                  : undefined
+              }
+            >
+              {submitMutation.isPending ? 'Submitting...' : 'Submit run'}
+            </Button>
+          </div>
         </div>
       )}
         </div>
 
         <aside className="space-y-4">
-          <RailCard title="Run summary">
-            <dl className="space-y-2">
+          <RailCard title="Run summary" className="border-slate-200">
+            <dl className="space-y-3">
               <div>
-                <dt className="text-muted-foreground">Status</dt>
-                <dd>
+                <dt className="text-xs font-medium text-slate-500">Status</dt>
+                <dd className="mt-1">
                   <RunStatusBadge status={run.status} />
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Template</dt>
-                <dd className="font-medium">{run.templateNameSnapshot}</dd>
+                <dt className="text-xs font-medium text-slate-500">Template</dt>
+                <dd className="mt-1 font-medium text-slate-900">{run.templateNameSnapshot}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Run #</dt>
-                <dd className="font-medium">{run.runNumber}</dd>
+                <dt className="text-xs font-medium text-slate-500">Run #</dt>
+                <dd className="mt-1 font-medium text-slate-900">{run.runNumber}</dd>
               </div>
               {run.dueAt && (
                 <div>
-                  <dt className="text-muted-foreground">Due</dt>
-                  <dd className="font-medium">{formatDateTime(run.dueAt)}</dd>
+                  <dt className="text-xs font-medium text-slate-500">Due</dt>
+                  <dd className="mt-1 font-medium text-slate-900">{formatDateTime(run.dueAt)}</dd>
                 </div>
               )}
             </dl>
           </RailCard>
 
-          <RailCard title="Progress">
-            <dl className="space-y-2">
+          <RailCard title="Progress" className="border-slate-200">
+            <dl className="space-y-3">
               <div>
-                <dt className="text-muted-foreground">Completed</dt>
-                <dd className="font-medium">{completedItems} / {totalItems}</dd>
+                <dt className="text-xs font-medium text-slate-500">Completed</dt>
+                <dd className="mt-1 font-semibold text-slate-900">{completedItems} / {totalItems}</dd>
               </div>
               {failedItems > 0 && (
                 <div>
-                  <dt className="text-muted-foreground">Failed</dt>
-                  <dd className="font-medium text-destructive">{failedItems}</dd>
+                  <dt className="text-xs font-medium text-slate-500">Failed</dt>
+                  <dd className="mt-1 font-semibold text-destructive">{failedItems}</dd>
                 </div>
               )}
               {incompleteRequired > 0 && (
                 <div>
-                  <dt className="text-muted-foreground">Incomplete required</dt>
-                  <dd className="font-medium">{incompleteRequired}</dd>
+                  <dt className="text-xs font-medium text-slate-500">Incomplete required</dt>
+                  <dd className="mt-1 font-medium text-slate-900">{incompleteRequired}</dd>
                 </div>
               )}
               {failedMissingEvidence > 0 && (
                 <div>
-                  <dt className="text-muted-foreground">Missing evidence</dt>
-                  <dd className="font-medium text-amber-600 dark:text-amber-400">{failedMissingEvidence}</dd>
+                  <dt className="text-xs font-medium text-slate-500">Missing evidence</dt>
+                  <dd className="mt-1 font-medium text-amber-600">{failedMissingEvidence}</dd>
                 </div>
               )}
               {failedMissingComment > 0 && (
                 <div>
-                  <dt className="text-muted-foreground">Missing comment</dt>
-                  <dd className="font-medium text-amber-600 dark:text-amber-400">{failedMissingComment}</dd>
+                  <dt className="text-xs font-medium text-slate-500">Missing comment</dt>
+                  <dd className="mt-1 font-medium text-amber-600">{failedMissingComment}</dd>
                 </div>
               )}
             </dl>
           </RailCard>
 
-          <RailCard title="Jump to section">
+          <RailCard title="Jump to section" className="border-slate-200">
             <ul className="space-y-1">
               {run.sectionSnapshots?.map((section) => (
                 <li key={section.id}>
                   <button
                     type="button"
                     onClick={() => scrollToSection(section.id)}
-                    className="text-left text-primary hover:underline w-full"
+                    className="w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-sky-600 hover:bg-sky-50 hover:underline"
                   >
                     {section.titleSnapshot}
                   </button>
@@ -454,15 +469,18 @@ export function ChecklistRunDetailPage() {
           </RailCard>
 
           {!isCompleted && (
-            <RailCard title="Submission readiness">
+            <RailCard title="Submission readiness" className="border-slate-200">
               {blockers.length === 0 ? (
-                <p className="text-emerald-700 dark:text-emerald-400 font-medium">
+                <p className="font-medium text-emerald-600">
                   Ready to submit
                 </p>
               ) : (
-                <ul className="space-y-1 text-amber-700 dark:text-amber-500">
+                <ul className="space-y-1.5 text-sm text-amber-700">
                   {blockers.map((b, idx) => (
-                    <li key={idx}>{b}</li>
+                    <li key={idx} className="flex items-start gap-1.5">
+                      <span className="mt-0.5 shrink-0">•</span>
+                      <span>{b}</span>
+                    </li>
                   ))}
                 </ul>
               )}

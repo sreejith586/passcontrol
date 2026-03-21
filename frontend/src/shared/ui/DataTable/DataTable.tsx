@@ -15,6 +15,7 @@ interface DataTableProps<T> {
   onSelectionChange?: (ids: string[]) => void;
   getRowId: (row: T) => string;
   onRowClick?: (row: T) => void;
+  getRowClassName?: (row: T) => string;
 }
 
 export function DataTable<T>({
@@ -29,6 +30,7 @@ export function DataTable<T>({
   onSelectionChange,
   getRowId,
   onRowClick,
+  getRowClassName,
 }: DataTableProps<T>) {
   const allSelected = data.length > 0 && data.every((r) => selectedIds.has(getRowId(r)));
   const someSelected = data.some((r) => selectedIds.has(getRowId(r)));
@@ -137,7 +139,8 @@ export function DataTable<T>({
                 key={id}
                 className={cn(
                   'border-b border-slate-100 transition-colors hover:bg-slate-50/80',
-                  onRowClick && 'cursor-pointer'
+                  onRowClick && 'cursor-pointer',
+                  getRowClassName?.(row)
                 )}
                 onClick={() => onRowClick?.(row)}
               >

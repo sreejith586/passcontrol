@@ -16,6 +16,20 @@ export function formatRelative(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
 }
 
+/** Format date for list rows: time when today, full date otherwise. */
+export function formatDateTimeContextual(date: string | Date): string {
+  const d = new Date(date);
+  const now = new Date();
+  const isToday =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (isToday) {
+    return format(d, 'HH:mm');
+  }
+  return format(d, 'MMM d HH:mm');
+}
+
 /** Derive SLA breach flags from alert data. Frontend-only; no backend. */
 export function deriveSlaBreach(alert: {
   triggeredAt: string;

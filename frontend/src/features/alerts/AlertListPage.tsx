@@ -21,8 +21,8 @@ import { StatusBadge } from './components/StatusBadge';
 import { SeverityBadge } from './components/SeverityBadge';
 import { AssigneeBadge } from './components/AssigneeBadge';
 import { BulkResolveModal } from './components/BulkResolveModal';
-import { formatDateTime } from '@/lib/date';
-import { getSourceTypeLabel } from '@/lib/labels';
+import { formatDateTimeContextual, formatRelative } from '@/lib/date';
+import { formatSourceDisplay } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { toast } from '@/shared/feedback/useToast';
@@ -183,36 +183,72 @@ export function AlertListPage() {
     },
   });
 
+  const severityBorderClass = (severity: string | null) => {
+    if (!severity) return '';
+    const map: Record<string, string> = {
+      CRITICAL: 'border-l-4 border-l-red-500',
+      HIGH: 'border-l-4 border-l-amber-500',
+      MEDIUM: 'border-l-4 border-l-amber-400',
+      LOW: 'border-l-4 border-l-slate-300',
+    };
+    return map[severity] ?? '';
+  };
+
   const columns = [
     {
       key: 'status',
       header: 'Status',
-      render: (row: AlertEvent) => <StatusBadge status={row.status} />,
+      render: (row: AlertEvent) => (
+        <div className="flex flex-col gap-0.5">
+          <StatusBadge status={row.status} />
+        </div>
+      ),
     },
     {
       key: 'severity',
       header: 'Severity',
-      render: (row: AlertEvent) => <SeverityBadge severity={row.severity} />,
+      render: (row: AlertEvent) => (
+        <div className="flex flex-col gap-0.5">
+          <SeverityBadge severity={row.severity} />
+        </div>
+      ),
     },
     {
-      key: 'sourceType',
+      key: 'source',
       header: 'Source',
-      render: (row: AlertEvent) => getSourceTypeLabel(row.sourceType),
+      render: (row: AlertEvent) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-slate-900">
+            {formatSourceDisplay(row.sourceType, row.sourceId)}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'assignedTo',
       header: 'Assigned',
       render: (row: AlertEvent) => (
-        <AssigneeBadge
-          assignedToUserId={row.assignedToUserId}
-          assignedToUser={row.assignedToUser}
-        />
+        <div className="flex flex-col gap-0.5">
+          <AssigneeBadge
+            assignedToUserId={row.assignedToUserId}
+            assignedToUser={row.assignedToUser}
+          />
+        </div>
       ),
     },
     {
       key: 'triggeredAt',
       header: 'Triggered',
-      render: (row: AlertEvent) => formatDateTime(row.triggeredAt),
+      render: (row: AlertEvent) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-slate-900">
+            {formatDateTimeContextual(row.triggeredAt)}
+          </span>
+          <span className="text-xs text-slate-500">
+            {formatRelative(row.triggeredAt)}
+          </span>
+        </div>
+      ),
     },
   ];
 
@@ -375,6 +411,7 @@ export function AlertListPage() {
         emptyDescription="Alerts will appear here when checklist items fail."
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/alerts/${row.id}`)}
+        getRowClassName={(row) => severityBorderClass(row.severity)}
         selectable
         selectedIds={selectedIds}
         onSelectionChange={handleSelectionChange}

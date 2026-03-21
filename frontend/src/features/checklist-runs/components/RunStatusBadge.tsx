@@ -18,6 +18,8 @@ export function RunStatusBadge({ status }: RunStatusBadgeProps) {
         ? 'warning'
         : 'success';
   return (
-    <Badge variant={variant}>{STATUS_LABELS[status] ?? status}</Badge>
+    <Badge variant={variant} className="font-bold">
+      {STATUS_LABELS[status] ?? status}
+    </Badge>
   );
 }

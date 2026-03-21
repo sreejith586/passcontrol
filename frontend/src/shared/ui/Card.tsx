@@ -36,7 +36,7 @@ export function RailCard({
 } & Omit<React.HTMLAttributes<HTMLDivElement>, 'title'>) {
   return (
     <Card variant="soft" className={cn('p-4', className)} {...props}>
-      <h3 className="mb-3 text-sm font-semibold text-foreground">{title}</h3>
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h3>
       <div className="space-y-2 text-sm">{children}</div>
     </Card>
   );

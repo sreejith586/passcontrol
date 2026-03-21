@@ -136,10 +136,10 @@ export function RunItemRow({
   return (
     <div
       className={cn(
-        'rounded-xl border p-4',
+        'rounded-xl border p-4 shadow-sm',
         item.isRequiredSnapshot
           ? 'border-sky-200 bg-sky-50/50'
-          : 'border-slate-200 bg-white shadow-sm'
+          : 'border-slate-200 bg-white'
       )}
     >
       <div className="flex flex-col gap-3">

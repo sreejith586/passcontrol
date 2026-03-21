@@ -9,6 +9,7 @@ import {
   Shield,
   PanelLeftClose,
   PanelLeft,
+  ShieldCheck,
 } from 'lucide-react';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { cn } from '@/lib/cn';
@@ -39,12 +40,15 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
       <div
         className={cn(
           'flex shrink-0 items-center border-b border-slate-700/50',
-          collapsed ? 'justify-center px-2 py-4' : 'px-4 py-4'
+          collapsed ? 'justify-center py-4' : 'gap-2 px-4 py-3'
         )}
       >
-        <span className="text-sm font-semibold text-white tracking-tight">
-          PassControl
-        </span>
+        <ShieldCheck className="h-5 w-5 shrink-0 text-white" aria-hidden />
+        {!collapsed && (
+          <span className="truncate text-sm font-semibold text-white tracking-tight">
+            PassControl
+          </span>
+        )}
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {navItems.map(({ to, label, icon: Icon, permission }) => (

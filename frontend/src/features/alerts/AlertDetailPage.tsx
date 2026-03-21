@@ -4,6 +4,11 @@ import { useState } from 'react';
 import { getAlert, listActivities, listComments } from './api';
 import { queryKeys } from './query-keys';
 import { AlertHeader } from './components/AlertHeader';
+import { StatusBadge } from './components/StatusBadge';
+import { SeverityBadge } from './components/SeverityBadge';
+import { AssigneeBadge } from './components/AssigneeBadge';
+import { RailCard } from '@/shared/ui/Card';
+import { formatDateTime, deriveSlaBreach } from '@/lib/date';
 import { AlertActionBar } from './components/AlertActionBar';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { CommentsSection } from './components/CommentsSection';
@@ -154,25 +159,83 @@ export function AlertDetailPage() {
             )}
             <Link
               to="/alerts"
-              className="text-sm text-primary hover:underline"
+              className="text-sm font-medium text-primary hover:underline"
             >
               ← Back to list
             </Link>
           </div>
         }
       />
-      <div className="space-y-4">
-        <AlertHeader alert={alert} />
-        <div className="rounded-lg border border-border bg-muted/20 p-4 shadow-sm">
-          <AlertActionBar alert={alert} />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+        {/* Main: Summary + Activity + Comments */}
+        <div className="min-w-0 space-y-6">
+          <AlertHeader alert={alert} />
+          <ActivityTimeline activities={activitiesQuery.data ?? []} />
+          <CommentsSection
+            alertId={alert.id}
+            comments={commentsQuery.data ?? []}
+          />
         </div>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ActivityTimeline activities={activitiesQuery.data ?? []} />
-        <CommentsSection
-          alertId={alert.id}
-          comments={commentsQuery.data ?? []}
-        />
+
+        {/* Right rail: Context + Actions */}
+        <aside className="space-y-4">
+          <RailCard title="Case summary" className="border-slate-200">
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Status</dt>
+                <dd className="mt-1">
+                  <StatusBadge status={alert.status} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Severity</dt>
+                <dd className="mt-1">
+                  <SeverityBadge severity={alert.severity} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Assigned to</dt>
+                <dd className="mt-1">
+                  <AssigneeBadge
+                    assignedToUserId={alert.assignedToUserId}
+                    assignedToUser={alert.assignedToUser}
+                  />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Source</dt>
+                <dd className="mt-1 font-medium text-slate-900">{sourceLabel}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Triggered</dt>
+                <dd className="mt-1 font-medium text-slate-900">{formatDateTime(alert.triggeredAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">SLA</dt>
+                <dd className="mt-1 text-slate-700">
+                  Ack {alert.acknowledgeWithinMinutes}m · Resolve {alert.resolveWithinMinutes}m
+                  {(() => {
+                    const { ackBreached, resolveBreached } = deriveSlaBreach(alert);
+                    if (ackBreached || resolveBreached) {
+                      return (
+                        <span className="mt-1 block text-xs font-medium text-destructive">
+                          {ackBreached && 'Ack breached'}
+                          {ackBreached && resolveBreached && ' · '}
+                          {resolveBreached && 'Resolve breached'}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </dd>
+              </div>
+            </dl>
+          </RailCard>
+          <RailCard title="Actions" className="border-slate-200">
+            <AlertActionBar alert={alert} />
+          </RailCard>
+        </aside>
       </div>
     </div>
   );

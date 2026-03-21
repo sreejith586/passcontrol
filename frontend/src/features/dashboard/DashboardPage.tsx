@@ -17,7 +17,7 @@ import { EmptyState } from '@/shared/layout/EmptyState';
 import { cn } from '@/lib/cn';
 import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
 import { StatusBadge } from '@/features/alerts/components/StatusBadge';
-import { getSourceTypeLabel } from '@/lib/labels';
+import { getSourceTypeLabel, formatSourceDisplay } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 
@@ -27,28 +27,47 @@ function MetricCard({
   label,
   value,
   variant = 'default',
+  secondary,
 }: {
   label: string;
   value: number;
   variant?: 'default' | 'warning' | 'destructive';
+  secondary?: string;
 }) {
   return (
-    <Card
-      variant="soft"
+    <div
       className={cn(
-        'p-4',
-        variant === 'destructive' && 'border-destructive/30 bg-destructive/5',
-        variant === 'warning' && 'border-amber-500/30 bg-amber-500/5',
-        variant === 'default' && 'border-border'
+        'rounded-xl border px-4 py-4 shadow-sm',
+        variant === 'destructive' && 'border-destructive/30 bg-white',
+        variant === 'warning' && 'border-amber-500/30 bg-white',
+        variant === 'default' && 'border-slate-200 bg-white'
       )}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
         {label}
       </p>
-      <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+      <p
+        className={cn(
+          'mt-2 text-3xl font-bold tabular-nums leading-tight',
+          variant === 'destructive' && 'text-destructive',
+          variant === 'warning' && 'text-amber-600',
+          variant === 'default' && 'text-slate-900'
+        )}
+      >
         {value}
       </p>
-    </Card>
+      {secondary && (
+        <p className="mt-0.5 text-xs text-slate-400">{secondary}</p>
+      )}
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+      {children}
+    </h2>
   );
 }
 
@@ -127,13 +146,16 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Dashboard"
         description="Operational overview"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Key metrics – primary KPI row */}
+      <section className="space-y-3">
+        <SectionTitle>Key metrics</SectionTitle>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {hasChecklistView &&
           (checklistMetrics.isLoading ? (
             <>
@@ -226,289 +248,309 @@ export function DashboardPage() {
               />
             </>
           ) : null)}
-      </div>
+        </div>
+      </section>
 
+      {/* Operational overview – SLA, trend, priorities, sources */}
       {hasAlertView && (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {slaCompliance.isLoading ? (
-            <Skeleton className="h-48 rounded-lg" />
-          ) : slaCompliance.isError ? (
-            <SectionError
-              message={
-                slaCompliance.error instanceof Error
-                  ? slaCompliance.error.message
-                  : 'Something went wrong'
-              }
-              onRetry={() => slaCompliance.refetch()}
-            />
-          ) : slaCompliance.data ? (
-            <Card variant="soft" className="space-y-3 p-4">
-              <h2 className="text-sm font-medium text-foreground">
-                SLA compliance (last 30 days)
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Alerts triggered in this period
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <MetricCard label="Total alerts" value={slaCompliance.data.totalAlerts} />
-                <MetricCard
-                  label="Ack within SLA"
-                  value={slaCompliance.data.acknowledgedWithinSla}
-                  variant="default"
-                />
-                <MetricCard
-                  label="Ack breached"
-                  value={slaCompliance.data.acknowledgedBreached}
-                  variant={
-                    slaCompliance.data.acknowledgedBreached > 0
-                      ? 'destructive'
-                      : 'default'
+        <section className="space-y-6">
+          <SectionTitle>Operational overview</SectionTitle>
+          <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+            {/* Left: SLA compliance + Escalation trend */}
+            <div className="space-y-6">
+              {slaCompliance.isLoading ? (
+                <Skeleton className="h-52 rounded-xl" />
+              ) : slaCompliance.isError ? (
+                <SectionError
+                  message={
+                    slaCompliance.error instanceof Error
+                      ? slaCompliance.error.message
+                      : 'Something went wrong'
                   }
+                  onRetry={() => slaCompliance.refetch()}
                 />
-                <MetricCard
-                  label="Resolved within SLA"
-                  value={slaCompliance.data.resolvedWithinSla}
-                  variant="default"
-                />
-                <MetricCard
-                  label="Resolved breached"
-                  value={slaCompliance.data.resolvedBreached}
-                  variant={
-                    slaCompliance.data.resolvedBreached > 0
-                      ? 'destructive'
-                      : 'default'
-                  }
-                />
-              </div>
-              {slaCompliance.data.totalAlerts > 0 && (() => {
-                const ackEval =
-                  slaCompliance.data.acknowledgedWithinSla +
-                  slaCompliance.data.acknowledgedBreached;
-                const resEval =
-                  slaCompliance.data.resolvedWithinSla +
-                  slaCompliance.data.resolvedBreached;
-                return (
-                  <div className="flex flex-wrap gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
-                    {ackEval > 0 && (
-                      <span>
-                        Ack compliance:{' '}
-                        {(
-                          (100 * slaCompliance.data.acknowledgedWithinSla) /
-                          ackEval
-                        ).toFixed(0)}
-                        %
-                      </span>
-                    )}
-                    {resEval > 0 && (
-                      <span>
-                        Resolve compliance:{' '}
-                        {(
-                          (100 * slaCompliance.data.resolvedWithinSla) /
-                          resEval
-                        ).toFixed(0)}
-                        %
-                      </span>
-                    )}
+              ) : slaCompliance.data ? (
+                <Card variant="soft" className="space-y-4 p-5">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      SLA compliance (last 30 days)
+                    </h3>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      Alerts triggered in this period
+                    </p>
                   </div>
-                );
-              })()}
-            </Card>
-          ) : null}
-          {escalationTrend.isLoading ? (
-            <Skeleton className="h-48 rounded-lg" />
-          ) : escalationTrend.isError ? (
-            <SectionError
-              message={
-                escalationTrend.error instanceof Error
-                  ? escalationTrend.error.message
-                  : 'Something went wrong'
-              }
-              onRetry={() => escalationTrend.refetch()}
-            />
-          ) : escalationTrend.data ? (
-            <Card variant="soft" className="space-y-3 p-4">
-              <h2 className="text-sm font-medium text-foreground">
-                Alerts triggered (last 7 days)
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Breached = currently past deadline
-              </p>
-              {escalationTrend.data.length > 0 ? (
-                <div className="space-y-2">
-                  {escalationTrend.data.map((point) => {
-                    const maxTotal = Math.max(
-                      ...escalationTrend.data!.map((p) => p.totalAlerts),
-                      1
-                    );
-                    const widthPct = (point.totalAlerts / maxTotal) * 100;
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    <MetricCard label="Total alerts" value={slaCompliance.data.totalAlerts} />
+                    <MetricCard
+                      label="Ack within SLA"
+                      value={slaCompliance.data.acknowledgedWithinSla}
+                      variant="default"
+                    />
+                    <MetricCard
+                      label="Ack breached"
+                      value={slaCompliance.data.acknowledgedBreached}
+                      variant={
+                        slaCompliance.data.acknowledgedBreached > 0
+                          ? 'destructive'
+                          : 'default'
+                      }
+                    />
+                    <MetricCard
+                      label="Resolved within SLA"
+                      value={slaCompliance.data.resolvedWithinSla}
+                      variant="default"
+                    />
+                    <MetricCard
+                      label="Resolved breached"
+                      value={slaCompliance.data.resolvedBreached}
+                      variant={
+                        slaCompliance.data.resolvedBreached > 0
+                          ? 'destructive'
+                          : 'default'
+                      }
+                    />
+                  </div>
+                  {slaCompliance.data.totalAlerts > 0 && (() => {
+                    const ackEval =
+                      slaCompliance.data.acknowledgedWithinSla +
+                      slaCompliance.data.acknowledgedBreached;
+                    const resEval =
+                      slaCompliance.data.resolvedWithinSla +
+                      slaCompliance.data.resolvedBreached;
                     return (
-                      <div key={point.date} className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-xs text-muted-foreground">
-                          {format(new Date(point.date), 'MMM d')}
-                        </span>
-                        <div className="flex flex-1 items-center">
-                          <div
-                            className="flex h-5 min-w-[2px] overflow-hidden rounded"
-                            style={{ width: `${Math.max(widthPct, 2)}%` }}
-                          >
-                            <div
-                              className="h-full bg-muted-foreground/30"
-                              style={{
-                                width: `${100 - (point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0)}%`,
-                              }}
-                            />
-                            {point.breachedAlerts > 0 && (
-                              <div
-                                className="h-full flex-1 bg-destructive/60"
-                                style={{
-                                  width: `${point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0}%`,
-                                }}
-                              />
-                            )}
-                          </div>
-                        </div>
-                        <span className="w-14 shrink-0 text-right text-xs tabular-nums">
-                          {point.totalAlerts}
-                          {point.breachedAlerts > 0 && (
-                            <span className="ml-1 text-destructive">
-                              ({point.breachedAlerts})
-                            </span>
-                          )}
-                        </span>
+                      <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
+                        {ackEval > 0 && (
+                          <span>
+                            Ack compliance:{' '}
+                            {(
+                              (100 * slaCompliance.data.acknowledgedWithinSla) /
+                              ackEval
+                            ).toFixed(0)}
+                            %
+                          </span>
+                        )}
+                        {resEval > 0 && (
+                          <span>
+                            Resolve compliance:{' '}
+                            {(
+                              (100 * slaCompliance.data.resolvedWithinSla) /
+                              resEval
+                            ).toFixed(0)}
+                            %
+                          </span>
+                        )}
                       </div>
                     );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No alerts in this period
-                </p>
-              )}
-            </Card>
-          ) : null}
-          {topProblemSources.isLoading ? (
-            <Skeleton className="h-48 rounded-lg" />
-          ) : topProblemSources.isError ? (
-            <SectionError
-              message={
-                topProblemSources.error instanceof Error
-                  ? topProblemSources.error.message
-                  : 'Something went wrong'
-              }
-              onRetry={() => topProblemSources.refetch()}
-            />
-          ) : topProblemSources.data ? (
-            <Card variant="soft" className="space-y-3 p-4">
-              <h2 className="text-sm font-medium text-foreground">
-                Top problem sources (all-time)
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                By total alert count
-              </p>
-              {topProblemSources.data.length > 0 ? (
-                <ol className="space-y-1">
-                  {topProblemSources.data.map((source, i) => (
-                    <li
-                      key={`${source.sourceType}-${source.sourceId}`}
-                      className="flex items-center justify-between gap-2 text-sm"
-                    >
-                      <span className="flex shrink-0 font-medium text-muted-foreground">
-                        {i + 1}.
-                      </span>
-                      <span className="min-w-0 truncate">
-                        {getSourceTypeLabel(source.sourceType)}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-muted-foreground">
-                        {source.count}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No alert sources yet
-                </p>
-              )}
-            </Card>
-          ) : null}
-        </div>
-      )}
+                  })()}
+                </Card>
+              ) : null}
 
-      {hasAlertView &&
-        (prioritized.isLoading ? (
-          <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-48 rounded-lg" />
+              {escalationTrend.isLoading ? (
+                <Skeleton className="h-48 rounded-xl" />
+              ) : escalationTrend.isError ? (
+                <SectionError
+                  message={
+                    escalationTrend.error instanceof Error
+                      ? escalationTrend.error.message
+                      : 'Something went wrong'
+                  }
+                  onRetry={() => escalationTrend.refetch()}
+                />
+              ) : escalationTrend.data ? (
+                <Card variant="soft" className="space-y-4 p-5">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Alerts triggered (last 7 days)
+                    </h3>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      Breached = currently past deadline
+                    </p>
+                  </div>
+                  {escalationTrend.data.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {escalationTrend.data.map((point) => {
+                        const maxTotal = Math.max(
+                          ...escalationTrend.data!.map((p) => p.totalAlerts),
+                          1
+                        );
+                        const widthPct = (point.totalAlerts / maxTotal) * 100;
+                        return (
+                          <div key={point.date} className="flex items-center gap-3">
+                            <span className="w-20 shrink-0 text-xs text-slate-500">
+                              {format(new Date(point.date), 'MMM d')}
+                            </span>
+                            <div className="flex flex-1 items-center h-6 rounded bg-slate-100 overflow-hidden">
+                              <div
+                                className="flex h-full min-w-[2px] overflow-hidden"
+                                style={{ width: `${Math.max(widthPct, 2)}%` }}
+                              >
+                                <div
+                                  className="h-full bg-slate-300"
+                                  style={{
+                                    width: `${100 - (point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0)}%`,
+                                  }}
+                                />
+                                {point.breachedAlerts > 0 && (
+                                  <div
+                                    className="h-full flex-1 bg-destructive/70"
+                                    style={{
+                                      width: `${point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0}%`,
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                            <div className="w-28 shrink-0 text-right text-xs tabular-nums">
+                              <span className="font-medium text-slate-700">
+                                {point.totalAlerts} alert{point.totalAlerts !== 1 ? 's' : ''}
+                              </span>
+                              {point.breachedAlerts > 0 && (
+                                <span className="ml-1 text-destructive font-medium">
+                                  · {point.breachedAlerts} breached
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      No alerts in this period
+                    </p>
+                  )}
+                </Card>
+              ) : null}
+            </div>
+
+            {/* Right: Top priorities + Top problem sources */}
+            <div className="space-y-6">
+              {prioritized.isLoading ? (
+                <Card variant="soft" className="p-5">
+                  <Skeleton className="h-5 w-32 mb-4" />
+                  <Skeleton className="h-48 rounded-lg" />
+                </Card>
+              ) : prioritized.isError ? (
+                <Card variant="soft" className="p-5">
+                  <h3 className="text-base font-semibold text-slate-900 mb-3">Top priorities</h3>
+                  <SectionError
+                    message={
+                      prioritized.error instanceof Error
+                        ? prioritized.error.message
+                        : 'Something went wrong'
+                    }
+                    onRetry={() => prioritized.refetch()}
+                  />
+                </Card>
+              ) : prioritized.data ? (
+                <Card variant="soft" className="space-y-4 p-5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Top priorities
+                    </h3>
+                    <Link
+                      to="/escalations"
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      View all →
+                    </Link>
+                  </div>
+                  {prioritized.data.items.length > 0 ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                      <ul className="divide-y divide-slate-100">
+                        {prioritized.data.items.slice(0, 10).map((item) => (
+                          <li key={item.alertEventId}>
+                            <Link
+                              to={`/alerts/${item.alertEventId}`}
+                              className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50 transition-colors"
+                            >
+                              <span className="flex shrink-0 items-center gap-2 truncate text-sm">
+                                <SeverityBadge severity={item.severity} />
+                                <StatusBadge
+                                  status={item.status as 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED'}
+                                />
+                                <span className="truncate text-slate-700">{getSourceTypeLabel(item.sourceType)}</span>
+                              </span>
+                              <span className="flex shrink-0 gap-1 text-xs">
+                                {item.sla.acknowledgeBreached && (
+                                  <span className="text-destructive font-medium">Ack</span>
+                                )}
+                                {item.sla.resolveBreached && (
+                                  <span className="text-destructive font-medium">Res</span>
+                                )}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <EmptyState
+                      title="No urgent escalations"
+                      description="All active alerts are within SLA."
+                      action={
+                        <Link to="/escalations">
+                          <Button variant="secondary" size="sm">
+                            View escalations
+                          </Button>
+                        </Link>
+                      }
+                    />
+                  )}
+                </Card>
+              ) : null}
+
+              {topProblemSources.isLoading ? (
+                <Skeleton className="h-48 rounded-xl" />
+              ) : topProblemSources.isError ? (
+                <SectionError
+                  message={
+                    topProblemSources.error instanceof Error
+                      ? topProblemSources.error.message
+                      : 'Something went wrong'
+                  }
+                  onRetry={() => topProblemSources.refetch()}
+                />
+              ) : topProblemSources.data ? (
+                <Card variant="soft" className="space-y-4 p-5">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Top problem sources
+                    </h3>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      By total alert count (all-time)
+                    </p>
+                  </div>
+                  {topProblemSources.data.length > 0 ? (
+                    <ol className="space-y-2">
+                      {topProblemSources.data.map((source, i) => (
+                        <li
+                          key={`${source.sourceType}-${source.sourceId}`}
+                          className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5 text-sm"
+                        >
+                          <span className="flex shrink-0 w-5 text-center font-bold text-slate-400">
+                            {i + 1}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+                            {formatSourceDisplay(source.sourceType, source.sourceId)}
+                          </span>
+                          <span className="shrink-0 rounded bg-slate-200 px-2 py-0.5 tabular-nums font-semibold text-slate-700">
+                            {source.count}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      No alert sources yet
+                    </p>
+                  )}
+                </Card>
+              ) : null}
+            </div>
           </div>
-        ) : prioritized.isError ? (
-          <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
-            <h2 className="font-medium text-foreground">Top priorities</h2>
-            <SectionError
-              message={
-                prioritized.error instanceof Error
-                  ? prioritized.error.message
-                  : 'Something went wrong'
-              }
-              onRetry={() => prioritized.refetch()}
-            />
-          </div>
-        ) : prioritized.data ? (
-        <Card variant="soft" className="space-y-4 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium text-foreground">Top priorities</h2>
-            <Link
-              to="/escalations"
-              className="text-sm text-primary hover:underline"
-            >
-              View all →
-            </Link>
-          </div>
-          {prioritized.data.items.length > 0 ? (
-            <>
-              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                <ul className="divide-y divide-slate-100">
-                  {prioritized.data.items.slice(0, 10).map((item) => (
-                    <li key={item.alertEventId}>
-                      <Link
-                        to={`/alerts/${item.alertEventId}`}
-                        className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50"
-                      >
-                        <span className="flex shrink-0 items-center gap-2 truncate text-sm">
-                          <SeverityBadge severity={item.severity} />
-                          <StatusBadge
-                            status={item.status as 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED'}
-                          />
-                          <span className="truncate">{getSourceTypeLabel(item.sourceType)}</span>
-                        </span>
-                        <span className="flex shrink-0 gap-1 text-xs">
-                          {item.sla.acknowledgeBreached && (
-                            <span className="text-destructive">Ack breached</span>
-                          )}
-                          {item.sla.resolveBreached && (
-                            <span className="text-destructive">Resolve breached</span>
-                          )}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              title="No urgent escalations"
-              description="All active alerts are within SLA."
-              action={
-                <Link to="/escalations">
-                  <Button variant="secondary" size="sm">
-                    View escalations
-                  </Button>
-                </Link>
-              }
-            />
-          )}
-        </Card>
-        ) : null)}
+        </section>
+      )}
     </div>
   );
 }

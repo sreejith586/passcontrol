@@ -83,9 +83,9 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
   });
 
   return (
-    <Card variant="soft" className="space-y-4 p-4">
+    <Card variant="soft" className="space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-foreground">Comments</h3>
+        <h3 className="text-base font-semibold text-slate-900">Comments</h3>
         <Button
           variant="ghost"
           size="sm"
@@ -129,7 +129,7 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
         {comments.map((c) => (
           <li
             key={c.id}
-            className="rounded-md border border-border bg-background/50 p-4 text-sm"
+            className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm shadow-sm"
           >
             <div className="flex flex-wrap items-center gap-2">
               <CommentTypeBadge type={c.type} />
