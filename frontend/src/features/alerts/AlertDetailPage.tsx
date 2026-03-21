@@ -1,5 +1,6 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { getAlert, listActivities, listComments } from './api';
 import { queryKeys } from './query-keys';
 import { AlertHeader } from './components/AlertHeader';
@@ -8,15 +9,19 @@ import { ActivityTimeline } from './components/ActivityTimeline';
 import { CommentsSection } from './components/CommentsSection';
 import { getSeverityLabel } from './components/SeverityBadge';
 import { getSourceTypeLabel } from '@/lib/labels';
+import { getRunItemById } from '@/features/checklist-runs/api';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { Breadcrumbs } from '@/shared/layout/Breadcrumbs';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { Button } from '@/shared/ui/Button';
 import { formatDate } from '@/lib/date';
+import { toast } from '@/shared/feedback/useToast';
 
 export function AlertDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [navigatingToItem, setNavigatingToItem] = useState(false);
 
   const alertQuery = useQuery({
     queryKey: queryKeys.alerts.detail(id!),
@@ -101,6 +106,23 @@ export function AlertDetailPage() {
   const sourceLabel = getSourceTypeLabel(alert.sourceType);
   const pageTitle = `${severityLabel !== '—' ? severityLabel : 'Alert'} • ${sourceLabel} • ${formatDate(alert.triggeredAt)}`;
 
+  const showViewChecklistItem =
+    alert.sourceType === 'CHECKLIST_RUN_ITEM' && !!alert.sourceId;
+
+  async function handleViewChecklistItem() {
+    if (!alert.sourceId) return;
+    setNavigatingToItem(true);
+    try {
+      const item = await getRunItemById(alert.sourceId);
+      navigate(`/checklist-runs/${item.checklistRunId}?itemId=${alert.sourceId}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not open checklist item';
+      toast.error(message);
+    } finally {
+      setNavigatingToItem(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -113,12 +135,24 @@ export function AlertDetailPage() {
         title={pageTitle}
         description={`${sourceLabel} • ${getSeverityLabel(alert.severity)}`}
         actions={
-          <Link
-            to="/alerts"
-            className="text-sm text-primary hover:underline"
-          >
-            ← Back to list
-          </Link>
+          <div className="flex items-center gap-2">
+            {showViewChecklistItem && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleViewChecklistItem}
+                disabled={navigatingToItem}
+              >
+                {navigatingToItem ? 'Opening…' : 'View checklist item'}
+              </Button>
+            )}
+            <Link
+              to="/alerts"
+              className="text-sm text-primary hover:underline"
+            >
+              ← Back to list
+            </Link>
+          </div>
         }
       />
       <div className="space-y-4">

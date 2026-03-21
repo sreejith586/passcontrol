@@ -1,0 +1,21 @@
+2026-03-21 16:46:35.718 +04 [70846] LOG:  starting PostgreSQL 16.13 (Homebrew) on x86_64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.202), 64-bit
+2026-03-21 16:46:35.723 +04 [70846] LOG:  listening on IPv6 address "::1", port 5432
+2026-03-21 16:46:35.723 +04 [70846] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-03-21 16:46:35.725 +04 [70846] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-03-21 16:46:35.740 +04 [70854] LOG:  database system was shut down at 2026-03-21 16:45:36 +04
+2026-03-21 16:46:35.764 +04 [70846] LOG:  database system is ready to accept connections
+2026-03-21 16:47:32.109 +04 [71117] LOG:  could not receive data from client: Connection reset by peer
+2026-03-21 16:47:32.165 +04 [71119] ERROR:  relation "_prisma_migrations" does not exist at character 126
+2026-03-21 16:47:32.165 +04 [71119] STATEMENT:  SELECT "id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count" FROM "_prisma_migrations" ORDER BY "started_at" ASC
+2026-03-21 16:47:32.384 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-21 16:47:32.476 +04 [70852] LOG:  checkpoint complete: wrote 935 buffers (5.7%); 1 WAL file(s) added, 0 removed, 0 recycled; write=0.023 s, sync=0.025 s, total=0.093 s; sync files=301, longest=0.001 s, average=0.001 s; distance=8679 kB, estimate=8679 kB; lsn=0/1D8D648, redo lsn=0/1D8D610
+2026-03-21 16:47:33.210 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-21 16:47:33.214 +04 [70852] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.004 s; sync files=4, longest=0.001 s, average=0.001 s; distance=5242 kB, estimate=8336 kB; lsn=0/22AC1F0, redo lsn=0/22AC1B8
+2026-03-21 16:47:34.556 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-21 16:47:34.586 +04 [70852] LOG:  checkpoint complete: wrote 170 buffers (1.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.008 s, sync=0.019 s, total=0.031 s; sync files=204, longest=0.002 s, average=0.001 s; distance=6420 kB, estimate=8144 kB; lsn=0/28F13C0, redo lsn=0/28F1388
+2026-03-21 16:47:35.312 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-21 16:47:35.316 +04 [70852] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.004 s; sync files=4, longest=0.001 s, average=0.001 s; distance=5243 kB, estimate=7854 kB; lsn=0/2E10150, redo lsn=0/2E10118
+2026-03-21 16:52:35.317 +04 [70852] LOG:  checkpoint starting: time
+2026-03-21 16:52:55.459 +04 [70852] LOG:  checkpoint complete: wrote 200 buffers (1.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=20.126 s, sync=0.010 s, total=20.143 s; sync files=93, longest=0.002 s, average=0.001 s; distance=427 kB, estimate=7111 kB; lsn=0/2E7ADA8, redo lsn=0/2E7AD70
+2026-03-21 17:50:18.772 +04 [70852] LOG:  checkpoint starting: time
+2026-03-21 17:50:21.678 +04 [70852] LOG:  checkpoint complete: wrote 29 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.895 s, sync=0.004 s, total=2.908 s; sync files=25, longest=0.001 s, average=0.001 s; distance=43 kB, estimate=6404 kB; lsn=0/2E85A38, redo lsn=0/2E85A00

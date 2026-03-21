@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-20
+**Last updated:** 2025-03-21 (Phase 10C)
 
 ## Implemented Features
 
@@ -94,6 +94,8 @@
 - [x] Phase 8A — Alert List Power Features: bulk acknowledge, bulk resolve, richer filters (severity, sourceType, from, to, assignedUserId); row selection (page-local, select-all); collapsible advanced filters; permission-gated bulk actions; partial-success toast feedback
 - [x] Phase 8B — Escalations parity: richer filters (severity, assignedToMe, unassignedOnly, assignedUserId); URL-synced filter state; assignment filter precedence (unassignedOnly > assignedToMe > assignedUserId); primary vs advanced filter grouping; row click → /alerts/:id preserved
 - [x] Phase 8C — Resolution note workflow: comments UI supports COMMENT and RESOLUTION_NOTE create; type selector (default COMMENT); clear type badges for COMMENT, RESOLUTION_NOTE, REOPEN_NOTE; resolve/reopen modals surface note-required validation errors inline; comments invalidated on resolve/reopen
+- [x] Phase 10A — Alert to checklist deep linking: "View checklist item" button on alert detail (checklist-originated alerts only); navigates to run with `?itemId=`; run detail scrolls to and briefly highlights the item
+- [x] Phase 10C — Checklist run detail two-column layout: desktop two-column workspace (main execution ~65%, right context rail ~35%); mobile stacks rail below; Run Summary, Progress, Section Jump, and Submission Readiness cards in rail
 
 ### Backend (recent fixes)
 
