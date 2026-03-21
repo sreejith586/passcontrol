@@ -22,7 +22,7 @@ import { SeverityBadge } from './components/SeverityBadge';
 import { AssigneeBadge } from './components/AssigneeBadge';
 import { BulkResolveModal } from './components/BulkResolveModal';
 import { formatDateTimeContextual, formatRelative } from '@/lib/date';
-import { formatSourceDisplay } from '@/lib/labels';
+import { formatAlertSourceDisplay } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { toast } from '@/shared/feedback/useToast';
@@ -183,15 +183,16 @@ export function AlertListPage() {
     },
   });
 
-  const severityBorderClass = (severity: string | null) => {
-    if (!severity) return '';
-    const map: Record<string, string> = {
-      CRITICAL: 'border-l-4 border-l-red-500',
-      HIGH: 'border-l-4 border-l-amber-500',
-      MEDIUM: 'border-l-4 border-l-amber-400',
-      LOW: 'border-l-4 border-l-slate-300',
+  const rowClassName = (row: AlertEvent) => {
+    const severityMap: Record<string, string> = {
+      CRITICAL: 'border-l-[6px] border-l-red-600',
+      HIGH: 'border-l-[6px] border-l-amber-500',
+      MEDIUM: 'border-l-[6px] border-l-amber-400',
+      LOW: 'border-l-[6px] border-l-slate-400',
     };
-    return map[severity] ?? '';
+    const base = severityMap[row.severity ?? ''] ?? 'border-l-[6px] border-l-slate-300';
+    const openBg = row.status === 'OPEN' ? 'bg-red-50/40' : '';
+    return `${base} ${openBg}`;
   };
 
   const columns = [
@@ -216,13 +217,17 @@ export function AlertListPage() {
     {
       key: 'source',
       header: 'Source',
-      render: (row: AlertEvent) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-slate-900">
-            {formatSourceDisplay(row.sourceType, row.sourceId)}
-          </span>
-        </div>
-      ),
+      render: (row: AlertEvent) => {
+        const { primary, secondary } = formatAlertSourceDisplay(row);
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold text-slate-900">{primary}</span>
+            {secondary && (
+              <span className="text-xs text-slate-500">{secondary}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'assignedTo',
@@ -241,11 +246,11 @@ export function AlertListPage() {
       header: 'Triggered',
       render: (row: AlertEvent) => (
         <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-slate-900">
-            {formatDateTimeContextual(row.triggeredAt)}
-          </span>
-          <span className="text-xs text-slate-500">
+          <span className="font-semibold text-slate-900">
             {formatRelative(row.triggeredAt)}
+          </span>
+          <span className="text-xs text-slate-400">
+            {formatDateTimeContextual(row.triggeredAt)}
           </span>
         </div>
       ),
@@ -411,7 +416,7 @@ export function AlertListPage() {
         emptyDescription="Alerts will appear here when checklist items fail."
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/alerts/${row.id}`)}
-        getRowClassName={(row) => severityBorderClass(row.severity)}
+        getRowClassName={rowClassName}
         selectable
         selectedIds={selectedIds}
         onSelectionChange={handleSelectionChange}

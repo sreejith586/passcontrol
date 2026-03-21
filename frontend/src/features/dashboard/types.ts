@@ -39,4 +39,7 @@ export interface TopProblemSource {
   sourceType: string;
   sourceId: string;
   count: number;
+  /** Enriched source label when available. */
+  sourceLabel?: string;
+  sourceContext?: { checklistName?: string; locationName?: string };
 }

@@ -4,6 +4,12 @@ import type { KeyboardEvent } from 'react';
 import { useRef, useEffect, useState } from 'react';
 import { getRunById, updateRunItem, submitRun } from './api';
 import { queryKeys } from './query-keys';
+import {
+  computeRunMetrics,
+  getBlockingItems,
+  getFirstBlockerItemId,
+  getSectionHealth,
+} from './run-metrics';
 import { RunItemRow } from './components/RunItemRow';
 import { RunStatusBadge } from './components/RunStatusBadge';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -245,33 +251,22 @@ export function ChecklistRunDetailPage() {
     }
   }
 
-  const totalItems = allItems.length;
-  const completedItems = allItems.filter((i) => i.respondedAt != null).length;
-  const failedItems = allItems.filter((i) => i.result === 'FAIL').length;
-  const incompleteRequired = allItems.filter(
-    (i) => i.isRequiredSnapshot && i.respondedAt == null
-  ).length;
-  const failedMissingEvidence = allItems.filter(
-    (i) =>
-      i.result === 'FAIL' &&
-      i.requiresEvidenceOnFailSnapshot &&
-      (i._count?.attachments ?? 0) === 0
-  ).length;
-  const failedMissingComment = allItems.filter(
-    (i) =>
-      i.result === 'FAIL' &&
-      i.requiresCommentOnFailSnapshot &&
-      !(i.comment?.trim())
-  ).length;
-
-  const blockers: string[] = [];
-  if (incompleteRequired > 0) blockers.push(`${incompleteRequired} required item${incompleteRequired !== 1 ? 's' : ''} incomplete`);
-  if (failedMissingEvidence > 0) blockers.push(`${failedMissingEvidence} failed item${failedMissingEvidence !== 1 ? 's' : ''} missing evidence`);
-  if (failedMissingComment > 0) blockers.push(`${failedMissingComment} failed item${failedMissingComment !== 1 ? 's' : ''} missing comment`);
+  const metrics = computeRunMetrics(run);
+  const blockingItems = getBlockingItems(run);
+  const firstBlockerId = getFirstBlockerItemId(run);
+  const sectionHealth = getSectionHealth(run);
 
   function scrollToSection(sectionId: string) {
     const el = document.getElementById(`section-${sectionId}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function scrollToItem(itemId: string) {
+    const el = document.getElementById(`run-item-${itemId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedItemId(itemId);
+    setTimeout(() => setHighlightedItemId(null), HIGHLIGHT_DURATION_MS);
   }
 
   return (
@@ -367,9 +362,9 @@ export function ChecklistRunDetailPage() {
                     : 'Submitting...'}
                 </span>
               )}
-              {blockers.length > 0 && (
+              {blockingItems.length > 0 && (
                 <p className="text-sm text-amber-600">
-                  {blockers.length} blocker{blockers.length !== 1 ? 's' : ''} to resolve
+                  {blockingItems.length} blocker{blockingItems.length !== 1 ? 's' : ''} to resolve
                 </p>
               )}
             </div>
@@ -378,10 +373,10 @@ export function ChecklistRunDetailPage() {
               disabled={
                 updateItemMutation.isPending ||
                 submitMutation.isPending ||
-                blockers.length > 0
+                blockingItems.length > 0
               }
               title={
-                blockers.length > 0
+                blockingItems.length > 0
                   ? 'Resolve all required items before submitting'
                   : undefined
               }
@@ -423,30 +418,30 @@ export function ChecklistRunDetailPage() {
             <dl className="space-y-3">
               <div>
                 <dt className="text-xs font-medium text-slate-500">Completed</dt>
-                <dd className="mt-1 font-semibold text-slate-900">{completedItems} / {totalItems}</dd>
+                <dd className="mt-1 font-semibold text-slate-900">{metrics.answered} / {metrics.total}</dd>
               </div>
-              {failedItems > 0 && (
+              {metrics.failedCount > 0 && (
                 <div>
                   <dt className="text-xs font-medium text-slate-500">Failed</dt>
-                  <dd className="mt-1 font-semibold text-destructive">{failedItems}</dd>
+                  <dd className="mt-1 font-semibold text-destructive">{metrics.failedCount}</dd>
                 </div>
               )}
-              {incompleteRequired > 0 && (
+              {metrics.incompleteRequiredCount > 0 && (
                 <div>
                   <dt className="text-xs font-medium text-slate-500">Incomplete required</dt>
-                  <dd className="mt-1 font-medium text-slate-900">{incompleteRequired}</dd>
+                  <dd className="mt-1 font-medium text-slate-900">{metrics.incompleteRequiredCount}</dd>
                 </div>
               )}
-              {failedMissingEvidence > 0 && (
+              {metrics.missingEvidenceCount > 0 && (
                 <div>
                   <dt className="text-xs font-medium text-slate-500">Missing evidence</dt>
-                  <dd className="mt-1 font-medium text-amber-600">{failedMissingEvidence}</dd>
+                  <dd className="mt-1 font-medium text-amber-600">{metrics.missingEvidenceCount}</dd>
                 </div>
               )}
-              {failedMissingComment > 0 && (
+              {metrics.missingCommentCount > 0 && (
                 <div>
                   <dt className="text-xs font-medium text-slate-500">Missing comment</dt>
-                  <dd className="mt-1 font-medium text-amber-600">{failedMissingComment}</dd>
+                  <dd className="mt-1 font-medium text-amber-600">{metrics.missingCommentCount}</dd>
                 </div>
               )}
             </dl>
@@ -454,14 +449,25 @@ export function ChecklistRunDetailPage() {
 
           <RailCard title="Jump to section" className="border-slate-200">
             <ul className="space-y-1">
-              {run.sectionSnapshots?.map((section) => (
-                <li key={section.id}>
+              {sectionHealth.map((sh) => (
+                <li key={sh.sectionId}>
                   <button
                     type="button"
-                    onClick={() => scrollToSection(section.id)}
-                    className="w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-sky-600 hover:bg-sky-50 hover:underline"
+                    onClick={() => scrollToSection(sh.sectionId)}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium hover:underline',
+                      sh.blockers > 0
+                        ? 'text-amber-700 hover:bg-amber-50'
+                        : 'text-sky-600 hover:bg-sky-50'
+                    )}
                   >
-                    {section.titleSnapshot}
+                    <span className="min-w-0 truncate">{sh.sectionTitle}</span>
+                    <span className="shrink-0 text-xs font-normal tabular-nums text-slate-500">
+                      {sh.completed}/{sh.total}
+                      {sh.blockers > 0 && (
+                        <span className="ml-1 text-amber-600">{sh.blockers} blocker{sh.blockers !== 1 ? 's' : ''}</span>
+                      )}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -470,19 +476,45 @@ export function ChecklistRunDetailPage() {
 
           {!isCompleted && (
             <RailCard title="Submission readiness" className="border-slate-200">
-              {blockers.length === 0 ? (
+              {blockingItems.length === 0 ? (
                 <p className="font-medium text-emerald-600">
                   Ready to submit
                 </p>
               ) : (
-                <ul className="space-y-1.5 text-sm text-amber-700">
-                  {blockers.map((b, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5">
-                      <span className="mt-0.5 shrink-0">•</span>
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-2">
+                  {firstBlockerId && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full justify-center"
+                      onClick={() => scrollToItem(firstBlockerId)}
+                    >
+                      Jump to first blocker
+                    </Button>
+                  )}
+                  <ul className="space-y-1.5 text-sm">
+                    {blockingItems.map((b) => (
+                      <li key={b.itemId} className="flex items-start gap-1.5">
+                        <span className="mt-0.5 shrink-0 text-amber-600">•</span>
+                        <button
+                          type="button"
+                          onClick={() => scrollToItem(b.itemId)}
+                          className="block w-full text-left text-amber-700 hover:underline hover:text-amber-800"
+                          title={`${b.label} (${b.sectionTitle})`}
+                        >
+                          <span className="font-medium">{b.label}</span>
+                          <span className="ml-1 text-xs text-slate-500">
+                            {b.blockerType === 'required_missing'
+                              ? 'required'
+                              : b.blockerType === 'missing_evidence'
+                                ? 'missing evidence'
+                                : 'missing comment'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </RailCard>
           )}

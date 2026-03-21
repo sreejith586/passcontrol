@@ -1,5 +1,10 @@
 export type AlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED';
 
+export interface AlertEventSourceContext {
+  checklistName?: string;
+  locationName?: string;
+}
+
 export interface AlertEvent {
   id: string;
   organizationId: string;
@@ -26,6 +31,10 @@ export interface AlertEvent {
   assignedAt: string | null;
   assignedByUserId: string | null;
   assignedToUser?: { id: string; name: string } | null;
+  /** Enriched source label (e.g. checklist item label). Fallback to formatSourceDisplay if absent. */
+  sourceLabel?: string;
+  /** Enriched context (checklist name, location). */
+  sourceContext?: AlertEventSourceContext;
 }
 
 export interface AlertEventActivity {

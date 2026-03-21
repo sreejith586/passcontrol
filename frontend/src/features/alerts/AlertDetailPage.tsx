@@ -13,7 +13,7 @@ import { AlertActionBar } from './components/AlertActionBar';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { CommentsSection } from './components/CommentsSection';
 import { getSeverityLabel } from './components/SeverityBadge';
-import { getSourceTypeLabel } from '@/lib/labels';
+import { formatAlertSourceDisplay } from '@/lib/labels';
 import { isNotFoundError } from '@/core/api/errors';
 import { getRunItemById } from '@/features/checklist-runs/api';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -114,8 +114,8 @@ export function AlertDetailPage() {
 
   const alert = alertQuery.data;
   const severityLabel = getSeverityLabel(alert.severity);
-  const sourceLabel = getSourceTypeLabel(alert.sourceType);
-  const pageTitle = `${severityLabel !== '—' ? severityLabel : 'Alert'} • ${sourceLabel} • ${formatDate(alert.triggeredAt)}`;
+  const { primary: sourcePrimary, secondary: sourceSecondary } = formatAlertSourceDisplay(alert);
+  const pageTitle = `${severityLabel !== '—' ? severityLabel : 'Alert'} • ${sourcePrimary} • ${formatDate(alert.triggeredAt)}`;
 
   const showViewChecklistItem =
     alert.sourceType === 'CHECKLIST_RUN_ITEM' && !!alert.sourceId;
@@ -144,7 +144,9 @@ export function AlertDetailPage() {
       />
       <PageHeader
         title={pageTitle}
-        description={`${sourceLabel} • ${getSeverityLabel(alert.severity)}`}
+        description={
+          sourceSecondary ? sourceSecondary : `${getSeverityLabel(alert.severity)} severity`
+        }
         actions={
           <div className="flex items-center gap-2">
             {showViewChecklistItem && (
@@ -205,7 +207,12 @@ export function AlertDetailPage() {
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-500">Source</dt>
-                <dd className="mt-1 font-medium text-slate-900">{sourceLabel}</dd>
+                <dd className="mt-1">
+                  <span className="font-medium text-slate-900">{sourcePrimary}</span>
+                  {sourceSecondary && (
+                    <span className="mt-1 block text-sm text-slate-500">{sourceSecondary}</span>
+                  )}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-500">Triggered</dt>

@@ -9,7 +9,8 @@
     "start:dev": "nest start --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "prisma:seed:reset-demo": "SEED_RESET_DEMO=true prisma db seed"
   },
   "prisma": {
     "seed": "node prisma/seed-runner.js"

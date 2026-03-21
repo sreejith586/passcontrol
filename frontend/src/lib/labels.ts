@@ -23,3 +23,22 @@ export function formatSourceDisplay(
   }
   return label;
 }
+
+/** Format alert source for display. Uses enriched sourceLabel when available, else formatSourceDisplay. */
+export function formatAlertSourceDisplay(alert: {
+  sourceLabel?: string | null;
+  sourceContext?: { checklistName?: string; locationName?: string } | null;
+  sourceType: string;
+  sourceId: string;
+}): { primary: string; secondary?: string } {
+  if (alert.sourceLabel?.trim()) {
+    const parts: string[] = [];
+    if (alert.sourceContext?.checklistName) parts.push(alert.sourceContext.checklistName);
+    if (alert.sourceContext?.locationName) parts.push(alert.sourceContext.locationName);
+    const secondary = parts.length > 0 ? parts.join(' · ') : undefined;
+    return { primary: alert.sourceLabel, secondary };
+  }
+  return {
+    primary: formatSourceDisplay(alert.sourceType, alert.sourceId),
+  };
+}

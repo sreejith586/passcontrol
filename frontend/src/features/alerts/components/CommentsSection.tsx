@@ -125,11 +125,11 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
           </Button>
         </form>
       )}
-      <ul className="space-y-4">
+      <ul className="space-y-5">
         {comments.map((c) => (
           <li
             key={c.id}
-            className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm shadow-sm"
+            className="rounded-xl border border-slate-200 bg-slate-50/80 px-5 py-4 text-sm shadow-sm"
           >
             <div className="flex flex-wrap items-center gap-2">
               <CommentTypeBadge type={c.type} />
@@ -141,7 +141,7 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
                 {formatDateTime(c.createdAt)}
               </span>
             </div>
-            <p className="mt-3 whitespace-pre-wrap text-foreground">{c.body}</p>
+            <p className="mt-4 whitespace-pre-wrap text-foreground leading-relaxed">{c.body}</p>
           </li>
         ))}
       </ul>

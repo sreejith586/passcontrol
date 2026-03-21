@@ -17,7 +17,7 @@ import { EmptyState } from '@/shared/layout/EmptyState';
 import { cn } from '@/lib/cn';
 import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
 import { StatusBadge } from '@/features/alerts/components/StatusBadge';
-import { getSourceTypeLabel, formatSourceDisplay } from '@/lib/labels';
+import { getSourceTypeLabel, formatAlertSourceDisplay } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 
@@ -145,12 +145,85 @@ export function DashboardPage() {
     );
   }
 
+  const needsAttention =
+    hasChecklistView &&
+    checklistMetrics.data &&
+    (checklistMetrics.data.openAlerts > 0 ||
+      checklistMetrics.data.overdueRuns > 0 ||
+      checklistMetrics.data.failedRuns > 0);
+
   return (
     <div className="space-y-8">
       <PageHeader
         title="Dashboard"
         description="Operational overview"
       />
+
+      {/* Needs Attention – high-priority summary */}
+      {needsAttention && (
+        <section className="space-y-3">
+          <SectionTitle>Needs attention</SectionTitle>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {checklistMetrics.data!.openAlerts > 0 && (
+              <Link
+                to="/alerts?status=OPEN"
+                className={cn(
+                  'rounded-xl border-2 px-5 py-4 shadow-md transition-shadow hover:shadow-lg',
+                  'border-destructive/50 bg-destructive/5'
+                )}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">
+                  Open alerts
+                </p>
+                <p className="mt-2 text-4xl font-bold tabular-nums text-destructive">
+                  {checklistMetrics.data!.openAlerts}
+                </p>
+                <p className="mt-1 text-xs font-medium text-destructive/80">
+                  Requires triage
+                </p>
+              </Link>
+            )}
+            {checklistMetrics.data!.overdueRuns > 0 && (
+              <Link
+                to="/checklist-runs?tab=overdue"
+                className={cn(
+                  'rounded-xl border-2 px-5 py-4 shadow-md transition-shadow hover:shadow-lg',
+                  'border-amber-500/50 bg-amber-500/10'
+                )}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                  Overdue runs
+                </p>
+                <p className="mt-2 text-4xl font-bold tabular-nums text-amber-700">
+                  {checklistMetrics.data!.overdueRuns}
+                </p>
+                <p className="mt-1 text-xs font-medium text-amber-600">
+                  Past due
+                </p>
+              </Link>
+            )}
+            {checklistMetrics.data!.failedRuns > 0 && (
+              <Link
+                to="/checklist-runs?tab=failed"
+                className={cn(
+                  'rounded-xl border-2 px-5 py-4 shadow-md transition-shadow hover:shadow-lg',
+                  'border-destructive/50 bg-destructive/5'
+                )}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">
+                  Failed runs
+                </p>
+                <p className="mt-2 text-4xl font-bold tabular-nums text-destructive">
+                  {checklistMetrics.data!.failedRuns}
+                </p>
+                <p className="mt-1 text-xs font-medium text-destructive/80">
+                  Items failed
+                </p>
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Key metrics – primary KPI row */}
       <section className="space-y-3">
@@ -532,7 +605,7 @@ export function DashboardPage() {
                             {i + 1}
                           </span>
                           <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
-                            {formatSourceDisplay(source.sourceType, source.sourceId)}
+                            {formatAlertSourceDisplay(source).primary}
                           </span>
                           <span className="shrink-0 rounded bg-slate-200 px-2 py-0.5 tabular-nums font-semibold text-slate-700">
                             {source.count}

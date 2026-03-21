@@ -133,13 +133,25 @@ export function RunItemRow({
     }
   }
 
+  const cardClass = {
+    fail: 'border-2 border-destructive/50 bg-destructive/10',
+    failNeedsAction: 'border-2 border-amber-500/50 bg-amber-50/60',
+    pass: 'border border-slate-100 bg-white',
+    passRequired: 'border border-sky-200/50 bg-sky-50/30',
+  };
+  const cardVariant = isFail
+    ? evidenceMissing || (showComment && !(item.comment?.trim()))
+      ? 'failNeedsAction'
+      : 'fail'
+    : item.isRequiredSnapshot
+      ? 'passRequired'
+      : 'pass';
+
   return (
     <div
       className={cn(
-        'rounded-xl border p-4 shadow-sm',
-        item.isRequiredSnapshot
-          ? 'border-sky-200 bg-sky-50/50'
-          : 'border-slate-200 bg-white'
+        'rounded-xl p-4 shadow-sm',
+        cardClass[cardVariant]
       )}
     >
       <div className="flex flex-col gap-3">

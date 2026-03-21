@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-21 (Phase 11D)
+**Last updated:** 2025-03-21 (Phase 12A.1)
 
 ## Implemented Features
 
@@ -101,6 +101,8 @@
 - [x] Phase 11B — App shell & core visual refactor: dark charcoal (slate-900) left sidebar; light neutral canvas (slate-50); white header with shadow; max-w content framing; Card/table rounded-xl, border-slate-200; FilterBar and action bar white with shadow; checklist tabs as segmented control; RunItemRow cards refined; DataTable cleaner container
 - [x] Phase 11C — Surface & detail experience refactor: sidebar branding (ShieldCheck icon + PassControl text; icon-only when collapsed); dashboard redesign (Key metrics section, Operational overview two-column: SLA/trend left, Top priorities/Top sources right; stronger KPI hierarchy, framed modules); alert detail (two-column case layout: main = Activity + Comments, right rail = Case summary + Actions; ActivityTimeline/CommentsSection stronger framing); checklist detail (section cards with bordered headers, stronger submit area, refined right rail with dt/dd hierarchy, Jump to section hover states); shared RailCard uppercase section titles
 - [x] Phase 11D — Information density & UX enrichment: Dashboard (alerts chart: "3 alerts · 2 breached" labels; top problem sources: formatSourceDisplay with sourceId; KPI cards: larger numbers, uppercase labels); Alerts list (enriched rows: formatSourceDisplay, formatDateTimeContextual + formatRelative, severity left border; DataTable getRowClassName); Checklist runs list (Checklist column: name + Run #; Status: badge + status label; Execution: progress + failed count + attachment count; RunStatusBadge font-bold); formatSourceDisplay, formatDateTimeContextual, formatRelative in lib
+- [x] Phase 11E.1 — Seed stability & demo foundation: AlertSlaPolicy idempotency (ensureDemoSlaPolicies: create only missing severities); demo gating (DEMO_TEMPLATE_KEYS, demoDataExists); optional reset-demo (SEED_RESET_DEMO=true, deleteDemoData, npm run prisma:seed:reset-demo)
+- [x] Phase 12A.1 — Checklist detail actionable blockers & guided navigation: Jump to first blocker button; Submission readiness shows specific blocking items (label, type) with click-to-scroll; Jump to section shows per-section health (completed/total, blocker count); sections with blockers visually emphasized (amber); run-metrics.ts reused for counts and new helpers (getBlockingItems, getFirstBlockerItemId, getSectionHealth)
 
 ### Backend (recent fixes)
 

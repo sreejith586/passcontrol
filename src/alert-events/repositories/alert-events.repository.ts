@@ -61,7 +61,7 @@ export class AlertEventsRepository {
     tx?: Prisma.TransactionClient,
   ) {
     const client = (tx ?? this.prisma) as Prisma.TransactionClient;
-    return client.alertEvent.findFirst({
+    const item = await client.alertEvent.findFirst({
       where: { id, organizationId },
       include: {
         assignedToUser: {
@@ -69,6 +69,9 @@ export class AlertEventsRepository {
         },
       },
     });
+    if (!item) return null;
+    const [enriched] = await this.enrichSourceForAlerts([item]);
+    return enriched;
   }
 
   async list(
@@ -124,7 +127,7 @@ export class AlertEventsRepository {
       ? { triggeredAt: sort.triggeredAt }
       : { createdAt: 'desc' as const };
 
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.prisma.alertEvent.findMany({
         where,
         skip: (pagination.page - 1) * pagination.limit,
@@ -139,7 +142,65 @@ export class AlertEventsRepository {
       this.prisma.alertEvent.count({ where }),
     ]);
 
+    const items = await this.enrichSourceForAlerts(rawItems);
     return { items, total };
+  }
+
+  /**
+   * Enrich CHECKLIST_RUN_ITEM alerts with sourceLabel and sourceContext.
+   */
+  private async enrichSourceForAlerts<T extends { sourceType: string; sourceId: string }>(
+    items: T[],
+  ): Promise<(T & { sourceLabel?: string; sourceContext?: { checklistName?: string; locationName?: string } })[]> {
+    const checklistSourceIds = items
+      .filter((i) => i.sourceType === 'CHECKLIST_RUN_ITEM' && i.sourceId)
+      .map((i) => i.sourceId);
+    if (checklistSourceIds.length === 0) return items as (T & { sourceLabel?: string; sourceContext?: { checklistName?: string; locationName?: string } })[];
+
+    const snapshots = await this.prisma.checklistRunItemSnapshot.findMany({
+      where: { id: { in: checklistSourceIds } },
+      select: {
+        id: true,
+        labelSnapshot: true,
+        checklistRun: {
+          select: {
+            templateNameSnapshot: true,
+            locationId: true,
+          },
+        },
+      },
+    });
+
+    const locationIds = [...new Set(snapshots.map((s) => s.checklistRun?.locationId).filter(Boolean))] as string[];
+    const locations = await this.prisma.location.findMany({
+      where: { id: { in: locationIds } },
+      select: { id: true, name: true },
+    });
+    const locationByName = new Map(locations.map((l) => [l.id, l.name]));
+
+    const sourceMap = new Map<
+      string,
+      { sourceLabel: string; sourceContext: { checklistName: string; locationName?: string } }
+    >();
+    for (const s of snapshots) {
+      const checklistName = s.checklistRun?.templateNameSnapshot ?? '';
+      const locationName = s.checklistRun?.locationId ? locationByName.get(s.checklistRun.locationId) : undefined;
+      sourceMap.set(s.id, {
+        sourceLabel: s.labelSnapshot,
+        sourceContext: { checklistName, ...(locationName && { locationName }) },
+      });
+    }
+
+    return items.map((item) => {
+      const enrichment = item.sourceType === 'CHECKLIST_RUN_ITEM' ? sourceMap.get(item.sourceId) : undefined;
+      return {
+        ...item,
+        ...(enrichment && {
+          sourceLabel: enrichment.sourceLabel,
+          sourceContext: enrichment.sourceContext,
+        }),
+      };
+    });
   }
 
   /**
@@ -1316,6 +1377,7 @@ export class AlertEventsRepository {
 
   /**
    * Top problem sources by alert count.
+   * Enriches CHECKLIST_RUN_ITEM with sourceLabel.
    */
   async getTopProblemSources(
     organizationId: string,
@@ -1325,6 +1387,8 @@ export class AlertEventsRepository {
       sourceType: string;
       sourceId: string;
       count: number;
+      sourceLabel?: string;
+      sourceContext?: { checklistName?: string; locationName?: string };
     }>
   > {
     const rows = await this.prisma.$queryRaw<
@@ -1341,11 +1405,59 @@ export class AlertEventsRepository {
       LIMIT ${limit}
     `);
 
-    return rows.map((r) => ({
+    const base = rows.map((r) => ({
       sourceType: r.source_type,
       sourceId: r.source_id,
       count: Number(r.cnt ?? 0),
     }));
+
+    const checklistRows = base.filter((r) => r.sourceType === 'CHECKLIST_RUN_ITEM');
+    if (checklistRows.length === 0) return base;
+
+    const snapshots = await this.prisma.checklistRunItemSnapshot.findMany({
+      where: { id: { in: checklistRows.map((r) => r.sourceId) } },
+      select: {
+        id: true,
+        labelSnapshot: true,
+        checklistRun: {
+          select: {
+            templateNameSnapshot: true,
+            locationId: true,
+          },
+        },
+      },
+    });
+
+    const locationIds = [...new Set(snapshots.map((s) => s.checklistRun?.locationId).filter(Boolean))] as string[];
+    const locations = await this.prisma.location.findMany({
+      where: { id: { in: locationIds } },
+      select: { id: true, name: true },
+    });
+    const locationByName = new Map(locations.map((l) => [l.id, l.name]));
+
+    const sourceMap = new Map<
+      string,
+      { sourceLabel: string; sourceContext: { checklistName: string; locationName?: string } }
+    >();
+    for (const s of snapshots) {
+      const checklistName = s.checklistRun?.templateNameSnapshot ?? '';
+      const locationName = s.checklistRun?.locationId ? locationByName.get(s.checklistRun.locationId) : undefined;
+      sourceMap.set(s.id, {
+        sourceLabel: s.labelSnapshot,
+        sourceContext: { checklistName, ...(locationName && { locationName }) },
+      });
+    }
+
+    return base.map((r) => {
+      const enrichment = r.sourceType === 'CHECKLIST_RUN_ITEM' ? sourceMap.get(r.sourceId) : undefined;
+      return {
+        ...r,
+        ...(enrichment && {
+          sourceLabel: enrichment.sourceLabel,
+          sourceContext: enrichment.sourceContext,
+        }),
+      };
+    });
   }
 
   private buildDimensionConditions(

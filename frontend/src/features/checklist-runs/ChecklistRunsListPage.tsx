@@ -3,6 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { getTodayRuns, getOverdueRuns, getFailedRuns } from './api';
 import { queryKeys } from './query-keys';
 import type { ChecklistRun } from './types';
+import {
+  computeRunMetrics,
+  formatProgress,
+  formatRequiredScope,
+} from './run-metrics';
 import { DataTable, DataTablePagination } from '@/shared/ui';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
@@ -12,42 +17,6 @@ import { Button } from '@/shared/ui/Button';
 import { cn } from '@/lib/cn';
 
 type Tab = 'today' | 'overdue' | 'failed';
-
-function computeProgress(run: ChecklistRun): string | null {
-  if (!run.sectionSnapshots?.length) return null;
-  let total = 0;
-  let answered = 0;
-  for (const section of run.sectionSnapshots) {
-    for (const item of section.itemSnapshots) {
-      total++;
-      if (item.respondedAt) answered++;
-    }
-  }
-  if (total === 0) return null;
-  return `${answered}/${total}`;
-}
-
-function computeFailedCount(run: ChecklistRun): number {
-  if (!run.sectionSnapshots?.length) return 0;
-  let count = 0;
-  for (const section of run.sectionSnapshots) {
-    for (const item of section.itemSnapshots) {
-      if (item.result === 'FAIL') count++;
-    }
-  }
-  return count;
-}
-
-function computeAttachmentCount(run: ChecklistRun): number {
-  if (!run.sectionSnapshots?.length) return 0;
-  let count = 0;
-  for (const section of run.sectionSnapshots) {
-    for (const item of section.itemSnapshots) {
-      count += item._count?.attachments ?? 0;
-    }
-  }
-  return count;
-}
 
 export function ChecklistRunsListPage() {
   const navigate = useNavigate();
@@ -111,6 +80,26 @@ export function ChecklistRunsListPage() {
     return map[status] ?? status;
   };
 
+  const getRowClassName = (row: ChecklistRun) => {
+    const m = computeRunMetrics(row);
+    const isOverdue =
+      row.dueAt && new Date(row.dueAt) < new Date() && row.status !== 'COMPLETED';
+    const isBlocked = m.missingEvidenceCount > 0 || m.missingCommentCount > 0;
+    const hasProblems = m.failedCount > 0 || m.incompleteRequiredCount > 0;
+    const isClean =
+      row.status === 'COMPLETED' &&
+      !isBlocked &&
+      !hasProblems &&
+      !isOverdue;
+
+    if (isBlocked) return 'border-l-[6px] border-l-red-600 bg-red-50/30';
+    if (m.failedCount > 0) return 'border-l-[6px] border-l-red-600 bg-red-50/30';
+    if (m.incompleteRequiredCount > 0 || isOverdue)
+      return 'border-l-[6px] border-l-amber-500 bg-amber-50/30';
+    if (isClean) return 'border-l-[6px] border-l-slate-200 bg-slate-50/20';
+    return 'border-l-[6px] border-l-slate-200';
+  };
+
   const columns = [
     {
       key: 'template',
@@ -153,23 +142,82 @@ export function ChecklistRunsListPage() {
       key: 'progress',
       header: 'Execution',
       render: (row: ChecklistRun) => {
-        const progress = computeProgress(row);
-        const failed = computeFailedCount(row);
-        const attachments = computeAttachmentCount(row);
+        const m = computeRunMetrics(row);
+        const progress = formatProgress(m);
+        const hasBlockers =
+          m.missingEvidenceCount > 0 || m.missingCommentCount > 0;
+        const hasProblems =
+          m.failedCount > 0 || m.incompleteRequiredCount > 0;
+        const showPills = hasBlockers || hasProblems;
+
         return (
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             <span className="font-medium text-slate-900">
-              {progress ?? '—'}
+              {progress ? `${progress} completed` : '—'}
             </span>
-            <div className="flex flex-wrap gap-x-2 text-xs text-slate-500">
-              {failed > 0 && (
-                <span className="text-amber-600 font-medium">{failed} failed</span>
-              )}
-              {attachments > 0 && (
-                <span>{attachments} attachment{attachments !== 1 ? 's' : ''}</span>
-              )}
-            </div>
+            {showPills && (
+              <div className="flex flex-wrap gap-1.5">
+                {m.failedCount > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium',
+                      'bg-amber-100 text-amber-800'
+                    )}
+                  >
+                    {m.failedCount} failed
+                  </span>
+                )}
+                {m.incompleteRequiredCount > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium',
+                      'bg-amber-100 text-amber-800'
+                    )}
+                  >
+                    {m.incompleteRequiredCount} req. missing
+                  </span>
+                )}
+                {m.missingEvidenceCount > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium',
+                      'bg-red-100 text-red-800'
+                    )}
+                  >
+                    {m.missingEvidenceCount} missing evidence
+                  </span>
+                )}
+                {m.missingCommentCount > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium',
+                      'bg-red-100 text-red-800'
+                    )}
+                  >
+                    {m.missingCommentCount} missing comment
+                  </span>
+                )}
+                {m.attachmentCount > 0 && (
+                  <span className="text-xs text-slate-500">
+                    {m.attachmentCount} attachment
+                    {m.attachmentCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
+        );
+      },
+    },
+    {
+      key: 'scope',
+      header: 'Required scope',
+      render: (row: ChecklistRun) => {
+        const m = computeRunMetrics(row);
+        return (
+          <span className="text-sm text-slate-600">
+            {formatRequiredScope(m)}
+          </span>
         );
       },
     },
@@ -238,6 +286,7 @@ export function ChecklistRunsListPage() {
         }
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/checklist-runs/${row.id}`)}
+        getRowClassName={getRowClassName}
       />
       {data && data.total > 0 && (
         <DataTablePagination
