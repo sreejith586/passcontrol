@@ -1,5 +1,5 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTodayRuns, getOverdueRuns, getFailedRuns } from './api';
 import { queryKeys } from './query-keys';
 import type { ChecklistRun } from './types';
@@ -9,6 +9,9 @@ import {
   formatRequiredScope,
 } from './run-metrics';
 import { DataTable, DataTablePagination } from '@/shared/ui';
+import { quickSetup } from '@/features/onboarding/api';
+import { PermissionGate } from '@/core/permissions/PermissionGate';
+import { toast } from '@/shared/feedback/useToast';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { RunStatusBadge } from './components/RunStatusBadge';
@@ -20,6 +23,7 @@ type Tab = 'today' | 'overdue' | 'failed';
 
 export function ChecklistRunsListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const tab: Tab =
@@ -54,6 +58,19 @@ export function ChecklistRunsListPage() {
         ? overdueQuery
         : failedQuery;
   const data = activeQuery.data;
+
+  const quickSetupMutation = useMutation({
+    mutationFn: quickSetup,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['checklist-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      navigate(`/checklist-runs/${result.runId}`);
+      toast.success('Your first checklist run is ready');
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Setup failed');
+    },
+  });
   const isLoading = activeQuery.isLoading;
   const isError = activeQuery.isError;
   const error = activeQuery.error;
@@ -270,19 +287,19 @@ export function ChecklistRunsListPage() {
         columns={columns}
         data={data?.items ?? []}
         loading={isLoading}
-        emptyMessage={
-          tab === 'today'
-            ? 'No runs for today'
-            : tab === 'overdue'
-              ? 'No overdue runs'
-              : 'No runs with failed items'
-        }
-        emptyDescription={
-          tab === 'today'
-            ? 'Checklist runs for today will appear here.'
-            : tab === 'overdue'
-              ? 'All runs are on schedule.'
-              : 'Runs with failed items will appear here.'
+        emptyMessage="No checklist runs yet"
+        emptyDescription="Create your first checklist and start your first run"
+        emptyAction={
+          <PermissionGate permission="checklist.template.create">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => quickSetupMutation.mutate()}
+              disabled={quickSetupMutation.isPending}
+            >
+              {quickSetupMutation.isPending ? 'Setting up...' : 'Start setup'}
+            </Button>
+          </PermissionGate>
         }
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/checklist-runs/${row.id}`)}

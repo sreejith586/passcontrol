@@ -34,6 +34,13 @@
 
 ---
 
+## 3. Phase 13 First Customer Experience (13B.1 COMPLETE)
+
+- ~~**Phase 13B.1 — Guided First Value onboarding**~~ — *Done.* Default landing /dashboard; Get Started panel when no runs; quick-setup endpoint creates template+schedule+run; Start setup CTAs; improved empty states; product explanation.
+- **Phase 13B.2+** — Optional: onboarding for orgs with template/schedule but no runs; smart landing (Dashboard vs Alerts based on context); template/schedule authoring UI (larger scope).
+
+---
+
 ## 4. Platform Hardening (MEDIUM PRIORITY)
 
 - **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.

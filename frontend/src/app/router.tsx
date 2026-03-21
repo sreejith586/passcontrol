@@ -40,7 +40,7 @@ const router = createBrowserRouter([
     ),
     errorElement: <RouteErrorFallback />,
     children: [
-      { index: true, element: <Navigate to="/alerts" replace /> },
+      { index: true, element: <Navigate to="/dashboard" replace /> },
       {
         path: 'dashboard',
         element: (

@@ -13,6 +13,7 @@ import { AttachmentsModule } from './attachments/attachments.module';
 import { ChecklistTemplatesModule } from './checklists/templates/checklist-templates.module';
 import { ChecklistSchedulesModule } from './checklists/schedules/checklist-schedules.module';
 import { ChecklistRunsModule } from './checklists/runs/checklist-runs.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { UsersModule } from './users/users.module';
 import { HealthController } from './health.controller';
 
@@ -32,6 +33,7 @@ import { HealthController } from './health.controller';
     ChecklistTemplatesModule,
     ChecklistSchedulesModule,
     ChecklistRunsModule,
+    OnboardingModule,
     UsersModule,
   ],
   controllers: [HealthController],

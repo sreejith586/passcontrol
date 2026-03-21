@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import {
   getChecklistMetrics,
@@ -9,9 +9,12 @@ import {
   getEscalationTrend,
   getTopProblemSources,
 } from './api';
+import { quickSetup } from '@/features/onboarding/api';
 import { queryKeys } from './query-keys';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { usePermission } from '@/core/permissions/use-permission';
+import { PermissionGate } from '@/core/permissions/PermissionGate';
+import { toast } from '@/shared/feedback/useToast';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { EmptyState } from '@/shared/layout/EmptyState';
 import { cn } from '@/lib/cn';
@@ -72,6 +75,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const hasChecklistView = usePermission('checklist.run.view');
   const hasAlertView = usePermission('alert.view');
 
@@ -114,6 +119,24 @@ export function DashboardPage() {
     queryFn: () => getTopProblemSources(5),
     enabled: hasAlertView,
   });
+
+  const quickSetupMutation = useMutation({
+    mutationFn: quickSetup,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['checklist-runs'] });
+      navigate(`/checklist-runs/${data.runId}`);
+      toast.success('Your first checklist run is ready');
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Setup failed');
+    },
+  });
+
+  const showOnboarding =
+    hasChecklistView &&
+    checklistMetrics.data &&
+    checklistMetrics.data.totalRuns === 0;
 
   if (!hasChecklistView && !hasAlertView) {
     return (
@@ -158,6 +181,34 @@ export function DashboardPage() {
         title="Dashboard"
         description="Operational overview"
       />
+
+      {/* Get Started – onboarding when no runs exist */}
+      {showOnboarding && (
+        <Card variant="soft" className="border-2 border-sky-200 bg-sky-50/50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Get started with PassControl
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            How PassControl works: <strong>Templates → Runs → Alerts</strong>
+          </p>
+          <ol className="mt-4 list-decimal list-inside space-y-1.5 text-sm text-slate-700">
+            <li>Create your first checklist</li>
+            <li>Generate a run</li>
+            <li>Complete your first inspection</li>
+          </ol>
+          <PermissionGate permission="checklist.template.create">
+            <Button
+              variant="primary"
+              size="sm"
+              className="mt-4"
+              onClick={() => quickSetupMutation.mutate()}
+              disabled={quickSetupMutation.isPending}
+            >
+              {quickSetupMutation.isPending ? 'Setting up...' : 'Start setup'}
+            </Button>
+          </PermissionGate>
+        </Card>
+      )}
 
       {/* Needs Attention – high-priority summary */}
       {needsAttention && (

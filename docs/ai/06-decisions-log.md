@@ -122,3 +122,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** For GET /v1/alert-events list, date-only `to` (YYYY-MM-DD, length ≤10) means through end of that day UTC: convert to next day midnight UTC and use `lt` (exclusive). Full ISO datetime `to` preserves precise `lte`. `from` unchanged (gte start of day UTC).
 - **Rationale:** `new Date("YYYY-MM-DD")` parses to UTC midnight; using `lte` on that excluded almost the entire day. Users expect "to 2025-03-15" to include all alerts on March 15 UTC.
+
+### Quick-setup onboarding (Phase 13B.1)
+
+- **Decision:** Single POST /onboarding/quick-setup endpoint creates template (quick-setup-starter), schedule, and run; returns runId. Permission: checklist.template.create. Idempotent for template/schedule: reuses if exists; on duplicate run for same day, returns existing runId.
+- **Rationale:** Minimal first-value flow without full template/schedule UI; admins can reach first run in one click; no new permission (reuses template.create); backend orchestrates existing services.

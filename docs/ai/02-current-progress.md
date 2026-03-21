@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-21 (Phase 12A.1)
+**Last updated:** 2025-03-22 (Phase 13B.1)
 
 ## Implemented Features
 
@@ -103,6 +103,7 @@
 - [x] Phase 11D — Information density & UX enrichment: Dashboard (alerts chart: "3 alerts · 2 breached" labels; top problem sources: formatSourceDisplay with sourceId; KPI cards: larger numbers, uppercase labels); Alerts list (enriched rows: formatSourceDisplay, formatDateTimeContextual + formatRelative, severity left border; DataTable getRowClassName); Checklist runs list (Checklist column: name + Run #; Status: badge + status label; Execution: progress + failed count + attachment count; RunStatusBadge font-bold); formatSourceDisplay, formatDateTimeContextual, formatRelative in lib
 - [x] Phase 11E.1 — Seed stability & demo foundation: AlertSlaPolicy idempotency (ensureDemoSlaPolicies: create only missing severities); demo gating (DEMO_TEMPLATE_KEYS, demoDataExists); optional reset-demo (SEED_RESET_DEMO=true, deleteDemoData, npm run prisma:seed:reset-demo)
 - [x] Phase 12A.1 — Checklist detail actionable blockers & guided navigation: Jump to first blocker button; Submission readiness shows specific blocking items (label, type) with click-to-scroll; Jump to section shows per-section health (completed/total, blocker count); sections with blockers visually emphasized (amber); run-metrics.ts reused for counts and new helpers (getBlockingItems, getFirstBlockerItemId, getSectionHealth)
+- [x] Phase 13B.1 — Guided First Value onboarding: default landing /dashboard; Get Started panel when totalRuns === 0; POST /onboarding/quick-setup (template + schedule + run); Start setup CTA on Dashboard and Checklist Runs; improved empty states (Alerts: "Go to checklist runs"); product explanation "Templates → Runs → Alerts"
 
 ### Backend (recent fixes)
 

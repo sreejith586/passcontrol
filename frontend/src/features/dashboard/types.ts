@@ -2,6 +2,7 @@ export interface ChecklistRunMetrics {
   todayRuns: number;
   overdueRuns: number;
   failedRuns: number;
+  totalRuns: number;
   openAlerts: number;
   acknowledgedAlerts: number;
   resolvedAlertsToday: number;

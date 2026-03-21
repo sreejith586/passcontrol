@@ -83,21 +83,24 @@ export class ChecklistRunsService {
       zoneId: query.zoneId,
     };
 
-    const [todayRuns, overdueRuns, failedRuns, alertCounts] = await Promise.all([
-      this.repo.countTodayRuns(ctx.organizationId, filters, todayRange),
-      this.repo.countOverdueRuns(ctx.organizationId, filters),
-      this.repo.countFailedRuns(ctx.organizationId, filters),
-      this.alertEvents.getMetricsCounts(
-        ctx.organizationId,
-        filters,
-        resolvedTodayRange,
-      ),
-    ]);
+    const [todayRuns, overdueRuns, failedRuns, totalRuns, alertCounts] =
+      await Promise.all([
+        this.repo.countTodayRuns(ctx.organizationId, filters, todayRange),
+        this.repo.countOverdueRuns(ctx.organizationId, filters),
+        this.repo.countFailedRuns(ctx.organizationId, filters),
+        this.repo.countTotalRuns(ctx.organizationId, filters),
+        this.alertEvents.getMetricsCounts(
+          ctx.organizationId,
+          filters,
+          resolvedTodayRange,
+        ),
+      ]);
 
     return {
       todayRuns,
       overdueRuns,
       failedRuns,
+      totalRuns,
       openAlerts: alertCounts.open,
       acknowledgedAlerts: alertCounts.acknowledged,
       resolvedAlertsToday: alertCounts.resolvedToday,

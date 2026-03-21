@@ -72,6 +72,24 @@ export class ChecklistRunsRepository {
   }
 
   /**
+   * Count total runs (for onboarding empty-state check).
+   */
+  async countTotalRuns(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+    },
+  ): Promise<number> {
+    const where: Prisma.ChecklistRunWhereInput = { organizationId };
+    if (filters.brandId != null) where.brandId = filters.brandId;
+    if (filters.locationId != null) where.locationId = filters.locationId;
+    if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    return this.prisma.checklistRun.count({ where });
+  }
+
+  /**
    * Count overdue runs (status PENDING/IN_PROGRESS, dueAt not null, dueAt < now).
    */
   async countOverdueRuns(

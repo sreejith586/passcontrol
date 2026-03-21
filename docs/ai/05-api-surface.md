@@ -6,7 +6,7 @@ Base: `/v1` (versioned)
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
-| GET | /checklist-runs/metrics | checklist.run.view | Dashboard counts |
+| GET | /checklist-runs/metrics | checklist.run.view | Dashboard counts (todayRuns, overdueRuns, failedRuns, totalRuns, alert counts) |
 | GET | /checklist-runs/today | checklist.run.view | Runs for today (paginated) |
 | GET | /checklist-runs/overdue | checklist.run.view | Overdue runs |
 | GET | /checklist-runs/failed | checklist.run.view | Runs with failed items |
@@ -89,6 +89,12 @@ Base: `/v1` (versioned)
 | GET | /alert-sla-policies/:id | alert.sla-policy.view | Get SLA policy by ID |
 | POST | /alert-sla-policies | alert.sla-policy.manage | Create SLA policy |
 | PATCH | /alert-sla-policies/:id | alert.sla-policy.manage | Update SLA policy |
+
+## Onboarding
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| POST | /onboarding/quick-setup | checklist.template.create | Creates starter template, schedule, and run. Returns `{ runId }`. Redirect to /checklist-runs/:runId. |
 
 ## Auth
 

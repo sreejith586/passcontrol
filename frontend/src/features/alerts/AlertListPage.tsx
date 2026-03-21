@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listAlerts,
@@ -412,8 +412,15 @@ export function AlertListPage() {
         columns={columns}
         data={items}
         loading={isLoading}
-        emptyMessage="No alerts found"
-        emptyDescription="Alerts will appear here when checklist items fail."
+        emptyMessage="No alerts yet"
+        emptyDescription="Alerts are created when checklist items fail"
+        emptyAction={
+          <Link to="/checklist-runs">
+            <Button variant="secondary" size="sm">
+              Go to checklist runs
+            </Button>
+          </Link>
+        }
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/alerts/${row.id}`)}
         getRowClassName={rowClassName}

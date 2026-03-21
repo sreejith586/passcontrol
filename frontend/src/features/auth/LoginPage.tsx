@@ -24,7 +24,7 @@ export function LoginPage() {
   const locationState = location.state as
     | { from?: { pathname: string }; passwordSetSuccess?: boolean }
     | undefined;
-  const from = locationState?.from?.pathname ?? '/alerts';
+  const from = locationState?.from?.pathname ?? '/dashboard';
   const passwordSetSuccess = locationState?.passwordSetSuccess ?? false;
 
   useEffect(() => {
