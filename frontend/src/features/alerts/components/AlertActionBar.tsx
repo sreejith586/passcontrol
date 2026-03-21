@@ -31,10 +31,7 @@ export function AlertActionBar({ alert }: AlertActionBarProps) {
   const [assignError, setAssignError] = useState<string | null>(null);
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.detail(alert.id) });
-    queryClient.invalidateQueries({ queryKey: ['alerts', 'list'] });
-    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.activities(alert.id) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.comments(alert.id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.alerts.all });
     queryClient.invalidateQueries({ queryKey: ['escalations'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };

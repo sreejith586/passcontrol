@@ -33,3 +33,29 @@ export function getRoutePermission(pathname: string): string | string[] | undefi
   }
   return undefined;
 }
+
+/** Routes to check for fallback, in order of preference. */
+const FALLBACK_ROUTE_ORDER: (keyof typeof ROUTE_PERMISSIONS)[] = [
+  '/dashboard',
+  '/checklist-runs',
+  '/alerts',
+  '/escalations',
+  '/settings/alert-workflow',
+  '/settings/users',
+  '/settings/roles',
+];
+
+/**
+ * Returns the first route the user can access, or null if none.
+ */
+export function getFirstAccessibleRoute(permissions: string[]): string | null {
+  for (const route of FALLBACK_ROUTE_ORDER) {
+    const required = ROUTE_PERMISSIONS[route];
+    if (!required) continue;
+    const hasAccess = Array.isArray(required)
+      ? required.some((p) => permissions.includes(p))
+      : permissions.includes(required);
+    if (hasAccess) return route;
+  }
+  return null;
+}

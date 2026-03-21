@@ -9,6 +9,7 @@ import { ActivityTimeline } from './components/ActivityTimeline';
 import { CommentsSection } from './components/CommentsSection';
 import { getSeverityLabel } from './components/SeverityBadge';
 import { getSourceTypeLabel } from '@/lib/labels';
+import { isNotFoundError } from '@/core/api/errors';
 import { getRunItemById } from '@/features/checklist-runs/api';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { Breadcrumbs } from '@/shared/layout/Breadcrumbs';
@@ -70,25 +71,30 @@ export function AlertDetailPage() {
   }
 
   if (alertQuery.isError) {
+    const isNotFound = isNotFoundError(alertQuery.error);
     return (
       <div className="space-y-6">
         <PageHeader title="Alert" />
         <ErrorState
-          title="Failed to load alert"
+          title={isNotFound ? 'Alert not found' : 'Failed to load alert'}
           description={
-            alertQuery.error instanceof Error
-              ? alertQuery.error.message
-              : 'Something went wrong'
+            isNotFound
+              ? 'The alert may have been deleted or you may not have access to it.'
+              : alertQuery.error instanceof Error
+                ? alertQuery.error.message
+                : 'Something went wrong'
           }
           action={
             <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => alertQuery.refetch()}
-              >
-                Try again
-              </Button>
+              {!isNotFound && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => alertQuery.refetch()}
+                >
+                  Try again
+                </Button>
+              )}
               <Link to="/alerts">
                 <Button variant="ghost" size="sm">
                   Back to alerts

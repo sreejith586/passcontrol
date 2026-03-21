@@ -13,7 +13,6 @@ import { queryKeys } from './query-keys';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { usePermission } from '@/core/permissions/use-permission';
 import { Skeleton } from '@/shared/ui/Skeleton';
-import { ErrorState } from '@/shared/layout/ErrorState';
 import { EmptyState } from '@/shared/layout/EmptyState';
 import { cn } from '@/lib/cn';
 import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
@@ -95,32 +94,6 @@ export function DashboardPage() {
     enabled: hasAlertView,
   });
 
-  const insightsQueries = [slaCompliance, escalationTrend, topProblemSources];
-  const isLoading =
-    (hasChecklistView && checklistMetrics.isLoading) ||
-    (hasAlertView &&
-      (escalationSummary.isLoading ||
-        prioritized.isLoading ||
-        insightsQueries.some((q) => q.isLoading)));
-
-  const hasError =
-    (hasChecklistView && checklistMetrics.isError) ||
-    (hasAlertView &&
-      (escalationSummary.isError ||
-        prioritized.isError ||
-        insightsQueries.some((q) => q.isError)));
-  const errorQuery = checklistMetrics.isError
-    ? checklistMetrics
-    : escalationSummary.isError
-      ? escalationSummary
-      : prioritized.isError
-        ? prioritized
-        : slaCompliance.isError
-          ? slaCompliance
-          : escalationTrend.isError
-            ? escalationTrend
-            : topProblemSources;
-
   if (!hasChecklistView && !hasAlertView) {
     return (
       <div className="space-y-6">
@@ -133,51 +106,20 @@ export function DashboardPage() {
     );
   }
 
-  if (hasError && errorQuery) {
+  function SectionError({
+    message,
+    onRetry,
+  }: {
+    message: string;
+    onRetry: () => void;
+  }) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Dashboard" />
-        <ErrorState
-          title="Failed to load dashboard"
-          description={
-            errorQuery.error instanceof Error
-              ? errorQuery.error.message
-              : 'Something went wrong'
-          }
-          action={
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => errorQuery.refetch()}
-            >
-              Try again
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Dashboard" description="Operational overview" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-        {hasAlertView && (
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Skeleton className="h-40 rounded-lg" />
-            <Skeleton className="h-40 rounded-lg" />
-            <Skeleton className="h-40 rounded-lg" />
-          </div>
-        )}
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-48 rounded-lg" />
-        </div>
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+        <p className="text-sm font-medium text-destructive">Failed to load</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{message}</p>
+        <Button variant="ghost" size="sm" className="mt-2" onClick={onRetry}>
+          Try again
+        </Button>
       </div>
     );
   }
@@ -190,71 +132,114 @@ export function DashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {hasChecklistView && checklistMetrics.data && (
-          <>
-            <MetricCard
-              label="Runs today"
-              value={checklistMetrics.data.todayRuns}
-            />
-            <MetricCard
-              label="Overdue runs"
-              value={checklistMetrics.data.overdueRuns}
-              variant={
-                checklistMetrics.data.overdueRuns > 0 ? 'warning' : 'default'
+        {hasChecklistView &&
+          (checklistMetrics.isLoading ? (
+            <>
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-24 rounded-lg" />
+              ))}
+            </>
+          ) : checklistMetrics.isError ? (
+            <SectionError
+              message={
+                checklistMetrics.error instanceof Error
+                  ? checklistMetrics.error.message
+                  : 'Something went wrong'
               }
+              onRetry={() => checklistMetrics.refetch()}
             />
-            <MetricCard
-              label="Failed runs"
-              value={checklistMetrics.data.failedRuns}
-              variant={
-                checklistMetrics.data.failedRuns > 0 ? 'destructive' : 'default'
+          ) : checklistMetrics.data ? (
+            <>
+              <MetricCard
+                label="Runs today"
+                value={checklistMetrics.data.todayRuns}
+              />
+              <MetricCard
+                label="Overdue runs"
+                value={checklistMetrics.data.overdueRuns}
+                variant={
+                  checklistMetrics.data.overdueRuns > 0 ? 'warning' : 'default'
+                }
+              />
+              <MetricCard
+                label="Failed runs"
+                value={checklistMetrics.data.failedRuns}
+                variant={
+                  checklistMetrics.data.failedRuns > 0 ? 'destructive' : 'default'
+                }
+              />
+              <MetricCard
+                label="Open alerts"
+                value={checklistMetrics.data.openAlerts}
+              />
+              <MetricCard
+                label="Acknowledged alerts"
+                value={checklistMetrics.data.acknowledgedAlerts}
+              />
+              <MetricCard
+                label="Resolved today"
+                value={checklistMetrics.data.resolvedAlertsToday}
+              />
+            </>
+          ) : null)}
+        {hasAlertView &&
+          (escalationSummary.isLoading ? (
+            <>
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-24 rounded-lg" />
+              ))}
+            </>
+          ) : escalationSummary.isError ? (
+            <SectionError
+              message={
+                escalationSummary.error instanceof Error
+                  ? escalationSummary.error.message
+                  : 'Something went wrong'
               }
+              onRetry={() => escalationSummary.refetch()}
             />
-            <MetricCard
-              label="Open alerts"
-              value={checklistMetrics.data.openAlerts}
-            />
-            <MetricCard
-              label="Acknowledged alerts"
-              value={checklistMetrics.data.acknowledgedAlerts}
-            />
-            <MetricCard
-              label="Resolved today"
-              value={checklistMetrics.data.resolvedAlertsToday}
-            />
-          </>
-        )}
-        {hasAlertView && escalationSummary.data && (
-          <>
-            <MetricCard
-              label="Active escalations"
-              value={escalationSummary.data.totalActiveAlerts}
-            />
-            <MetricCard
-              label="Ack breached"
-              value={escalationSummary.data.acknowledgeBreached}
-              variant={
-                escalationSummary.data.acknowledgeBreached > 0
-                  ? 'destructive'
-                  : 'default'
-              }
-            />
-            <MetricCard
-              label="Resolve breached"
-              value={escalationSummary.data.resolveBreached}
-              variant={
-                escalationSummary.data.resolveBreached > 0
-                  ? 'destructive'
-                  : 'default'
-              }
-            />
-          </>
-        )}
+          ) : escalationSummary.data ? (
+            <>
+              <MetricCard
+                label="Active escalations"
+                value={escalationSummary.data.totalActiveAlerts}
+              />
+              <MetricCard
+                label="Ack breached"
+                value={escalationSummary.data.acknowledgeBreached}
+                variant={
+                  escalationSummary.data.acknowledgeBreached > 0
+                    ? 'destructive'
+                    : 'default'
+                }
+              />
+              <MetricCard
+                label="Resolve breached"
+                value={escalationSummary.data.resolveBreached}
+                variant={
+                  escalationSummary.data.resolveBreached > 0
+                    ? 'destructive'
+                    : 'default'
+                }
+              />
+            </>
+          ) : null)}
       </div>
 
-      {hasAlertView && (slaCompliance.data || escalationTrend.data || topProblemSources.data) && (
+      {hasAlertView && (
         <div className="grid gap-4 lg:grid-cols-3">
-          {slaCompliance.data && (
+          {slaCompliance.isLoading ? (
+            <Skeleton className="h-48 rounded-lg" />
+          ) : slaCompliance.isError ? (
+            <SectionError
+              message={
+                slaCompliance.error instanceof Error
+                  ? slaCompliance.error.message
+                  : 'Something went wrong'
+              }
+              onRetry={() => slaCompliance.refetch()}
+            />
+          ) : slaCompliance.data ? (
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
               <h2 className="text-sm font-medium text-foreground">
                 SLA compliance (last 30 days)
@@ -326,8 +311,19 @@ export function DashboardPage() {
                 );
               })()}
             </div>
-          )}
-          {escalationTrend.data && (
+          ) : null}
+          {escalationTrend.isLoading ? (
+            <Skeleton className="h-48 rounded-lg" />
+          ) : escalationTrend.isError ? (
+            <SectionError
+              message={
+                escalationTrend.error instanceof Error
+                  ? escalationTrend.error.message
+                  : 'Something went wrong'
+              }
+              onRetry={() => escalationTrend.refetch()}
+            />
+          ) : escalationTrend.data ? (
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
               <h2 className="text-sm font-medium text-foreground">
                 Alerts triggered (last 7 days)
@@ -387,8 +383,19 @@ export function DashboardPage() {
                 </p>
               )}
             </div>
-          )}
-          {topProblemSources.data && (
+          ) : null}
+          {topProblemSources.isLoading ? (
+            <Skeleton className="h-48 rounded-lg" />
+          ) : topProblemSources.isError ? (
+            <SectionError
+              message={
+                topProblemSources.error instanceof Error
+                  ? topProblemSources.error.message
+                  : 'Something went wrong'
+              }
+              onRetry={() => topProblemSources.refetch()}
+            />
+          ) : topProblemSources.data ? (
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
               <h2 className="text-sm font-medium text-foreground">
                 Top problem sources (all-time)
@@ -421,11 +428,29 @@ export function DashboardPage() {
                 </p>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
-      {hasAlertView && prioritized.data && (
+      {hasAlertView &&
+        (prioritized.isLoading ? (
+          <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-48 rounded-lg" />
+          </div>
+        ) : prioritized.isError ? (
+          <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+            <h2 className="font-medium text-foreground">Top priorities</h2>
+            <SectionError
+              message={
+                prioritized.error instanceof Error
+                  ? prioritized.error.message
+                  : 'Something went wrong'
+              }
+              onRetry={() => prioritized.refetch()}
+            />
+          </div>
+        ) : prioritized.data ? (
         <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium text-foreground">Top priorities</h2>
@@ -481,7 +506,7 @@ export function DashboardPage() {
             />
           )}
         </div>
-      )}
+        ) : null)}
     </div>
   );
 }

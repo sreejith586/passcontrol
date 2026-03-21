@@ -13,7 +13,7 @@ import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { formatDateTime } from '@/lib/date';
 import { toast } from '@/shared/feedback/useToast';
-import { ApiError } from '@/core/api/errors';
+import { ApiError, isNotFoundError } from '@/core/api/errors';
 import { usePermission } from '@/core/permissions/use-permission';
 import { cn } from '@/lib/cn';
 
@@ -152,21 +152,30 @@ export function ChecklistRunDetailPage() {
   }
 
   if (runQuery.isError) {
+    const isNotFound = isNotFoundError(runQuery.error);
     return (
       <div className="space-y-6">
         <PageHeader title="Checklist Run" />
         <ErrorState
-          title="Failed to load run"
+          title={isNotFound ? 'Checklist run not found' : 'Failed to load run'}
           description={
-            runQuery.error instanceof Error
-              ? runQuery.error.message
-              : 'Something went wrong'
+            isNotFound
+              ? 'The run may have been deleted or you may not have access to it.'
+              : runQuery.error instanceof Error
+                ? runQuery.error.message
+                : 'Something went wrong'
           }
           action={
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => runQuery.refetch()}>
-                Try again
-              </Button>
+              {!isNotFound && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => runQuery.refetch()}
+                >
+                  Try again
+                </Button>
+              )}
               <Link to="/checklist-runs">
                 <Button variant="ghost" size="sm">
                   Back to runs
@@ -331,7 +340,7 @@ export function ChecklistRunDetailPage() {
                     isUpdating={updatingItemId === item.id}
                     canViewEvidence={canViewEvidence}
                     canDeleteEvidence={canDeleteEvidence}
-                    canUploadEvidence={canUploadEvidence}
+                    canUploadEvidence={canUploadEvidence && !isCompleted}
                     onUpdate={handleUpdateItem}
                   />
                 </div>
@@ -352,7 +361,14 @@ export function ChecklistRunDetailPage() {
           <Button
             onClick={() => submitMutation.mutate()}
             disabled={
-              submitMutation.isPending || updateItemMutation.isPending
+              updateItemMutation.isPending ||
+              submitMutation.isPending ||
+              blockers.length > 0
+            }
+            title={
+              blockers.length > 0
+                ? 'Resolve all required items before submitting'
+                : undefined
             }
           >
             {submitMutation.isPending ? 'Submitting...' : 'Submit run'}

@@ -5,6 +5,7 @@ import {
 } from 'react-router-dom';
 import { AuthGuard } from '@/core/auth/auth-guard';
 import { RoutePermissionGuard } from '@/core/permissions/RoutePermissionGuard';
+import { RouteErrorFallback } from '@/app/RouteErrorFallback';
 import { AppShell } from '@/features/shell/AppShell';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { SetPasswordPage } from '@/features/auth/SetPasswordPage';
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
         <AppShell />
       </AuthGuard>
     ),
+    errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <Navigate to="/alerts" replace /> },
       {
@@ -119,9 +121,9 @@ const router = createBrowserRouter([
       },
     ],
   },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/set-password', element: <SetPasswordPage /> },
-  { path: '*', element: <NotFoundPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorFallback /> },
+  { path: '/set-password', element: <SetPasswordPage />, errorElement: <RouteErrorFallback /> },
+  { path: '*', element: <NotFoundPage />, errorElement: <RouteErrorFallback /> },
 ]);
 
 export function AppRouter() {

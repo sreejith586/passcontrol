@@ -12,3 +12,7 @@ export class ApiError extends Error {
 export function isApiError(err: unknown): err is ApiError {
   return err instanceof ApiError;
 }
+
+export function isNotFoundError(err: unknown): boolean {
+  return isApiError(err) && err.status === 404;
+}

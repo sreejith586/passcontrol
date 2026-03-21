@@ -1,3 +1,4 @@
+import type { FocusEvent } from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import type { ChecklistRunItemSnapshot } from '../types';
 import {
@@ -29,13 +30,16 @@ function CommentField({
     setLocal(initialValue);
   }, [initialValue]);
 
-  const handleBlur = useCallback(() => {
-    const trimmed = local.trim();
-    const prevTrimmed = initialValue.trim();
-    if (trimmed !== prevTrimmed) {
-      onUpdate(itemId, { comment: trimmed });
-    }
-  }, [itemId, local, initialValue, onUpdate]);
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLTextAreaElement>) => {
+      const trimmed = (e.target.value ?? '').trim();
+      const prevTrimmed = initialValue.trim();
+      if (trimmed !== prevTrimmed) {
+        onUpdate(itemId, { comment: trimmed });
+      }
+    },
+    [itemId, initialValue, onUpdate]
+  );
 
   return (
     <div>
