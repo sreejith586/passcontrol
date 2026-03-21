@@ -8,6 +8,7 @@ import { ChecklistSchedulesRepository } from '../repositories/checklist-schedule
 import { ChecklistScheduleRecurrenceService } from './checklist-schedule-recurrence.service';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
+import { ScopeValidationService } from '../../../common/scope-validation/scope-validation.service';
 import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
@@ -25,6 +26,7 @@ export class ChecklistSchedulesService {
     private readonly recurrence: ChecklistScheduleRecurrenceService,
     private readonly audit: AuditLogsService,
     private readonly prisma: PrismaService,
+    private readonly scopeValidation: ScopeValidationService,
   ) {}
 
   async create(
@@ -36,6 +38,12 @@ export class ChecklistSchedulesService {
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
     validateStartsAtEndsAt(startsAt, endsAt);
+
+    await this.scopeValidation.validate(ctx.organizationId, {
+      brandId: dto.brandId ?? null,
+      locationId: dto.locationId ?? null,
+      zoneId: dto.zoneId ?? null,
+    });
 
     const template = await this.prisma.checklistTemplate.findFirst({
       where: {
@@ -114,6 +122,13 @@ export class ChecklistSchedulesService {
     dto: UpdateScheduleDto,
   ) {
     const existing = await this.getById(ctx, id);
+
+    const effectiveScope = {
+      brandId: dto.brandId !== undefined ? dto.brandId : existing.brandId,
+      locationId: dto.locationId !== undefined ? dto.locationId : existing.locationId,
+      zoneId: dto.zoneId !== undefined ? dto.zoneId : existing.zoneId,
+    };
+    await this.scopeValidation.validate(ctx.organizationId, effectiveScope);
 
     if (dto.rrule !== undefined) validateRrule(dto.rrule);
     if (dto.timezone !== undefined) validateTimezone(dto.timezone);

@@ -106,6 +106,9 @@
 - [x] Phase 13B.1 — Guided First Value onboarding: default landing /dashboard; Get Started panel when totalRuns === 0; POST /onboarding/quick-setup (template + schedule + run); Start setup CTA on Dashboard and Checklist Runs; improved empty states (Alerts: "Go to checklist runs"); product explanation "Templates → Runs → Alerts"
 - [x] Phase 14A — Checklist Template Management: list page (/checklist-templates), create/edit page (/checklist-templates/new, /checklist-templates/:id); sections and items editor; create (POST), update (PATCH), publish (POST :id/publish); validation (name, ≥1 section, ≥1 item per section)
 - [x] Phase 14B.1 — Checklist Schedules (PassControl): list page (/checklist-schedules), create/edit page (/checklist-schedules/new, /checklist-schedules/:id); RRULE presets (no raw RRULE input); activate/deactivate; manual "Generate run" from list; sidebar nav; permissions checklist.schedule.view/create/update/activate/deactivate, checklist.run.generate
+- [x] Phase 14C.1 — Organizational Structure Backend: Brands API (GET/POST/PATCH /brands), Locations API (GET/POST/PATCH /locations), Zones API (GET/POST/PATCH /zones); permissions brand.view/manage, location.view/manage, zone.view/manage; scope validation for checklist templates and schedules (brandId, locationId, zoneId must exist in org and hierarchy must be consistent)
+- [x] Phase 14C.2 — Organizational Structure UI: Brands, Locations, Zones list pages with create/edit modals; sidebar nav; route permissions; API integration with brands, locations, zones endpoints
+- [x] Phase 14C.3 — Scope Selectors for Templates & Schedules: Optional Brand/Location/Zone cascading selectors in template and schedule editors; ScopeSelectors component; scope included in create/update payloads; help text "Leave blank to make this available organization-wide"
 
 ### Backend (recent fixes)
 

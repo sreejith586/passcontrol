@@ -25,6 +25,7 @@ import { toast } from '@/shared/feedback/useToast';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
+import { ScopeSelectors } from '@/features/org-scope/ScopeSelectors';
 
 const TIMEZONES = [
   'America/New_York',
@@ -85,6 +86,9 @@ export function ChecklistScheduleEditorPage() {
   const [customRrule, setCustomRrule] = useState(''); // preserved when preset is custom
   const [startsAt, setStartsAt] = useState<string>('');
   const [endsAt, setEndsAt] = useState<string>('');
+  const [brandId, setBrandId] = useState('');
+  const [locationId, setLocationId] = useState('');
+  const [zoneId, setZoneId] = useState('');
 
   const scheduleQuery = useQuery({
     queryKey: queryKeys.detail(id!),
@@ -113,6 +117,9 @@ export function ChecklistScheduleEditorPage() {
       }
       setStartsAt(s.startsAt ? toIsoDateLocal(new Date(s.startsAt)) : '');
       setEndsAt(s.endsAt ? toIsoDateLocal(new Date(s.endsAt)) : '');
+      setBrandId(s.brandId ?? '');
+      setLocationId(s.locationId ?? '');
+      setZoneId(s.zoneId ?? '');
     }
   }, [scheduleQuery.data]);
 
@@ -199,12 +206,18 @@ export function ChecklistScheduleEditorPage() {
     const startsAtIso = startsAtDate?.toISOString();
     const endsAtIso = endsAtDate?.toISOString();
 
+    const scopePayload: { brandId?: string; locationId?: string; zoneId?: string } = {};
+    if (brandId) scopePayload.brandId = brandId;
+    if (locationId) scopePayload.locationId = locationId;
+    if (zoneId) scopePayload.zoneId = zoneId;
+
     if (isNew) {
       createMutation.mutate({
         checklistTemplateId,
         name: name.trim(),
         timezone: timezone.trim(),
         rrule: effectiveRrule.trim(),
+        ...scopePayload,
         startsAt: startsAtIso,
         endsAt: endsAtIso,
       });
@@ -215,6 +228,7 @@ export function ChecklistScheduleEditorPage() {
           name: name.trim(),
           timezone: timezone.trim(),
           rrule: effectiveRrule.trim(),
+          ...scopePayload,
           startsAt: startsAtIso,
           endsAt: endsAtIso,
         },
@@ -369,6 +383,20 @@ export function ChecklistScheduleEditorPage() {
               </p>
             )}
           </div>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-foreground">Scope (optional)</h3>
+          <ScopeSelectors
+            brandId={brandId}
+            locationId={locationId}
+            zoneId={zoneId}
+            onChange={({ brandId: b, locationId: l, zoneId: z }) => {
+              setBrandId(b);
+              setLocationId(l);
+              setZoneId(z);
+            }}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

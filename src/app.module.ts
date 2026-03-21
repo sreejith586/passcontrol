@@ -10,6 +10,9 @@ import { AlertSlaPoliciesModule } from './alert-sla-policies/alert-sla-policies.
 import { OrganizationSettingsModule } from './organization-settings/organization-settings.module';
 import { FilesModule } from './files/files.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { BrandsModule } from './brands/brands.module';
+import { LocationsModule } from './locations/locations.module';
+import { ZonesModule } from './zones/zones.module';
 import { ChecklistTemplatesModule } from './checklists/templates/checklist-templates.module';
 import { ChecklistSchedulesModule } from './checklists/schedules/checklist-schedules.module';
 import { ChecklistRunsModule } from './checklists/runs/checklist-runs.module';
@@ -30,6 +33,9 @@ import { HealthController } from './health.controller';
     OrganizationSettingsModule,
     FilesModule,
     AttachmentsModule,
+    BrandsModule,
+    LocationsModule,
+    ZonesModule,
     ChecklistTemplatesModule,
     ChecklistSchedulesModule,
     ChecklistRunsModule,

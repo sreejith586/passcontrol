@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { InfraModule } from '../../infra/infra.module';
 import { AccessModule } from '../../access/access.module';
 import { AuditModule } from '../../audit/audit.module';
+import { ScopeValidationModule } from '../../common/scope-validation/scope-validation.module';
 import { ChecklistSchedulesController } from './controllers/checklist-schedules.controller';
 import { ChecklistSchedulesService } from './services/checklist-schedules.service';
 import { ChecklistScheduleRecurrenceService } from './services/checklist-schedule-recurrence.service';
@@ -10,7 +11,7 @@ import { ChecklistScheduleRunGeneratorService } from './services/checklist-sched
 import { ChecklistScheduleCronService } from './services/checklist-schedule-cron.service';
 
 @Module({
-  imports: [InfraModule, AccessModule, AuditModule],
+  imports: [InfraModule, AccessModule, AuditModule, ScopeValidationModule],
   controllers: [ChecklistSchedulesController],
   providers: [
     ChecklistSchedulesService,

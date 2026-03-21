@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { ChecklistTemplatesRepository } from '../repositories/checklist-templates.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
+import { ScopeValidationService } from '../../../common/scope-validation/scope-validation.service';
 import { CreateTemplateDto } from '../dto/create-template.dto';
 import { UpdateTemplateDto } from '../dto/update-template.dto';
 import { ListTemplatesQueryDto } from '../dto/list-templates.dto';
@@ -15,12 +16,19 @@ export class ChecklistTemplatesService {
   constructor(
     private readonly repo: ChecklistTemplatesRepository,
     private readonly audit: AuditLogsService,
+    private readonly scopeValidation: ScopeValidationService,
   ) {}
 
   async create(
     ctx: { organizationId: string; userId?: string },
     dto: CreateTemplateDto,
   ) {
+    await this.scopeValidation.validate(ctx.organizationId, {
+      brandId: dto.brandId ?? null,
+      locationId: dto.locationId ?? null,
+      zoneId: dto.zoneId ?? null,
+    });
+
     const version = await this.repo.findNextVersion(
       ctx.organizationId,
       dto.templateKey,
@@ -91,6 +99,14 @@ export class ChecklistTemplatesService {
     dto: UpdateTemplateDto,
   ) {
     const existing = await this.getById(ctx, id);
+
+    const effectiveScope = {
+      brandId: dto.brandId !== undefined ? dto.brandId : existing.brandId,
+      locationId: dto.locationId !== undefined ? dto.locationId : existing.locationId,
+      zoneId: dto.zoneId !== undefined ? dto.zoneId : existing.zoneId,
+    };
+    await this.scopeValidation.validate(ctx.organizationId, effectiveScope);
+
     if (existing.status !== 'DRAFT') {
       throw new BadRequestException(
         'Template can only be updated when status is DRAFT',

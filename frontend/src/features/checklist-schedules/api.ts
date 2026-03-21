@@ -32,6 +32,9 @@ export interface CreateSchedulePayload {
   name: string;
   timezone: string;
   rrule: string;
+  brandId?: string;
+  locationId?: string;
+  zoneId?: string;
   startsAt?: string;
   endsAt?: string;
 }
@@ -40,6 +43,9 @@ export interface UpdateSchedulePayload {
   name?: string;
   timezone?: string;
   rrule?: string;
+  brandId?: string;
+  locationId?: string;
+  zoneId?: string;
   startsAt?: string;
   endsAt?: string;
 }

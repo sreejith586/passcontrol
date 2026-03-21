@@ -135,6 +135,33 @@ Base: `/v1` (versioned)
 | POST | /checklist-templates/:id/publish | checklist.template.publish | Publish template (DRAFT → PUBLISHED) |
 | POST | /checklist-templates/:id/archive | checklist.template.archive | Archive template |
 
+## Brands
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /brands | brand.view | List brands for organization |
+| POST | /brands | brand.manage | Create brand (name) |
+| GET | /brands/:id | brand.view | Get brand by ID |
+| PATCH | /brands/:id | brand.manage | Update brand (name) |
+
+## Locations
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /locations | location.view | List locations (query: brandId) |
+| POST | /locations | location.manage | Create location (brandId, name, timezone) |
+| GET | /locations/:id | location.view | Get location by ID (includes brand: { id, name }) |
+| PATCH | /locations/:id | location.manage | Update location (brandId?, name?, timezone?) |
+
+## Zones
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /zones | zone.view | List zones (query: locationId) |
+| POST | /zones | zone.manage | Create zone (locationId, name) |
+| GET | /zones/:id | zone.view | Get zone by ID (includes location: { id, name }) |
+| PATCH | /zones/:id | zone.manage | Update zone (locationId?, name?) |
+
 ## Checklist Schedules
 
 | Method | Path | Permission | Description |
@@ -148,6 +175,8 @@ Base: `/v1` (versioned)
 | POST | /checklist-schedules/:id/generate-run | checklist.run.generate | Generate run from schedule (optional body `{ dueAt?: string }`; v1 frontend sends empty body) |
 
 Frontend v1: uses RRULE presets (Daily 6/9/18, Twice daily, Weekly Mon/Sun); no raw RRULE editor; no brand/location/zone scope in UI. Generate-run without dueAt creates run for schedule's next occurrence; on duplicate/day conflict, backend returns error with message.
+
+Scope validation (Phase 14C.1): Checklist templates and schedules validate brandId, locationId, zoneId when provided — each must exist in org; if both brandId and locationId provided, location must belong to brand; if both locationId and zoneId provided, zone must belong to location.
 
 ## Other
 

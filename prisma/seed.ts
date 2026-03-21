@@ -88,6 +88,12 @@ const PERMISSIONS: Array<{ key: string; name: string }> = [
   { key: 'user.view', name: 'View users and roles' },
   { key: 'user.invite', name: 'Invite users to organization' },
   { key: 'user.manage', name: 'Manage user roles and status' },
+  { key: 'brand.view', name: 'View brands' },
+  { key: 'brand.manage', name: 'Manage brands' },
+  { key: 'location.view', name: 'View locations' },
+  { key: 'location.manage', name: 'Manage locations' },
+  { key: 'zone.view', name: 'View zones' },
+  { key: 'zone.manage', name: 'Manage zones' },
 ];
 
 async function ensureOrganization() {

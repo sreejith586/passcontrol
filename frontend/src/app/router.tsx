@@ -20,6 +20,9 @@ import { ChecklistTemplatesListPage } from '@/features/checklist-templates/Check
 import { ChecklistTemplateEditorPage } from '@/features/checklist-templates/ChecklistTemplateEditorPage';
 import { ChecklistSchedulesListPage } from '@/features/checklist-schedules/ChecklistSchedulesListPage';
 import { ChecklistScheduleEditorPage } from '@/features/checklist-schedules/ChecklistScheduleEditorPage';
+import { BrandsListPage } from '@/features/brands/BrandsListPage';
+import { LocationsListPage } from '@/features/locations/LocationsListPage';
+import { ZonesListPage } from '@/features/zones/ZonesListPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
 
@@ -114,6 +117,30 @@ const router = createBrowserRouter([
         element: (
           <RoutePermissionGuard>
             <ChecklistScheduleEditorPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'brands',
+        element: (
+          <RoutePermissionGuard>
+            <BrandsListPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'locations',
+        element: (
+          <RoutePermissionGuard>
+            <LocationsListPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'zones',
+        element: (
+          <RoutePermissionGuard>
+            <ZonesListPage />
           </RoutePermissionGuard>
         ),
       },

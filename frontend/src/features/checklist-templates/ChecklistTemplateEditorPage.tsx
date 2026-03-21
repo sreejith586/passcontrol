@@ -26,6 +26,7 @@ import { toast } from '@/shared/feedback/useToast';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
+import { ScopeSelectors } from '@/features/org-scope/ScopeSelectors';
 
 const ITEM_TYPES = [
   { value: 'BOOLEAN', label: 'Yes/No (Pass/Fail)' },
@@ -63,9 +64,10 @@ function toCreatePayload(
   name: string,
   description: string,
   templateKey: string,
-  sections: SectionForm[]
+  sections: SectionForm[],
+  scope: { brandId: string; locationId: string; zoneId: string }
 ): CreateTemplatePayload {
-  return {
+  const payload: CreateTemplatePayload = {
     templateKey: templateKey.trim() || slugFromName(name),
     name: name.trim(),
     description: description.trim() || undefined,
@@ -84,14 +86,19 @@ function toCreatePayload(
       })) as CreateItemPayload[],
     })) as CreateSectionPayload[],
   };
+  if (scope.brandId) payload.brandId = scope.brandId;
+  if (scope.locationId) payload.locationId = scope.locationId;
+  if (scope.zoneId) payload.zoneId = scope.zoneId;
+  return payload;
 }
 
 function toUpdatePayload(
   name: string,
   description: string,
-  sections: SectionForm[]
+  sections: SectionForm[],
+  scope: { brandId: string; locationId: string; zoneId: string }
 ): UpdateTemplatePayload {
-  return {
+  const payload: UpdateTemplatePayload = {
     name: name.trim(),
     description: description.trim() || undefined,
     sections: sections.map((s, si) => ({
@@ -109,6 +116,10 @@ function toUpdatePayload(
       })),
     })),
   };
+  if (scope.brandId) payload.brandId = scope.brandId;
+  if (scope.locationId) payload.locationId = scope.locationId;
+  if (scope.zoneId) payload.zoneId = scope.zoneId;
+  return payload;
 }
 
 function templateToForm(t: ChecklistTemplate): {
@@ -116,6 +127,9 @@ function templateToForm(t: ChecklistTemplate): {
   description: string;
   templateKey: string;
   status: string;
+  brandId: string;
+  locationId: string;
+  zoneId: string;
   sections: SectionForm[];
 } {
   return {
@@ -123,6 +137,9 @@ function templateToForm(t: ChecklistTemplate): {
     description: t.description ?? '',
     templateKey: t.templateKey,
     status: t.status,
+    brandId: t.brandId ?? '',
+    locationId: t.locationId ?? '',
+    zoneId: t.zoneId ?? '',
     sections: (t.sections ?? []).map((s, si) => ({
       id: s.id,
       title: s.title,
@@ -194,6 +211,9 @@ export function ChecklistTemplateEditorPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [templateKey, setTemplateKey] = useState('');
+  const [brandId, setBrandId] = useState('');
+  const [locationId, setLocationId] = useState('');
+  const [zoneId, setZoneId] = useState('');
   const [sections, setSections] = useState<SectionForm[]>(() => [
     emptySection(0),
   ]);
@@ -210,6 +230,9 @@ export function ChecklistTemplateEditorPage() {
       setName(form.name);
       setDescription(form.description);
       setTemplateKey(form.templateKey);
+      setBrandId(form.brandId);
+      setLocationId(form.locationId);
+      setZoneId(form.zoneId);
       setSections(form.sections);
     }
   }, [templateQuery.data]);
@@ -264,12 +287,13 @@ export function ChecklistTemplateEditorPage() {
       return;
     }
 
+    const scope = { brandId, locationId, zoneId };
     if (isNew) {
-      createMutation.mutate(toCreatePayload(name, description, templateKey, sections));
+      createMutation.mutate(toCreatePayload(name, description, templateKey, sections, scope));
     } else if (id && isDraft) {
       updateMutation.mutate({
         templateId: id,
-        payload: toUpdatePayload(name, description, sections),
+        payload: toUpdatePayload(name, description, sections, scope),
       });
     }
   }
@@ -434,6 +458,20 @@ export function ChecklistTemplateEditorPage() {
           rows={2}
           disabled={!canEdit}
         />
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-foreground">Scope (optional)</h3>
+          <ScopeSelectors
+            brandId={brandId}
+            locationId={locationId}
+            zoneId={zoneId}
+            onChange={({ brandId: b, locationId: l, zoneId: z }) => {
+              setBrandId(b);
+              setLocationId(l);
+              setZoneId(z);
+            }}
+            disabled={!canEdit}
+          />
+        </div>
         {canEdit && (
           <div className="flex gap-2">
             <Button
