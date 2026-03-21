@@ -7,6 +7,7 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   '/dashboard': ['checklist.run.view', 'alert.view'],
   '/checklist-runs': 'checklist.run.view',
   '/checklist-templates': ['checklist.template.view', 'checklist.template.create'],
+  '/checklist-schedules': ['checklist.schedule.view', 'checklist.schedule.create'],
   '/alerts': 'alert.view',
   '/escalations': 'alert.view',
   '/settings/alert-workflow': 'alert.workflow-policy.view',
@@ -39,6 +40,7 @@ export function getRoutePermission(pathname: string): string | string[] | undefi
 const FALLBACK_ROUTE_ORDER: (keyof typeof ROUTE_PERMISSIONS)[] = [
   '/dashboard',
   '/checklist-templates',
+  '/checklist-schedules',
   '/checklist-runs',
   '/alerts',
   '/escalations',

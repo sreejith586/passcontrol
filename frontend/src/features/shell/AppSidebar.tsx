@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   FileText,
+  Calendar,
   AlertTriangle,
   TrendingUp,
   Settings,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/cn';
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: ['checklist.run.view', 'alert.view'] as const },
   { to: '/checklist-templates', label: 'Checklist Templates', icon: FileText, permission: ['checklist.template.view', 'checklist.template.create'] as const },
+  { to: '/checklist-schedules', label: 'Checklist Schedules', icon: Calendar, permission: ['checklist.schedule.view', 'checklist.schedule.create'] as const },
   { to: '/checklist-runs', label: 'Checklist Runs', icon: ClipboardList, permission: 'checklist.run.view' as const },
   { to: '/alerts', label: 'Alerts', icon: AlertTriangle, permission: 'alert.view' as const },
   { to: '/escalations', label: 'Escalations', icon: TrendingUp, permission: 'alert.view' as const },

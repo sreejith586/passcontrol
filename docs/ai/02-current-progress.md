@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-22 (Phase 13B.1)
+**Last updated:** 2025-03-22 (Phase 14B.1)
 
 ## Implemented Features
 
@@ -105,6 +105,7 @@
 - [x] Phase 12A.1 — Checklist detail actionable blockers & guided navigation: Jump to first blocker button; Submission readiness shows specific blocking items (label, type) with click-to-scroll; Jump to section shows per-section health (completed/total, blocker count); sections with blockers visually emphasized (amber); run-metrics.ts reused for counts and new helpers (getBlockingItems, getFirstBlockerItemId, getSectionHealth)
 - [x] Phase 13B.1 — Guided First Value onboarding: default landing /dashboard; Get Started panel when totalRuns === 0; POST /onboarding/quick-setup (template + schedule + run); Start setup CTA on Dashboard and Checklist Runs; improved empty states (Alerts: "Go to checklist runs"); product explanation "Templates → Runs → Alerts"
 - [x] Phase 14A — Checklist Template Management: list page (/checklist-templates), create/edit page (/checklist-templates/new, /checklist-templates/:id); sections and items editor; create (POST), update (PATCH), publish (POST :id/publish); validation (name, ≥1 section, ≥1 item per section)
+- [x] Phase 14B.1 — Checklist Schedules (PassControl): list page (/checklist-schedules), create/edit page (/checklist-schedules/new, /checklist-schedules/:id); RRULE presets (no raw RRULE input); activate/deactivate; manual "Generate run" from list; sidebar nav; permissions checklist.schedule.view/create/update/activate/deactivate, checklist.run.generate
 
 ### Backend (recent fixes)
 

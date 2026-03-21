@@ -135,9 +135,23 @@ Base: `/v1` (versioned)
 | POST | /checklist-templates/:id/publish | checklist.template.publish | Publish template (DRAFT → PUBLISHED) |
 | POST | /checklist-templates/:id/archive | checklist.template.archive | Archive template |
 
+## Checklist Schedules
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /checklist-schedules | checklist.schedule.view | List schedules (query: checklistTemplateId, isActive, page, limit) |
+| GET | /checklist-schedules/:id | checklist.schedule.view | Get schedule by ID |
+| POST | /checklist-schedules | checklist.schedule.create | Create schedule (checklistTemplateId, name, timezone, rrule, startsAt?, endsAt?) |
+| PATCH | /checklist-schedules/:id | checklist.schedule.update | Update schedule (partial: name, timezone, rrule, startsAt?, endsAt?) |
+| POST | /checklist-schedules/:id/activate | checklist.schedule.activate | Activate schedule |
+| POST | /checklist-schedules/:id/deactivate | checklist.schedule.deactivate | Deactivate schedule |
+| POST | /checklist-schedules/:id/generate-run | checklist.run.generate | Generate run from schedule (optional body `{ dueAt?: string }`; v1 frontend sends empty body) |
+
+Frontend v1: uses RRULE presets (Daily 6/9/18, Twice daily, Weekly Mon/Sun); no raw RRULE editor; no brand/location/zone scope in UI. Generate-run without dueAt creates run for schedule's next occurrence; on duplicate/day conflict, backend returns error with message.
+
 ## Other
 
-- `/temperature-policies`, `/temperature-readings`, `/checklist-schedules`, `/organization-settings`
+- `/temperature-policies`, `/temperature-readings`, `/organization-settings`
 
 ## Response Shape
 

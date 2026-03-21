@@ -18,6 +18,8 @@ import { ChecklistRunsListPage } from '@/features/checklist-runs/ChecklistRunsLi
 import { ChecklistRunDetailPage } from '@/features/checklist-runs/ChecklistRunDetailPage';
 import { ChecklistTemplatesListPage } from '@/features/checklist-templates/ChecklistTemplatesListPage';
 import { ChecklistTemplateEditorPage } from '@/features/checklist-templates/ChecklistTemplateEditorPage';
+import { ChecklistSchedulesListPage } from '@/features/checklist-schedules/ChecklistSchedulesListPage';
+import { ChecklistScheduleEditorPage } from '@/features/checklist-schedules/ChecklistScheduleEditorPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
 
@@ -88,6 +90,30 @@ const router = createBrowserRouter([
         element: (
           <RoutePermissionGuard>
             <ChecklistTemplateEditorPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-schedules',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistSchedulesListPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-schedules/new',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistScheduleEditorPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'checklist-schedules/:id',
+        element: (
+          <RoutePermissionGuard>
+            <ChecklistScheduleEditorPage />
           </RoutePermissionGuard>
         ),
       },
