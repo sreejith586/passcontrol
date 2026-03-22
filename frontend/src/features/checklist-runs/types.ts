@@ -54,6 +54,8 @@ export interface ChecklistRunListResponse {
 /** Params for today runs */
 export interface ListTodayRunsParams {
   status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  assignedToMe?: boolean;
+  assignedToUserId?: string;
   page?: number;
   limit?: number;
   timezone?: string;
@@ -62,12 +64,16 @@ export interface ListTodayRunsParams {
 
 /** Params for overdue runs */
 export interface ListOverdueRunsParams {
+  assignedToMe?: boolean;
+  assignedToUserId?: string;
   page?: number;
   limit?: number;
 }
 
 /** Params for failed runs */
 export interface ListFailedRunsParams {
+  assignedToMe?: boolean;
+  assignedToUserId?: string;
   page?: number;
   limit?: number;
   from?: string;

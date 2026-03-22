@@ -4,10 +4,11 @@ import {
   IsIn,
   IsString,
   IsInt,
+  IsBoolean,
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ListTodayRunsQueryDto {
@@ -15,6 +16,17 @@ export class ListTodayRunsQueryDto {
   @IsOptional()
   @IsIn(['PENDING', 'IN_PROGRESS', 'COMPLETED'])
   status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Filter by assigned user UUID' })
+  @IsOptional()
+  @IsUUID()
+  assignedToUserId?: string;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Filter to runs assigned to current user' })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  assignedToMe?: boolean;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()

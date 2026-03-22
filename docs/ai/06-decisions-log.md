@@ -132,3 +132,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add `performedByUser` Prisma relation to ChecklistRun (reverse: `performedChecklistRuns` on User). Include performedByUser in RUN_INCLUDE and RUN_SUMMARY_SELECT. Display "Performed By" in run detail right rail and run list; read-only, null-safe (— when no performer). No new endpoints; no execution logic changes.
 - **Rationale:** Clarifies distinction between Assigned To (accountable) and Performed By (executor). performedByUserId already set by markRunInProgress and submitRun; relation enables name resolution; consistent with assignedToUser pattern.
+
+### My Runs / assignee-based filtering (Phase 15E)
+
+- **Decision:** Add optional `assignedToMe` (boolean) and `assignedToUserId` (UUID) to today/overdue/failed list DTOs. Service resolves assignedToMe via ctx.userId; repository filters by assignedToUserId when provided. Frontend: FilterBar with "Assigned to me" checkbox; URL-synced; no assignee dropdown in v1.
+- **Rationale:** Enables practical "My Runs" workflow without new endpoint; follows alerts-style filter resolution; minimal scope (checkbox only).

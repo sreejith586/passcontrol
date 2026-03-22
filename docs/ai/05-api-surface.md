@@ -11,7 +11,10 @@ Base: `/v1` (versioned)
 | GET | /checklist-runs/overdue | checklist.run.view | Overdue runs |
 | GET | /checklist-runs/failed | checklist.run.view | Runs with failed items |
 | GET | /checklist-runs/:id | checklist.run.view | Run by ID |
+| PATCH | /checklist-runs/:id/assignment | checklist.run.update | Update run assignment (assign, reassign, or clear) |
 | POST | /checklist-runs/:id/submit | checklist.run.submit | Submit completed run |
+
+Run list filters (Phase 15E): today, overdue, failed support assignedToMe (bool) and assignedToUserId (UUID). assignedToMe=true uses current user from JWT; assignedToUserId filters by specific user. Precedence: assignedToMe > assignedToUserId.
 
 ## Checklist Run Items
 

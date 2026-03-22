@@ -14,16 +14,19 @@ import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { toast } from '@/shared/feedback/useToast';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
+import { FilterBar, FilterCheckbox } from '@/shared/layout/FilterBar';
 import { RunStatusBadge } from './components/RunStatusBadge';
 import { formatDateTime } from '@/lib/date';
 import { Button } from '@/shared/ui/Button';
 import { cn } from '@/lib/cn';
+import { useAuth } from '@/core/auth/auth-context';
 
 type Tab = 'today' | 'overdue' | 'failed';
 
 export function ChecklistRunsListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const tab: Tab =
@@ -32,22 +35,25 @@ export function ChecklistRunsListPage() {
       : 'today';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = parseInt(searchParams.get('limit') || '25', 10);
+  const assignedToMe = searchParams.get('assignedToMe') === 'true';
+
+  const listParams = { page, limit, assignedToMe: assignedToMe || undefined };
 
   const todayQuery = useQuery({
-    queryKey: queryKeys.today({ page, limit }),
-    queryFn: () => getTodayRuns({ page, limit }),
+    queryKey: queryKeys.today(listParams),
+    queryFn: () => getTodayRuns(listParams),
     enabled: tab === 'today',
   });
 
   const overdueQuery = useQuery({
-    queryKey: queryKeys.overdue({ page, limit }),
-    queryFn: () => getOverdueRuns({ page, limit }),
+    queryKey: queryKeys.overdue(listParams),
+    queryFn: () => getOverdueRuns(listParams),
     enabled: tab === 'overdue',
   });
 
   const failedQuery = useQuery({
-    queryKey: queryKeys.failed({ page, limit }),
-    queryFn: () => getFailedRuns({ page, limit }),
+    queryKey: queryKeys.failed(listParams),
+    queryFn: () => getFailedRuns(listParams),
     enabled: tab === 'failed',
   });
 
@@ -85,6 +91,14 @@ export function ChecklistRunsListPage() {
   function setPage(p: number) {
     const next = new URLSearchParams(searchParams);
     next.set('page', String(p));
+    setSearchParams(next);
+  }
+
+  function setAssignedToMe(checked: boolean) {
+    const next = new URLSearchParams(searchParams);
+    if (checked) next.set('assignedToMe', 'true');
+    else next.delete('assignedToMe');
+    next.set('page', '1');
     setSearchParams(next);
   }
 
@@ -301,6 +315,15 @@ export function ChecklistRunsListPage() {
           </button>
         ))}
       </div>
+      {user?.id && (
+        <FilterBar>
+          <FilterCheckbox
+            checked={assignedToMe}
+            onChange={setAssignedToMe}
+            label="Assigned to me"
+          />
+        </FilterBar>
+      )}
       <DataTable
         columns={columns}
         data={data?.items ?? []}

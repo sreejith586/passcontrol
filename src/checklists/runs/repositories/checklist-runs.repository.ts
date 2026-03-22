@@ -153,6 +153,7 @@ export class ChecklistRunsRepository {
       brandId?: string;
       locationId?: string;
       zoneId?: string;
+      assignedToUserId?: string;
     },
     dateRange: { start: Date; end: Date },
     pagination: { page: number; limit: number },
@@ -209,6 +210,7 @@ export class ChecklistRunsRepository {
       locationId?: string;
       zoneId?: string;
       checklistTemplateId?: string;
+      assignedToUserId?: string;
     },
     pagination: { page: number; limit: number },
     options?: { view?: 'full' | 'summary' },
@@ -224,6 +226,7 @@ export class ChecklistRunsRepository {
     if (filters.zoneId != null) where.zoneId = filters.zoneId;
     if (filters.checklistTemplateId != null)
       where.checklistTemplateId = filters.checklistTemplateId;
+    if (filters.assignedToUserId != null) where.assignedToUserId = filters.assignedToUserId;
 
     const useSummary = options?.view === 'summary';
     const skip = (pagination.page - 1) * pagination.limit;
@@ -265,6 +268,7 @@ export class ChecklistRunsRepository {
       checklistTemplateId?: string;
       from?: string;
       to?: string;
+      assignedToUserId?: string;
     },
     pagination: { page: number; limit: number },
     options?: { view?: 'full' | 'summary' },
@@ -296,6 +300,7 @@ export class ChecklistRunsRepository {
         { dueAt: null, createdAt: createdAtFilter },
       ];
     }
+    if (filters.assignedToUserId != null) where.assignedToUserId = filters.assignedToUserId;
 
     const useSummary = options?.view === 'summary';
     const skip = (pagination.page - 1) * pagination.limit;

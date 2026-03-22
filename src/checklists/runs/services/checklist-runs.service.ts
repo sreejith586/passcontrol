@@ -55,6 +55,20 @@ export class ChecklistRunsService {
     private readonly temperatureReadings: TemperatureReadingsService,
   ) {}
 
+  /**
+   * Resolve assignment filter from query params.
+   * Precedence: assignedToMe (uses ctx.userId) > assignedToUserId.
+   */
+  private resolveAssignmentFilter(
+    assignedToMe?: boolean,
+    assignedToUserId?: string,
+    userId?: string,
+  ): string | undefined {
+    if (assignedToMe === true && userId) return userId;
+    if (assignedToUserId) return assignedToUserId;
+    return undefined;
+  }
+
   private getDateRange(timezone?: string, dateStr?: string): { start: Date; end: Date } {
     const zone = timezone ?? 'UTC';
     let dt: DateTime;
@@ -111,12 +125,17 @@ export class ChecklistRunsService {
   }
 
   async getTodayRuns(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     query: ListTodayRunsQueryDto,
   ) {
     const { start, end } = this.getDateRange(query.timezone, query.date);
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
+    const assignedToUserId = this.resolveAssignmentFilter(
+      query.assignedToMe,
+      query.assignedToUserId,
+      ctx.userId,
+    );
     const { items, total } = await this.repo.findTodayRuns(
       ctx.organizationId,
       {
@@ -124,6 +143,7 @@ export class ChecklistRunsService {
         brandId: query.brandId,
         locationId: query.locationId,
         zoneId: query.zoneId,
+        assignedToUserId,
       },
       { start, end },
       { page, limit },
@@ -133,11 +153,16 @@ export class ChecklistRunsService {
   }
 
   async getOverdueRuns(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     query: ListOverdueRunsQueryDto,
   ) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
+    const assignedToUserId = this.resolveAssignmentFilter(
+      query.assignedToMe,
+      query.assignedToUserId,
+      ctx.userId,
+    );
     const { items, total } = await this.repo.findOverdueRuns(
       ctx.organizationId,
       {
@@ -145,6 +170,7 @@ export class ChecklistRunsService {
         locationId: query.locationId,
         zoneId: query.zoneId,
         checklistTemplateId: query.checklistTemplateId,
+        assignedToUserId,
       },
       { page, limit },
       { view: query.view ?? 'full' },
@@ -153,11 +179,16 @@ export class ChecklistRunsService {
   }
 
   async getFailedRuns(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     query: ListFailedRunsQueryDto,
   ) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
+    const assignedToUserId = this.resolveAssignmentFilter(
+      query.assignedToMe,
+      query.assignedToUserId,
+      ctx.userId,
+    );
     const { items, total } = await this.repo.findFailedRuns(
       ctx.organizationId,
       {
@@ -167,6 +198,7 @@ export class ChecklistRunsService {
         checklistTemplateId: query.checklistTemplateId,
         from: query.from,
         to: query.to,
+        assignedToUserId,
       },
       { page, limit },
       { view: query.view ?? 'full' },

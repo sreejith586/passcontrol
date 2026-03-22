@@ -14,6 +14,8 @@ export async function getTodayRuns(
 ): Promise<ChecklistRunListResponse> {
   const searchParams: Record<string, string> = {};
   if (params?.status) searchParams.status = params.status;
+  if (params?.assignedToMe === true) searchParams.assignedToMe = 'true';
+  if (params?.assignedToUserId) searchParams.assignedToUserId = params.assignedToUserId;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   if (params?.timezone) searchParams.timezone = params.timezone;
@@ -26,6 +28,8 @@ export async function getOverdueRuns(
   params?: ListOverdueRunsParams
 ): Promise<ChecklistRunListResponse> {
   const searchParams: Record<string, string> = {};
+  if (params?.assignedToMe === true) searchParams.assignedToMe = 'true';
+  if (params?.assignedToUserId) searchParams.assignedToUserId = params.assignedToUserId;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   searchParams.view = 'full';
@@ -36,6 +40,8 @@ export async function getFailedRuns(
   params?: ListFailedRunsParams
 ): Promise<ChecklistRunListResponse> {
   const searchParams: Record<string, string> = {};
+  if (params?.assignedToMe === true) searchParams.assignedToMe = 'true';
+  if (params?.assignedToUserId) searchParams.assignedToUserId = params.assignedToUserId;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   if (params?.from) searchParams.from = params.from;

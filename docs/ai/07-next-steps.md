@@ -45,6 +45,7 @@
 ## 4. Phase 15 Ownership & Visibility (15D COMPLETE)
 
 - ~~**Phase 15D — Run Performer Visibility**~~ — *Done.* performedByUser relation; RUN_INCLUDE/RUN_SUMMARY_SELECT; Performed By in run detail and list; read-only, null-safe.
+- ~~**Phase 15E — My Runs / Assignee-Based Filtering**~~ — *Done.* assignedToMe, assignedToUserId on today/overdue/failed; "Assigned to me" checkbox; URL-synced; no assignee dropdown.
 
 ---
 
