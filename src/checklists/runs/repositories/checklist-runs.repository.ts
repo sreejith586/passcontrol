@@ -325,6 +325,32 @@ export class ChecklistRunsRepository {
     });
   }
 
+  /**
+   * Update assignedToUserId for a single run. Caller must verify org and status.
+   */
+  async updateAssignment(
+    organizationId: string,
+    runId: string,
+    assignedToUserId: string | null,
+  ) {
+    const existing = await this.prisma.checklistRun.findFirst({
+      where: { id: runId, organizationId },
+      select: { id: true },
+    });
+    if (!existing) return null;
+
+    return this.prisma.checklistRun.update({
+      where: { id: runId },
+      data: {
+        assignedToUser:
+          assignedToUserId != null
+            ? { connect: { id: assignedToUserId } }
+            : { disconnect: true },
+      },
+      include: RUN_INCLUDE,
+    });
+  }
+
   async findRunItemById(organizationId: string, itemId: string) {
     return this.prisma.checklistRunItemSnapshot.findFirst({
       where: { id: itemId, organizationId },

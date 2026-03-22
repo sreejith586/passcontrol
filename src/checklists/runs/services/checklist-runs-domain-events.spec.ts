@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UsersService } from '../../../users/services/users.service';
 import { ChecklistRunsService } from './checklist-runs.service';
 import { ChecklistRunsRepository } from '../repositories/checklist-runs.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
@@ -73,6 +74,7 @@ describe('ChecklistRunsService (domain events - fail transition)', () => {
       providers: [
         ChecklistRunsService,
         { provide: ChecklistRunsRepository, useValue: mockRepo },
+        { provide: UsersService, useValue: { belongsToOrganization: jest.fn().mockResolvedValue(true) } },
         { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
         { provide: AlertEventsService, useValue: {} },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: publisher },
@@ -269,6 +271,7 @@ describe('ChecklistRunsService (domain events - run completion)', () => {
       providers: [
         ChecklistRunsService,
         { provide: ChecklistRunsRepository, useValue: mockRepo },
+        { provide: UsersService, useValue: { belongsToOrganization: jest.fn().mockResolvedValue(true) } },
         { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
         { provide: AlertEventsService, useValue: {} },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: publisher },

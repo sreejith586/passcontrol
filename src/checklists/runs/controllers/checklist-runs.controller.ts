@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -18,6 +20,7 @@ import { ListTodayRunsQueryDto } from '../dto/list-today-runs.dto';
 import { ListOverdueRunsQueryDto } from '../dto/list-overdue-runs.dto';
 import { ListFailedRunsQueryDto } from '../dto/list-failed-runs.dto';
 import { ChecklistRunMetricsQueryDto } from '../dto/list-metrics.dto';
+import { UpdateChecklistRunAssignmentDto } from '../dto/update-checklist-run-assignment.dto';
 import { JwtAuthGuard } from '../../../auth/guards/auth.guard';
 import { RbacGuard } from '../../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../../access/rbac/permissions.decorator';
@@ -149,6 +152,19 @@ export class ChecklistRunsController {
     @Param('id') id: string,
   ) {
     const run = await this.service.getRunById(ctx, id);
+    return ApiResponse.ok(run);
+  }
+
+  @Patch(':id/assignment')
+  @RequirePermissions('checklist.run.update')
+  @ApiOperation({ summary: 'Update run assignment (assign, reassign, or clear)' })
+  @ApiParam({ name: 'id', description: 'Run UUID' })
+  async updateAssignment(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateChecklistRunAssignmentDto,
+  ) {
+    const run = await this.service.updateRunAssignment(ctx, id, dto);
     return ApiResponse.ok(run);
   }
 

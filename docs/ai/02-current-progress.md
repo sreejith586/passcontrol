@@ -112,6 +112,7 @@
 - [x] Phase 14C.4 — Scope Clearing Support: Users can clear Brand/Location/Zone on existing templates and schedules via update; cleared values sent as null; reverts entities back to organization-wide scope
 - [x] Phase 15A — Schedule Ownership: ChecklistSchedule.ownerUserId (optional); owner validated against org membership; owner selector in schedule editor; Owner column in schedules list; clearing supported
 - [x] Phase 15B — Run Assignment (Ownership Continuity): ChecklistRun.assignedToUserId inherited from schedule.ownerUserId when runs are generated; Assigned To column in run list; Assigned To in run detail right rail; null-safe for existing runs
+- [x] Phase 15C — Manual Run Reassignment: PATCH /checklist-runs/:id/assignment; assign/reassign/clear from Run Detail page; allowed for PENDING/IN_PROGRESS only; org-scoped user validation; does not affect schedule or other runs
 
 ### Backend (recent fixes)
 

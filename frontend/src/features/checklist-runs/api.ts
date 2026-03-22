@@ -59,6 +59,15 @@ export async function submitRun(runId: string): Promise<ChecklistRun> {
   return post<ChecklistRun>(`/checklist-runs/${runId}/submit`);
 }
 
+export async function updateRunAssignment(
+  runId: string,
+  assignedToUserId: string | null
+): Promise<ChecklistRun> {
+  return patch<ChecklistRun>(`/checklist-runs/${runId}/assignment`, {
+    assignedToUserId,
+  });
+}
+
 export async function getRunItemById(itemId: string): Promise<RunItemDetail> {
   return get<RunItemDetail>(`/checklist-run-items/${itemId}`);
 }

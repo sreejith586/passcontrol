@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { UsersService } from '../../../users/services/users.service';
 import { ChecklistRunsService } from './checklist-runs.service';
 import { ChecklistRunsRepository } from '../repositories/checklist-runs.repository';
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
@@ -60,6 +61,7 @@ describe('ChecklistRunsService (uploadEvidence)', () => {
       providers: [
         ChecklistRunsService,
         { provide: ChecklistRunsRepository, useValue: repo },
+        { provide: UsersService, useValue: { belongsToOrganization: jest.fn().mockResolvedValue(true) } },
         { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
         { provide: AlertEventsService, useValue: {} },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: {} },

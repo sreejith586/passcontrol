@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { KeyboardEvent } from 'react';
 import { useRef, useEffect, useState } from 'react';
-import { getRunById, updateRunItem, submitRun } from './api';
+import { getRunById, updateRunItem, submitRun, updateRunAssignment } from './api';
 import { queryKeys } from './query-keys';
 import {
   computeRunMetrics,
@@ -23,6 +23,7 @@ import { ApiError, isNotFoundError } from '@/core/api/errors';
 import { usePermission } from '@/core/permissions/use-permission';
 import { cn } from '@/lib/cn';
 import { RailCard } from '@/shared/ui/Card';
+import { RunAssignmentModal } from './components/RunAssignmentModal';
 
 type UpdateItemVariables = {
   itemId: string;
@@ -47,6 +48,8 @@ export function ChecklistRunDetailPage() {
   const canViewEvidence = usePermission('attachment.view');
   const canDeleteEvidence = usePermission('attachment.delete');
   const canUploadEvidence = usePermission('checklist.run.update');
+  const canUpdateRun = usePermission('checklist.run.update');
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
 
   const runQuery = useQuery({
     queryKey: queryKeys.detail(id!),
@@ -99,6 +102,20 @@ export function ChecklistRunDetailPage() {
     onError: (err) => {
       const message = err instanceof ApiError ? err.message : 'Failed to submit run';
       toast.error(message);
+    },
+  });
+
+  const updateAssignmentMutation = useMutation({
+    mutationFn: (assignedToUserId: string | null) =>
+      updateRunAssignment(id!, assignedToUserId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.detail(id!), updated);
+      queryClient.invalidateQueries({ queryKey: queryKeys.all });
+      setAssignmentModalOpen(false);
+      toast.success('Assignment updated');
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to update assignment');
     },
   });
 
@@ -407,8 +424,19 @@ export function ChecklistRunDetailPage() {
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-500">Assigned To</dt>
-                <dd className="mt-1 font-medium text-slate-900">
-                  {run.assignedToUser?.name ?? 'Unassigned'}
+                <dd className="mt-1 flex items-center gap-2">
+                  <span className="font-medium text-slate-900">
+                    {run.assignedToUser?.name ?? 'Unassigned'}
+                  </span>
+                  {canUpdateRun && !isCompleted && (
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentModalOpen(true)}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Change
+                    </button>
+                  )}
                 </dd>
               </div>
               {run.dueAt && (
@@ -419,6 +447,24 @@ export function ChecklistRunDetailPage() {
               )}
             </dl>
           </RailCard>
+
+          <RunAssignmentModal
+            open={assignmentModalOpen}
+            onClose={() => {
+              setAssignmentModalOpen(false);
+              updateAssignmentMutation.reset();
+            }}
+            onConfirm={(assignedToUserId) =>
+              updateAssignmentMutation.mutate(assignedToUserId)
+            }
+            loading={updateAssignmentMutation.isPending}
+            error={
+              updateAssignmentMutation.isError && updateAssignmentMutation.error instanceof Error
+                ? updateAssignmentMutation.error.message
+                : undefined
+            }
+            currentAssignedToUserId={run.assignedToUserId ?? null}
+          />
 
           <RailCard title="Progress" className="border-slate-200">
             <dl className="space-y-3">

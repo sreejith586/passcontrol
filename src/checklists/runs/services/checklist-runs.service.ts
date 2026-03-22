@@ -36,11 +36,14 @@ import { UpdateRunItemDto } from '../dto/update-run-item.dto';
 import { LinkAttachmentToRunItemDto } from '../dto/link-attachment-to-run-item.dto';
 import { CreateTemperatureReadingForRunItemDto } from '../dto/create-temperature-reading-for-run-item.dto';
 import { TemperatureSourceType } from '../../../temperature/enums/source-type.enum';
+import { UsersService } from '../../../users/services/users.service';
+import { UpdateChecklistRunAssignmentDto } from '../dto/update-checklist-run-assignment.dto';
 
 @Injectable()
 export class ChecklistRunsService {
   constructor(
     private readonly repo: ChecklistRunsRepository,
+    private readonly usersService: UsersService,
     private readonly audit: AuditLogsService,
     private readonly alertEvents: AlertEventsService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
@@ -175,6 +178,42 @@ export class ChecklistRunsService {
     const run = await this.repo.findRunById(ctx.organizationId, id);
     if (!run) throw new NotFoundException('Checklist run not found');
     return run;
+  }
+
+  async updateRunAssignment(
+    ctx: { organizationId: string },
+    runId: string,
+    dto: UpdateChecklistRunAssignmentDto,
+  ) {
+    const existing = await this.repo.findRunById(ctx.organizationId, runId);
+    if (!existing) throw new NotFoundException('Checklist run not found');
+
+    if (existing.status === 'COMPLETED') {
+      throw new BadRequestException(
+        'Cannot change assignment: run is already completed',
+      );
+    }
+
+    const assignedToUserId = dto.assignedToUserId ?? null;
+    if (assignedToUserId != null) {
+      const belongsToOrg = await this.usersService.belongsToOrganization(
+        assignedToUserId,
+        ctx.organizationId,
+      );
+      if (!belongsToOrg) {
+        throw new BadRequestException(
+          'Target user not found or does not belong to this organization',
+        );
+      }
+    }
+
+    const updated = await this.repo.updateAssignment(
+      ctx.organizationId,
+      runId,
+      assignedToUserId,
+    );
+    if (!updated) throw new NotFoundException('Checklist run not found');
+    return updated;
   }
 
   async updateRunItem(
