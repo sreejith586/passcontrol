@@ -7,6 +7,7 @@ import {
   updateSchedule,
   activateSchedule,
   deactivateSchedule,
+  previewNextRun,
 } from './api';
 import type { CreateSchedulePayload, UpdateSchedulePayload } from './api';
 import { listTemplates } from '@/features/checklist-templates/api';
@@ -29,6 +30,7 @@ import { ErrorState } from '@/shared/layout/ErrorState';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { ScopeSelectors } from '@/features/org-scope/ScopeSelectors';
 import { TIMEZONES, getBrowserTimezone } from '@/lib/timezones';
+import { formatDateTime } from '@/lib/date';
 
 function toIsoDateLocal(d: Date | null): string {
   if (!d) return '';
@@ -183,6 +185,39 @@ export function ChecklistScheduleEditorPage() {
     presetId && presetId !== CUSTOM_FALLBACK_ID
       ? RRULE_PRESETS.find((p) => p.id === presetId)?.rrule ?? ''
       : customRrule;
+
+  const startsAtDate = fromIsoDateLocal(startsAt);
+  const endsAtDate = fromIsoDateLocal(endsAt);
+  const isInvalidWindow =
+    startsAtDate && endsAtDate && endsAtDate < startsAtDate;
+  const previewParams = {
+    rrule: effectiveRrule.trim(),
+    timezone: timezone.trim(),
+    startsAt: startsAtDate?.toISOString(),
+    endsAt: endsAtDate?.toISOString(),
+  };
+  const canPreview =
+    !!previewParams.rrule &&
+    !!previewParams.timezone &&
+    !isInvalidWindow;
+
+  const previewQuery = useQuery({
+    queryKey: [
+      'schedule-preview',
+      previewParams.rrule,
+      previewParams.timezone,
+      previewParams.startsAt ?? '',
+      previewParams.endsAt ?? '',
+    ],
+    queryFn: () =>
+      previewNextRun({
+        rrule: previewParams.rrule,
+        timezone: previewParams.timezone,
+        startsAt: previewParams.startsAt || undefined,
+        endsAt: previewParams.endsAt || undefined,
+      }),
+    enabled: canPreview,
+  });
 
   function handleSave() {
     const startsAtDate = fromIsoDateLocal(startsAt);
@@ -464,6 +499,29 @@ export function ChecklistScheduleEditorPage() {
               })()}
             </div>
           </div>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-foreground">
+            Next Run Preview
+          </h3>
+          {!canPreview ? (
+            <p className="text-sm text-slate-500">
+              Select recurrence and timezone to see next run
+            </p>
+          ) : previewQuery.isLoading ? (
+            <p className="text-sm text-slate-500">Loading...</p>
+          ) : previewQuery.isError ? (
+            <p className="text-sm text-amber-700">
+              Could not compute preview
+            </p>
+          ) : previewQuery.data?.nextRunAt ? (
+            <p className="text-sm text-foreground">
+              Next run: {formatDateTime(previewQuery.data.nextRunAt)}
+            </p>
+          ) : (
+            <p className="text-sm text-foreground">No future runs</p>
+          )}
         </div>
 
         {!isNew && schedule && (

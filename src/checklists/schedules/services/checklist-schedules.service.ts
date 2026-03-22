@@ -14,6 +14,7 @@ import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
 import { GenerateRunDto } from '../dto/generate-run.dto';
+import { PreviewNextRunDto } from '../dto/preview-next-run.dto';
 import {
   validateRrule,
   validateTimezone,
@@ -107,6 +108,28 @@ export class ChecklistSchedulesService {
       { after: final ?? created },
     );
     return final ?? created;
+  }
+
+  /**
+   * Preview next run for draft schedule config. No DB calls, no org scoping.
+   * Invalid RRULE returns null (does not throw).
+   */
+  previewNextRun(dto: PreviewNextRunDto): { nextRunAt: string | null } {
+    validateTimezone(dto.timezone);
+    const startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+    const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+    validateStartsAtEndsAt(startsAt, endsAt);
+
+    const next = this.recurrence.computeNextRunAt(
+      {
+        rrule: dto.rrule,
+        timezone: dto.timezone,
+        startsAt,
+        endsAt,
+      },
+      new Date(),
+    );
+    return { nextRunAt: next?.toISOString() ?? null };
   }
 
   async getById(ctx: { organizationId: string }, id: string) {

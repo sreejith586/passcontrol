@@ -21,6 +21,7 @@ import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
 import { GenerateRunDto } from '../dto/generate-run.dto';
+import { PreviewNextRunDto } from '../dto/preview-next-run.dto';
 import { JwtAuthGuard } from '../../../auth/guards/auth.guard';
 import { RbacGuard } from '../../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../../access/rbac/permissions.decorator';
@@ -36,6 +37,15 @@ import {
 @ApiBearerAuth()
 export class ChecklistSchedulesController {
   constructor(private readonly service: ChecklistSchedulesService) {}
+
+  @Post('preview-next-run')
+  @RequirePermissions('checklist.schedule.view')
+  @ApiOperation({ summary: 'Preview next run for draft schedule config' })
+  @ApiBody({ type: PreviewNextRunDto })
+  async previewNextRun(@Body() dto: PreviewNextRunDto) {
+    const result = await this.service.previewNextRun(dto);
+    return ApiResponse.ok(result);
+  }
 
   @Post()
   @RequirePermissions('checklist.schedule.create')

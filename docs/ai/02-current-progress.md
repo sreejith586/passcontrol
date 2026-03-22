@@ -116,6 +116,7 @@
 - [x] Phase 15D — Run Performer Visibility: performedByUser relation on ChecklistRun; RUN_INCLUDE/RUN_SUMMARY_SELECT include performedByUser (id, name); Assigned To and Performed By both shown in run detail right rail and run list; read-only display, null-safe (— when no performer)
 - [x] Phase 15E — My Runs / Assignee-Based Filtering: assignedToMe, assignedToUserId query params on today/overdue/failed list endpoints; FilterBar "Assigned to me" checkbox on run list page; URL-synced; applies to all tabs; no assignee dropdown in this phase
 - [x] Temperature checklist item unit display UX: TemperatureItemInput shows active unit (°F/°C) inline beside the input; resolution order: item config (`configSnapshot.unit`) → regional `temperatureUnitFallback` (location/regional settings) → default °F; no backend/API/label changes; display-only clarity improvement
+- [x] Phase 16C — Next Run Preview: POST /v1/checklist-schedules/preview-next-run for draft config; reuses computeNextRunAt; schedule editor shows next run datetime or "No future runs"; enabled when rrule+timezone present
 
 ### Backend (recent fixes)
 

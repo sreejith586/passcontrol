@@ -80,6 +80,26 @@ export async function getScheduleById(
   return get<ChecklistSchedule>(`/checklist-schedules/${id}`);
 }
 
+export interface PreviewNextRunParams {
+  rrule: string;
+  timezone: string;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export interface PreviewNextRunResult {
+  nextRunAt: string | null;
+}
+
+export async function previewNextRun(
+  params: PreviewNextRunParams,
+): Promise<PreviewNextRunResult> {
+  return post<PreviewNextRunResult>(
+    '/checklist-schedules/preview-next-run',
+    params,
+  );
+}
+
 export async function createSchedule(
   payload: CreateSchedulePayload
 ): Promise<ChecklistSchedule> {
