@@ -426,19 +426,44 @@ export function ChecklistScheduleEditorPage() {
           </select>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Starts at (optional)"
-            type="datetime-local"
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-          />
-          <Input
-            label="Ends at (optional)"
-            type="datetime-local"
-            value={endsAt}
-            onChange={(e) => setEndsAt(e.target.value)}
-          />
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-foreground">
+            Activation Window (optional)
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Input
+                label="Start (optional)"
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Schedule will start generating runs at or after this time
+              </p>
+            </div>
+            <div>
+              <Input
+                label="End (optional)"
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Schedule will stop generating runs after this time
+              </p>
+              {(() => {
+                const endsAtDate = fromIsoDateLocal(endsAt);
+                const isEndPast =
+                  endsAtDate && endsAtDate < new Date();
+                return isEndPast ? (
+                  <p className="mt-1.5 text-sm text-amber-700" role="status">
+                    End date has already passed. This schedule will not generate new runs.
+                  </p>
+                ) : null;
+              })()}
+            </div>
+          </div>
         </div>
 
         {!isNew && schedule && (
