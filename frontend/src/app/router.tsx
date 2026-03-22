@@ -25,7 +25,8 @@ import { LocationsListPage } from '@/features/locations/LocationsListPage';
 import { ZonesListPage } from '@/features/zones/ZonesListPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
-import { ReportsPage } from '@/features/reports/ReportsPage';
+import { ReportsLandingPage } from '@/features/reports/ReportsLandingPage';
+import { ReportWorkspacePage } from '@/features/reports/ReportWorkspacePage';
 
 function NotFoundPage() {
   return (
@@ -155,11 +156,56 @@ const router = createBrowserRouter([
       },
       {
         path: 'reports',
-        element: (
-          <RoutePermissionGuard>
-            <ReportsPage />
-          </RoutePermissionGuard>
-        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <RoutePermissionGuard>
+                <ReportsLandingPage />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'checklist-completion',
+            element: (
+              <RoutePermissionGuard>
+                <ReportWorkspacePage reportType="checklist-completion" />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'failed-items',
+            element: (
+              <RoutePermissionGuard>
+                <ReportWorkspacePage reportType="failed-items" />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'overdue-runs',
+            element: (
+              <RoutePermissionGuard>
+                <ReportWorkspacePage reportType="overdue-runs" />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'consolidated-operations',
+            element: (
+              <RoutePermissionGuard>
+                <ReportWorkspacePage reportType="consolidated-operations" />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'checklist-item-status',
+            element: (
+              <RoutePermissionGuard>
+                <ReportWorkspacePage reportType="checklist-item-status" />
+              </RoutePermissionGuard>
+            ),
+          },
+        ],
       },
       {
         path: 'settings',

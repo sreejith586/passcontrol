@@ -80,6 +80,20 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: 'reports',
+    label: 'Reports',
+    icon: FileBarChart,
+    permission: 'reports.view' as const,
+    children: [
+      { to: '/reports', label: 'Overview', permission: 'reports.view' as const },
+      { to: '/reports/checklist-completion', label: 'Checklist Completion', permission: 'reports.view' as const },
+      { to: '/reports/failed-items', label: 'Failed Items', permission: 'reports.view' as const },
+      { to: '/reports/overdue-runs', label: 'Overdue Runs', permission: 'reports.view' as const },
+      { to: '/reports/consolidated-operations', label: 'Consolidated Operations', permission: 'reports.view' as const },
+      { to: '/reports/checklist-item-status', label: 'Checklist Item Status', permission: 'reports.view' as const },
+    ],
+  },
+  {
     id: 'settings',
     label: 'Settings',
     icon: Settings,
@@ -94,7 +108,6 @@ const navGroups: NavGroup[] = [
 
 const topLevelItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: ['checklist.run.view', 'alert.view'] as const },
-  { to: '/reports', label: 'Reports', icon: FileBarChart, permission: 'reports.view' as const },
 ];
 
 function isChildActive(pathname: string, group: NavGroup): boolean {
