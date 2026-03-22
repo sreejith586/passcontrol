@@ -25,6 +25,6 @@ import { ChecklistRunItemsRepository } from './repositories/checklist-run-items.
     ChecklistRunItemsService,
     ChecklistRunItemsRepository,
   ],
-  exports: [ChecklistRunsService],
+  exports: [ChecklistRunsService, ChecklistRunItemsService],
 })
 export class ChecklistRunsModule {}

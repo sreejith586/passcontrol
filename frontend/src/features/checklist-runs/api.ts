@@ -7,6 +7,7 @@ import type {
   ListFailedRunsParams,
   RunItemDetail,
   RunItemAttachment,
+  FailedRunItemsListResponse,
 } from './types';
 
 export async function getTodayRuns(
@@ -16,6 +17,9 @@ export async function getTodayRuns(
   if (params?.status) searchParams.status = params.status;
   if (params?.assignedToMe === true) searchParams.assignedToMe = 'true';
   if (params?.assignedToUserId) searchParams.assignedToUserId = params.assignedToUserId;
+  if (params?.brandId) searchParams.brandId = params.brandId;
+  if (params?.locationId) searchParams.locationId = params.locationId;
+  if (params?.zoneId) searchParams.zoneId = params.zoneId;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   if (params?.timezone) searchParams.timezone = params.timezone;
@@ -30,6 +34,10 @@ export async function getOverdueRuns(
   const searchParams: Record<string, string> = {};
   if (params?.assignedToMe === true) searchParams.assignedToMe = 'true';
   if (params?.assignedToUserId) searchParams.assignedToUserId = params.assignedToUserId;
+  if (params?.brandId) searchParams.brandId = params.brandId;
+  if (params?.locationId) searchParams.locationId = params.locationId;
+  if (params?.zoneId) searchParams.zoneId = params.zoneId;
+  if (params?.checklistTemplateId) searchParams.checklistTemplateId = params.checklistTemplateId;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   searchParams.view = 'full';
@@ -42,12 +50,41 @@ export async function getFailedRuns(
   const searchParams: Record<string, string> = {};
   if (params?.assignedToMe === true) searchParams.assignedToMe = 'true';
   if (params?.assignedToUserId) searchParams.assignedToUserId = params.assignedToUserId;
+  if (params?.brandId) searchParams.brandId = params.brandId;
+  if (params?.locationId) searchParams.locationId = params.locationId;
+  if (params?.zoneId) searchParams.zoneId = params.zoneId;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   if (params?.from) searchParams.from = params.from;
   if (params?.to) searchParams.to = params.to;
   searchParams.view = 'full';
   return get<ChecklistRunListResponse>('/checklist-runs/failed', searchParams);
+}
+
+export async function getFailedItems(
+  params?: {
+    brandId?: string;
+    locationId?: string;
+    zoneId?: string;
+    checklistTemplateId?: string;
+    severity?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }
+): Promise<FailedRunItemsListResponse> {
+  const searchParams: Record<string, string> = {};
+  if (params?.brandId) searchParams.brandId = params.brandId;
+  if (params?.locationId) searchParams.locationId = params.locationId;
+  if (params?.zoneId) searchParams.zoneId = params.zoneId;
+  if (params?.checklistTemplateId) searchParams.checklistTemplateId = params.checklistTemplateId;
+  if (params?.severity) searchParams.severity = params.severity;
+  if (params?.from) searchParams.from = params.from;
+  if (params?.to) searchParams.to = params.to;
+  if (params?.page) searchParams.page = String(params.page);
+  if (params?.limit) searchParams.limit = String(params.limit);
+  return get<FailedRunItemsListResponse>('/checklist-run-items/failed', searchParams);
 }
 
 export async function getRunById(id: string): Promise<ChecklistRun> {

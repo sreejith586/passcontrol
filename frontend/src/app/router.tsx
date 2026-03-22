@@ -25,6 +25,7 @@ import { LocationsListPage } from '@/features/locations/LocationsListPage';
 import { ZonesListPage } from '@/features/zones/ZonesListPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
+import { ReportsPage } from '@/features/reports/ReportsPage';
 
 function NotFoundPage() {
   return (
@@ -149,6 +150,14 @@ const router = createBrowserRouter([
         element: (
           <RoutePermissionGuard>
             <EscalationsPage />
+          </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'reports',
+        element: (
+          <RoutePermissionGuard>
+            <ReportsPage />
           </RoutePermissionGuard>
         ),
       },

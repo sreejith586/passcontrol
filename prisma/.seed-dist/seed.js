@@ -84,6 +84,7 @@ const PERMISSIONS = [
     { key: 'location.manage', name: 'Manage locations' },
     { key: 'zone.view', name: 'View zones' },
     { key: 'zone.manage', name: 'Manage zones' },
+    { key: 'reports.view', name: 'View and export reports' },
 ];
 async function ensureOrganization() {
     const organization = await prisma.organization.findFirst({
@@ -398,6 +399,7 @@ const RESTAURANT_ROLES = [
             'attachment.create',
             'attachment.delete',
             'user.view',
+            'reports.view',
         ],
     },
     {

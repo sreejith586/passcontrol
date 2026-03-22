@@ -170,6 +170,125 @@ export class ChecklistRunsService {
     return { items, total, page, limit };
   }
 
+  /**
+   * Get runs in a date range for export/reports.
+   * When pagination is provided, returns paginated result for preview. Otherwise returns all (high limit) for export.
+   */
+  async getRunsInDateRangeForReport(
+    ctx: { organizationId: string; userId?: string },
+    filters: {
+      from?: string;
+      to?: string;
+      timezone?: string;
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      assignedToMe?: boolean;
+    },
+    pagination?: { page: number; limit: number },
+  ) {
+    const REPORT_LIMIT = 10000;
+    const { page, limit } = pagination ?? { page: 1, limit: REPORT_LIMIT };
+    const timezone =
+      filters.timezone ??
+      (
+        await this.regionalSettings.resolveRegionalSettings(
+          ctx.organizationId,
+          filters.locationId,
+        )
+      ).timezone;
+    const zone = timezone ?? 'UTC';
+    let start: Date;
+    let end: Date;
+    if (filters.from && filters.to) {
+      const fromDt = DateTime.fromISO(filters.from, { zone });
+      const toDt = DateTime.fromISO(filters.to, { zone });
+      start = (fromDt.isValid ? fromDt : DateTime.now().setZone(zone))
+        .startOf('day')
+        .toUTC()
+        .toJSDate();
+      end = (toDt.isValid ? toDt : DateTime.now().setZone(zone))
+        .endOf('day')
+        .toUTC()
+        .toJSDate();
+    } else {
+      const dt = DateTime.now().setZone(zone);
+      start = dt.startOf('day').toUTC().toJSDate();
+      end = dt.endOf('day').toUTC().toJSDate();
+    }
+    const assignedToUserId = filters.assignedToMe && ctx.userId ? ctx.userId : undefined;
+    const { items, total } = await this.repo.findTodayRuns(
+      ctx.organizationId,
+      {
+        brandId: filters.brandId,
+        locationId: filters.locationId,
+        zoneId: filters.zoneId,
+        assignedToUserId,
+      },
+      { start, end },
+      { page, limit },
+      { view: 'summary' },
+    );
+    return { items, total, page, limit };
+  }
+
+  /**
+   * Get runs in date range with failedItemCount and openAlertCount. For consolidated operations report.
+   */
+  async getRunsInDateRangeWithAggregates(
+    ctx: { organizationId: string; userId?: string },
+    filters: {
+      from?: string;
+      to?: string;
+      timezone?: string;
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      assignedToMe?: boolean;
+    },
+    pagination?: { page: number; limit: number },
+  ) {
+    const result = await this.getRunsInDateRangeForReport(ctx, filters, pagination);
+    const runIds = result.items.map((r) => r.id);
+    const aggregates = await this.repo.getRunAggregates(ctx.organizationId, runIds);
+    const items = result.items.map((r) => {
+      const agg = aggregates.get(r.id) ?? { failedItemCount: 0, openAlertCount: 0 };
+      return { ...r, failedItemCount: agg.failedItemCount, openAlertCount: agg.openAlertCount };
+    });
+    return { ...result, items };
+  }
+
+  /**
+   * Get overdue runs for export/reports. Bypasses pagination (high limit).
+   * Used by ReportsService only.
+   */
+  async getOverdueRunsForReport(
+    ctx: { organizationId: string; userId?: string },
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+      assignedToMe?: boolean;
+    },
+  ) {
+    const REPORT_LIMIT = 10000;
+    const assignedToUserId = filters.assignedToMe && ctx.userId ? ctx.userId : undefined;
+    const { items } = await this.repo.findOverdueRuns(
+      ctx.organizationId,
+      {
+        brandId: filters.brandId,
+        locationId: filters.locationId,
+        zoneId: filters.zoneId,
+        checklistTemplateId: filters.checklistTemplateId,
+        assignedToUserId,
+      },
+      { page: 1, limit: REPORT_LIMIT },
+      { view: 'summary' },
+    );
+    return items;
+  }
+
   async getOverdueRuns(
     ctx: { organizationId: string; userId?: string },
     query: ListOverdueRunsQueryDto,

@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
+  FileBarChart,
 } from 'lucide-react';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { cn } from '@/lib/cn';
@@ -93,6 +94,7 @@ const navGroups: NavGroup[] = [
 
 const topLevelItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: ['checklist.run.view', 'alert.view'] as const },
+  { to: '/reports', label: 'Reports', icon: FileBarChart, permission: 'reports.view' as const },
 ];
 
 function isChildActive(pathname: string, group: NavGroup): boolean {

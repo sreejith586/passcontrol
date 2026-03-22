@@ -16,6 +16,7 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   '/settings/organization': 'alert.workflow-policy.view',
   '/settings/users': 'user.view',
   '/settings/roles': 'user.view',
+  '/reports': 'reports.view',
 };
 
 /**
@@ -53,6 +54,7 @@ const FALLBACK_ROUTE_ORDER: (keyof typeof ROUTE_PERMISSIONS)[] = [
   '/settings/organization',
   '/settings/users',
   '/settings/roles',
+  '/reports',
 ];
 
 /**

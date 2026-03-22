@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DateTime } from 'luxon';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
@@ -11,6 +12,7 @@ export interface FailedItemFilters {
   severity?: string;
   from?: string;
   to?: string;
+  timezone?: string;
 }
 
 export type FailuresTrendsInterval = 'day' | 'week' | 'month';
@@ -112,9 +114,9 @@ export class ChecklistRunItemsRepository {
       latest_alerts AS (
         SELECT DISTINCT ON (ae.source_id) ae.source_id, ae.status
         FROM alert_events ae
-        WHERE ae.organization_id = ${organizationId}
+        WHERE ae.organization_id = CAST(${organizationId} AS uuid)
           AND ae.source_type = 'CHECKLIST_RUN_ITEM'
-          AND ae.source_id IN (SELECT id FROM filtered_failed_items)
+          AND ae.source_id::uuid IN (SELECT id FROM filtered_failed_items)
         ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC
       )
       SELECT
@@ -196,9 +198,9 @@ export class ChecklistRunItemsRepository {
       latest_alerts AS (
         SELECT DISTINCT ON (ae.source_id) ae.source_id, ae.status
         FROM alert_events ae
-        WHERE ae.organization_id = ${organizationId}
+        WHERE ae.organization_id = CAST(${organizationId} AS uuid)
           AND ae.source_type = 'CHECKLIST_RUN_ITEM'
-          AND ae.source_id IN (SELECT id FROM filtered_failed_items)
+          AND ae.source_id::uuid IN (SELECT id FROM filtered_failed_items)
         ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC
       )
       SELECT
@@ -214,7 +216,7 @@ export class ChecklistRunItemsRepository {
         COUNT(la.source_id) FILTER (WHERE la.status = 'ACKNOWLEDGED')::bigint AS acknowledged_alerts,
         COUNT(la.source_id) FILTER (WHERE la.status = 'RESOLVED')::bigint AS resolved_alerts
       FROM filtered_failed_items ffi
-      LEFT JOIN latest_alerts la ON la.source_id = ffi.id
+      LEFT JOIN latest_alerts la ON la.source_id::uuid = ffi.id
       GROUP BY ffi.location_id
       ORDER BY
         COUNT(*) FILTER (WHERE ffi.severity_snapshot = 'CRITICAL') DESC,
@@ -291,9 +293,9 @@ export class ChecklistRunItemsRepository {
       latest_alerts AS (
         SELECT DISTINCT ON (ae.source_id) ae.source_id, ae.status
         FROM alert_events ae
-        WHERE ae.organization_id = ${organizationId}
+        WHERE ae.organization_id = CAST(${organizationId} AS uuid)
           AND ae.source_type = 'CHECKLIST_RUN_ITEM'
-          AND ae.source_id IN (SELECT id FROM filtered_failed_items)
+          AND ae.source_id::uuid IN (SELECT id FROM filtered_failed_items)
         ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC
       )
       SELECT
@@ -310,7 +312,7 @@ export class ChecklistRunItemsRepository {
         COUNT(la.source_id) FILTER (WHERE la.status = 'ACKNOWLEDGED')::bigint AS acknowledged_alerts,
         COUNT(la.source_id) FILTER (WHERE la.status = 'RESOLVED')::bigint AS resolved_alerts
       FROM filtered_failed_items ffi
-      LEFT JOIN latest_alerts la ON la.source_id = ffi.id
+      LEFT JOIN latest_alerts la ON la.source_id::uuid = ffi.id
       GROUP BY ffi.checklist_template_id, ffi.template_name_snapshot
       ORDER BY
         COUNT(*) FILTER (WHERE ffi.severity_snapshot = 'CRITICAL') DESC,
@@ -482,42 +484,151 @@ export class ChecklistRunItemsRepository {
     filters: FailedItemFilters,
   ): Prisma.Sql[] {
     const conditions: Prisma.Sql[] = [
-      Prisma.sql`cri.organization_id = ${organizationId}`,
+      Prisma.sql`cri.organization_id = CAST(${organizationId} AS uuid)`,
       Prisma.sql`cri.result = 'FAIL'`,
     ];
 
     if (filters.brandId != null) {
-      conditions.push(Prisma.sql`cr.brand_id = ${filters.brandId}`);
+      conditions.push(Prisma.sql`cr.brand_id = CAST(${filters.brandId} AS uuid)`);
     }
     if (filters.locationId != null) {
-      conditions.push(Prisma.sql`cr.location_id = ${filters.locationId}`);
+      conditions.push(Prisma.sql`cr.location_id = CAST(${filters.locationId} AS uuid)`);
     }
     if (filters.zoneId != null) {
-      conditions.push(Prisma.sql`cr.zone_id = ${filters.zoneId}`);
+      conditions.push(Prisma.sql`cr.zone_id = CAST(${filters.zoneId} AS uuid)`);
     }
     if (filters.checklistTemplateId != null) {
       conditions.push(
-        Prisma.sql`cr.checklist_template_id = ${filters.checklistTemplateId}`,
+        Prisma.sql`cr.checklist_template_id = CAST(${filters.checklistTemplateId} AS uuid)`,
       );
     }
     if (filters.severity != null) {
       conditions.push(Prisma.sql`cri.severity_snapshot = ${filters.severity}`);
     }
 
+    const zone = filters.timezone ?? 'UTC';
     if (filters.from != null) {
-      const fromDate = new Date(filters.from);
+      const fromDt = DateTime.fromISO(filters.from, { zone });
+      const fromDate = (fromDt.isValid ? fromDt : DateTime.now().setZone(zone))
+        .startOf('day')
+        .toUTC()
+        .toJSDate();
       conditions.push(
         Prisma.sql`COALESCE(cr.due_at, cr.created_at) >= ${fromDate}`,
       );
     }
     if (filters.to != null) {
-      const toDate = new Date(filters.to);
+      const toDt = DateTime.fromISO(filters.to, { zone });
+      const toDate = (toDt.isValid ? toDt : DateTime.now().setZone(zone))
+        .endOf('day')
+        .toUTC()
+        .toJSDate();
       conditions.push(
         Prisma.sql`COALESCE(cr.due_at, cr.created_at) <= ${toDate}`,
       );
     }
 
     return conditions;
+  }
+
+  /**
+   * Find item snapshots in date range for Checklist Item Status report.
+   * One row per item, with section and run context. Paginated.
+   */
+  async findItemSnapshotsInDateRange(
+    organizationId: string,
+    filters: {
+      start: Date;
+      end: Date;
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+      assignedToUserId?: string;
+      result?: 'PASS' | 'FAIL';
+    },
+    pagination: { page: number; limit: number },
+  ): Promise<{
+    items: Array<{
+      id: string;
+      checklistRunId: string;
+      labelSnapshot: string;
+      itemTypeSnapshot: string;
+      result: string | null;
+      comment: string | null;
+      severitySnapshot: string;
+      sortOrder: number;
+      _count: { attachments: number };
+      checklistRunSectionSnapshot: { titleSnapshot: string; sortOrder: number };
+      checklistRun: {
+        runNumber: number;
+        templateNameSnapshot: string;
+        dueAt: Date | null;
+      };
+    }>;
+    total: number;
+  }> {
+    const runWhere: Prisma.ChecklistRunWhereInput = {
+      organizationId,
+      OR: [
+        { dueAt: { gte: filters.start, lte: filters.end } },
+        {
+          dueAt: null,
+          createdAt: { gte: filters.start, lte: filters.end },
+        },
+      ],
+    };
+    if (filters.brandId != null) runWhere.brandId = filters.brandId;
+    if (filters.locationId != null) runWhere.locationId = filters.locationId;
+    if (filters.zoneId != null) runWhere.zoneId = filters.zoneId;
+    if (filters.checklistTemplateId != null)
+      runWhere.checklistTemplateId = filters.checklistTemplateId;
+    if (filters.assignedToUserId != null)
+      runWhere.assignedToUserId = filters.assignedToUserId;
+
+    const itemWhere: Prisma.ChecklistRunItemSnapshotWhereInput = {
+      organizationId,
+      checklistRun: runWhere,
+    };
+    if (filters.result != null) itemWhere.result = filters.result;
+
+    const skip = (pagination.page - 1) * pagination.limit;
+    const [items, total] = await Promise.all([
+      this.prisma.checklistRunItemSnapshot.findMany({
+        where: itemWhere,
+        orderBy: [
+          { checklistRun: { dueAt: 'desc' } },
+          { checklistRunSectionSnapshot: { sortOrder: 'asc' } },
+          { sortOrder: 'asc' } as const,
+        ],
+        skip,
+        take: pagination.limit,
+        select: {
+          id: true,
+          checklistRunId: true,
+          labelSnapshot: true,
+          itemTypeSnapshot: true,
+          result: true,
+          comment: true,
+          severitySnapshot: true,
+          sortOrder: true,
+          _count: { select: { attachments: true } },
+          checklistRunSectionSnapshot: {
+            select: { titleSnapshot: true, sortOrder: true },
+          },
+          checklistRun: {
+            select: {
+              runNumber: true,
+              templateNameSnapshot: true,
+              dueAt: true,
+            },
+          },
+        },
+      }),
+      this.prisma.checklistRunItemSnapshot.count({ where: itemWhere }),
+    ]);
+
+    return { items, total };
   }
 
   /**

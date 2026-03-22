@@ -67,9 +67,14 @@ export async function get<T>(url: string, params?: Record<string, unknown>): Pro
 
 /**
  * GET raw blob (e.g. file content). Does not unwrap; returns Blob directly.
+ * @param url - Endpoint path (e.g. /reports/checklist-completion/export)
+ * @param params - Optional query params for filtered export
  */
-export async function getBlob(url: string): Promise<Blob> {
-  const res = await apiClient.get(url, { responseType: 'blob' });
+export async function getBlob(
+  url: string,
+  params?: Record<string, unknown>
+): Promise<Blob> {
+  const res = await apiClient.get(url, { responseType: 'blob', params });
   return res.data as Blob;
 }
 

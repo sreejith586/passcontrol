@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { DateTime } from 'luxon';
 import { AlertStatus } from '@prisma/client';
 import { ChecklistRunItemsRepository } from '../repositories/checklist-run-items.repository';
 import { AlertEventsRepository } from '../../../alert-events/repositories/alert-events.repository';
 import { AlertEventsService } from '../../../alert-events/services/alert-events.service';
+import { RegionalSettingsResolverService } from '../../../common/services/regional-settings-resolver.service';
 import { ListFailedChecklistRunItemsQueryDto } from '../dto/list-failed-checklist-run-items.dto';
 import { ListFailedChecklistRunItemsSummaryQueryDto } from '../dto/list-failed-checklist-run-items-summary.dto';
 import {
@@ -93,6 +99,7 @@ export class ChecklistRunItemsService {
     private readonly repo: ChecklistRunItemsRepository,
     private readonly alertEventsRepo: AlertEventsRepository,
     private readonly alertEventsService: AlertEventsService,
+    private readonly regionalSettings: RegionalSettingsResolverService,
   ) {}
 
   async getById(
@@ -339,6 +346,188 @@ export class ChecklistRunItemsService {
     };
   }
 
+  /**
+   * Get failed items for export/reports. Bypasses pagination (high limit).
+   * Used by ReportsService only.
+   */
+  async getFailedItemsForReport(
+    ctx: { organizationId: string },
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+      severity?: string;
+      from?: string;
+      to?: string;
+    },
+  ): Promise<FailedRunItemResponse[]> {
+    if (!ctx?.organizationId?.trim()) {
+      throw new UnauthorizedException('Organization context is required');
+    }
+    const REPORT_LIMIT = 10000;
+    const timezone =
+      (
+        await this.regionalSettings.resolveRegionalSettings(
+          ctx.organizationId,
+          filters.locationId,
+        )
+      ).timezone;
+    const filtersWithTz = { ...filters, timezone };
+    const ids = await this.repo.findFailedItemIds(ctx.organizationId, filtersWithTz, {
+      page: 1,
+      limit: REPORT_LIMIT,
+    });
+    const hydrated = await this.repo.findByIdsWithRunAndAttachmentCount(
+      ctx.organizationId,
+      ids,
+    );
+    return hydrated.map((row) => this.toResponse(row));
+  }
+
+  /**
+   * Get item snapshots in date range for Checklist Item Status report (preview).
+   * Returns paginated items with section and run context.
+   */
+  async getItemStatusForReport(
+    ctx: { organizationId: string; userId?: string },
+    filters: {
+      from?: string;
+      to?: string;
+      timezone?: string;
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+      assignedToMe?: boolean;
+      result?: 'PASS' | 'FAIL';
+    },
+    pagination: { page: number; limit: number },
+  ): Promise<{
+    items: Array<{
+      id: string;
+      checklistRunId: string;
+      labelSnapshot: string;
+      itemTypeSnapshot: string;
+      result: string | null;
+      comment: string | null;
+      severitySnapshot: string;
+      sectionTitle: string;
+      runNumber: number;
+      templateNameSnapshot: string;
+      dueAt: Date | null;
+      attachmentCount: number;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const timezone =
+      filters.timezone ??
+      (
+        await this.regionalSettings.resolveRegionalSettings(
+          ctx.organizationId,
+          filters.locationId,
+        )
+      ).timezone;
+    const zone = timezone ?? 'UTC';
+    let start: Date;
+    let end: Date;
+    if (filters.from && filters.to) {
+      const fromDt = DateTime.fromISO(filters.from, { zone });
+      const toDt = DateTime.fromISO(filters.to, { zone });
+      start = (fromDt.isValid ? fromDt : DateTime.now().setZone(zone))
+        .startOf('day')
+        .toUTC()
+        .toJSDate();
+      end = (toDt.isValid ? toDt : DateTime.now().setZone(zone))
+        .endOf('day')
+        .toUTC()
+        .toJSDate();
+    } else {
+      const dt = DateTime.now().setZone(zone);
+      start = dt.startOf('day').toUTC().toJSDate();
+      end = dt.endOf('day').toUTC().toJSDate();
+    }
+    const assignedToUserId =
+      filters.assignedToMe && ctx.userId ? ctx.userId : undefined;
+
+    const { items, total } = await this.repo.findItemSnapshotsInDateRange(
+      ctx.organizationId,
+      {
+        start,
+        end,
+        brandId: filters.brandId,
+        locationId: filters.locationId,
+        zoneId: filters.zoneId,
+        checklistTemplateId: filters.checklistTemplateId,
+        assignedToUserId,
+        result: filters.result,
+      },
+      pagination,
+    );
+
+    return {
+      items: items.map((i) => ({
+        id: i.id,
+        checklistRunId: i.checklistRunId,
+        labelSnapshot: i.labelSnapshot,
+        itemTypeSnapshot: i.itemTypeSnapshot,
+        result: i.result,
+        comment: i.comment,
+        severitySnapshot: i.severitySnapshot ?? '',
+        sectionTitle: i.checklistRunSectionSnapshot?.titleSnapshot ?? '',
+        runNumber: i.checklistRun.runNumber,
+        templateNameSnapshot: i.checklistRun.templateNameSnapshot,
+        dueAt: i.checklistRun.dueAt,
+        attachmentCount: i._count?.attachments ?? 0,
+      })),
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+  }
+
+  /**
+   * Get all item snapshots in date range for export (high limit).
+   */
+  async getItemStatusForExport(
+    ctx: { organizationId: string; userId?: string },
+    filters: {
+      from?: string;
+      to?: string;
+      timezone?: string;
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      checklistTemplateId?: string;
+      assignedToMe?: boolean;
+      result?: 'PASS' | 'FAIL';
+    },
+  ): Promise<
+    Array<{
+      id: string;
+      checklistRunId: string;
+      labelSnapshot: string;
+      itemTypeSnapshot: string;
+      result: string | null;
+      comment: string | null;
+      severitySnapshot: string;
+      sectionTitle: string;
+      runNumber: number;
+      templateNameSnapshot: string;
+      dueAt: Date | null;
+      attachmentCount: number;
+    }>
+  > {
+    const REPORT_LIMIT = 10000;
+    const result = await this.getItemStatusForReport(ctx, filters, {
+      page: 1,
+      limit: REPORT_LIMIT,
+    });
+    return result.items;
+  }
+
   async getFailedItems(
     ctx: { organizationId: string },
     query: ListFailedChecklistRunItemsQueryDto,
@@ -348,9 +537,19 @@ export class ChecklistRunItemsService {
     page: number;
     limit: number;
   }> {
+    if (!ctx?.organizationId?.trim()) {
+      throw new UnauthorizedException('Organization context is required');
+    }
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
     const pagination = { page, limit };
+
+    const timezone = (
+      await this.regionalSettings.resolveRegionalSettings(
+        ctx.organizationId,
+        query.locationId,
+      )
+    ).timezone;
 
     const filters = {
       brandId: query.brandId,
@@ -360,6 +559,7 @@ export class ChecklistRunItemsService {
       severity: query.severity,
       from: query.from,
       to: query.to,
+      timezone,
     };
 
     const [ids, total] = await Promise.all([

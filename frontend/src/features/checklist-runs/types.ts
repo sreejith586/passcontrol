@@ -57,6 +57,9 @@ export interface ListTodayRunsParams {
   status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
   assignedToMe?: boolean;
   assignedToUserId?: string;
+  brandId?: string;
+  locationId?: string;
+  zoneId?: string;
   page?: number;
   limit?: number;
   timezone?: string;
@@ -67,6 +70,10 @@ export interface ListTodayRunsParams {
 export interface ListOverdueRunsParams {
   assignedToMe?: boolean;
   assignedToUserId?: string;
+  brandId?: string;
+  locationId?: string;
+  zoneId?: string;
+  checklistTemplateId?: string;
   page?: number;
   limit?: number;
 }
@@ -75,10 +82,40 @@ export interface ListOverdueRunsParams {
 export interface ListFailedRunsParams {
   assignedToMe?: boolean;
   assignedToUserId?: string;
+  brandId?: string;
+  locationId?: string;
+  zoneId?: string;
   page?: number;
   limit?: number;
   from?: string;
   to?: string;
+}
+
+/** Failed run item (from GET /checklist-run-items/failed) */
+export interface FailedRunItem {
+  id: string;
+  checklistRunId: string;
+  label: string;
+  result: string | null;
+  severitySnapshot: string;
+  comment: string | null;
+  attachmentCount: number;
+  checklistRun: {
+    runNumber: number;
+    templateNameSnapshot: string;
+    dueAt: string | null;
+    brandId: string | null;
+    locationId: string | null;
+    zoneId: string | null;
+  };
+}
+
+/** Paginated failed items response */
+export interface FailedRunItemsListResponse {
+  items: FailedRunItem[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 /** Attachment metadata from run item detail */

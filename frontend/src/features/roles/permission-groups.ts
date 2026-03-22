@@ -31,6 +31,10 @@ export const PERMISSION_GROUPS: Record<
     label: 'Organizational Structure',
     description: 'Brands, locations, and zones',
   },
+  Reports: {
+    label: 'Reports',
+    description: 'View and export reports',
+  },
 };
 
 /** Permission key → category. Order matters for display. */
@@ -76,6 +80,7 @@ const PERMISSION_TO_CATEGORY: Record<string, string> = {
   'location.manage': 'Organizational Structure',
   'zone.view': 'Organizational Structure',
   'zone.manage': 'Organizational Structure',
+  'reports.view': 'Reports',
 };
 
 /** Human-readable permission labels. */
@@ -121,6 +126,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   'location.manage': 'Manage locations',
   'zone.view': 'View zones',
   'zone.manage': 'Manage zones',
+  'reports.view': 'View and export reports',
 };
 
 export function getPermissionLabel(key: string): string {
@@ -146,6 +152,7 @@ export const CATEGORY_ORDER = [
   'Temperature & Compliance',
   'Files & Attachments',
   'Organizational Structure',
+  'Reports',
   'Administration',
   'Other',
 ] as const;

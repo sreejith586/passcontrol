@@ -175,6 +175,8 @@ export class ChecklistRunsRepository {
     if (filters.brandId != null) where.brandId = filters.brandId;
     if (filters.locationId != null) where.locationId = filters.locationId;
     if (filters.zoneId != null) where.zoneId = filters.zoneId;
+    if (filters.assignedToUserId != null)
+      where.assignedToUserId = filters.assignedToUserId;
 
     const useSummary = options?.view === 'summary';
     const skip = (pagination.page - 1) * pagination.limit;
@@ -201,6 +203,74 @@ export class ChecklistRunsRepository {
     ]);
 
     return { items, total };
+  }
+
+  /**
+   * Get failed item count and open alert count per run. Single aggregation query, no N+1.
+   */
+  async getRunAggregates(
+    organizationId: string,
+    runIds: string[],
+  ): Promise<Map<string, { failedItemCount: number; openAlertCount: number }>> {
+    if (runIds.length === 0) return new Map();
+
+    const runIdsIn = Prisma.join(
+      runIds.map((id) => Prisma.sql`${id}::uuid`),
+    );
+
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        checklist_run_id: string;
+        failed_item_count: bigint;
+        open_alert_count: bigint;
+      }>
+    >(Prisma.sql`
+      WITH failed_per_run AS (
+        SELECT checklist_run_id, COUNT(*)::bigint AS cnt
+        FROM checklist_run_item_snapshots
+        WHERE organization_id = CAST(${organizationId} AS uuid)
+          AND checklist_run_id IN (${runIdsIn})
+          AND result = 'FAIL'
+        GROUP BY checklist_run_id
+      ),
+      latest_alerts AS (
+        SELECT DISTINCT ON (ae.source_id) ae.source_id, ae.status
+        FROM alert_events ae
+        INNER JOIN checklist_run_item_snapshots cri ON cri.id = ae.source_id::uuid
+        WHERE ae.organization_id = CAST(${organizationId} AS uuid)
+          AND ae.source_type = 'CHECKLIST_RUN_ITEM'
+          AND cri.checklist_run_id IN (${runIdsIn})
+        ORDER BY ae.source_id, ae.created_at DESC, ae.id DESC
+      ),
+      open_per_run AS (
+        SELECT cri.checklist_run_id, COUNT(*)::bigint AS cnt
+        FROM latest_alerts la
+        INNER JOIN checklist_run_item_snapshots cri ON cri.id = la.source_id::uuid
+        WHERE la.status = 'OPEN'
+        GROUP BY cri.checklist_run_id
+      )
+      SELECT
+        r.id AS checklist_run_id,
+        COALESCE(fpr.cnt, 0)::bigint AS failed_item_count,
+        COALESCE(opr.cnt, 0)::bigint AS open_alert_count
+      FROM checklist_runs r
+      LEFT JOIN failed_per_run fpr ON fpr.checklist_run_id = r.id
+      LEFT JOIN open_per_run opr ON opr.checklist_run_id = r.id
+      WHERE r.organization_id = CAST(${organizationId} AS uuid)
+        AND r.id IN (${runIdsIn})
+    `);
+
+    const map = new Map<string, { failedItemCount: number; openAlertCount: number }>();
+    for (const r of rows) {
+      map.set(r.checklist_run_id, {
+        failedItemCount: Number(r.failed_item_count ?? 0),
+        openAlertCount: Number(r.open_alert_count ?? 0),
+      });
+    }
+    for (const id of runIds) {
+      if (!map.has(id)) map.set(id, { failedItemCount: 0, openAlertCount: 0 });
+    }
+    return map;
   }
 
   async findOverdueRuns(
