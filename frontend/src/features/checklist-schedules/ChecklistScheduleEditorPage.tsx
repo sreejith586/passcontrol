@@ -28,28 +28,7 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { ScopeSelectors } from '@/features/org-scope/ScopeSelectors';
-
-const TIMEZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'UTC',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-];
-
-function getBrowserTimezone(): string {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return TIMEZONES.includes(tz) ? tz : 'UTC';
-  } catch {
-    return 'UTC';
-  }
-}
+import { TIMEZONES, getBrowserTimezone } from '@/lib/timezones';
 
 function toIsoDateLocal(d: Date | null): string {
   if (!d) return '';

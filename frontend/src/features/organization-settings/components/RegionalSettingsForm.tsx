@@ -2,25 +2,8 @@ import { useForm } from 'react-hook-form';
 import type { RegionalSettings } from '../types';
 import { Button } from '@/shared/ui/Button';
 import { usePermission } from '@/core/permissions/use-permission';
-
-const TIMEZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'UTC',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-];
-
-const TEMPERATURE_UNITS = [
-  { value: '', label: 'Not set (use default)' },
-  { value: 'F', label: 'Fahrenheit (°F)' },
-  { value: 'C', label: 'Celsius (°C)' },
-] as const;
+import { TIMEZONES } from '@/lib/timezones';
+import { TEMPERATURE_UNIT_OPTIONS } from '@/lib/temperature-units';
 
 interface RegionalSettingsFormProps {
   settings: RegionalSettings;
@@ -86,8 +69,9 @@ export function RegionalSettingsForm({
             disabled={!canManage}
             className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
-            {TEMPERATURE_UNITS.map((opt) => (
-              <option key={opt.value || 'empty'} value={opt.value}>
+            <option value="">Not set (use default)</option>
+            {TEMPERATURE_UNIT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}

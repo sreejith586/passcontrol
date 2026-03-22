@@ -76,7 +76,12 @@ export function TemperatureItemInput({
         placeholder={`Enter temperature (${displayUnit})`}
         className="max-w-[140px]"
       />
-      <span className="text-sm text-muted-foreground">{displayUnit}</span>
+      <span
+        className="shrink-0 text-sm font-medium text-foreground tabular-nums"
+        aria-label={`Temperature in ${displayUnit}`}
+      >
+        {displayUnit}
+      </span>
     </div>
   );
 }

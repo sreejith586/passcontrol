@@ -9,28 +9,8 @@ import { queryKeys as brandQueryKeys } from '@/features/brands/query-keys';
 import type { Location } from '../api';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
-
-const TIMEZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'UTC',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-];
-
-function getBrowserTimezone(): string {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return TIMEZONES.includes(tz) ? tz : 'UTC';
-  } catch {
-    return 'UTC';
-  }
-}
+import { TIMEZONES, getBrowserTimezone } from '@/lib/timezones';
+import { TEMPERATURE_UNIT_OPTIONS } from '@/lib/temperature-units';
 
 interface LocationModalProps {
   open: boolean;
@@ -205,8 +185,11 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
             className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
           >
             <option value="">Use organization default</option>
-            <option value="F">Fahrenheit (°F)</option>
-            <option value="C">Celsius (°C)</option>
+            {TEMPERATURE_UNIT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
         {error && (
