@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -26,4 +27,9 @@ export class UpdateLocationDto {
   @MinLength(1, { message: 'Timezone cannot be empty' })
   @MaxLength(63)
   timezone?: string;
+
+  @ApiPropertyOptional({ enum: ['F', 'C'], description: 'Temperature unit override (null = use org default)' })
+  @IsOptional()
+  @IsIn(['F', 'C'])
+  temperatureUnit?: 'F' | 'C' | null;
 }

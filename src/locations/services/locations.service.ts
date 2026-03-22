@@ -39,6 +39,7 @@ export class LocationsService {
       brandId: dto.brandId,
       name,
       timezone,
+      temperatureUnit: dto.temperatureUnit ?? null,
     });
     await this.audit.recordWrite('LOCATION_CREATE', ctx, created.id, {
       after: created,
@@ -90,6 +91,7 @@ export class LocationsService {
       brandId: dto.brandId,
       name: dto.name !== undefined ? name! : undefined,
       timezone: dto.timezone !== undefined ? timezone! : undefined,
+      temperatureUnit: dto.temperatureUnit !== undefined ? dto.temperatureUnit : undefined,
     });
     await this.audit.recordWrite('LOCATION_UPDATE', ctx, id, {
       before: existing,

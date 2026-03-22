@@ -12,6 +12,7 @@ export interface Location {
   brand?: LocationBrand;
   name: string;
   timezone: string;
+  temperatureUnit?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,13 +33,14 @@ export async function createLocation(payload: {
   brandId: string;
   name: string;
   timezone: string;
+  temperatureUnit?: 'F' | 'C' | null;
 }): Promise<Location> {
   return post<Location>('/locations', payload);
 }
 
 export async function updateLocation(
   id: string,
-  payload: { brandId?: string; name?: string; timezone?: string }
+  payload: { brandId?: string; name?: string; timezone?: string; temperatureUnit?: 'F' | 'C' | null }
 ): Promise<Location> {
   return patch<Location>(`/locations/${id}`, payload);
 }

@@ -13,6 +13,7 @@ import { AlertListPage } from '@/features/alerts/AlertListPage';
 import { AlertDetailPage } from '@/features/alerts/AlertDetailPage';
 import { EscalationsPage } from '@/features/escalations/EscalationsPage';
 import { AlertWorkflowSettingsPage } from '@/features/organization-settings/AlertWorkflowSettingsPage';
+import { RegionalSettingsPage } from '@/features/organization-settings/RegionalSettingsPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ChecklistRunsListPage } from '@/features/checklist-runs/ChecklistRunsListPage';
 import { ChecklistRunDetailPage } from '@/features/checklist-runs/ChecklistRunDetailPage';
@@ -172,6 +173,14 @@ const router = createBrowserRouter([
         path: 'settings',
         children: [
           { index: true, element: <Navigate to="/settings/alert-workflow" replace /> },
+          {
+            path: 'regional',
+            element: (
+              <RoutePermissionGuard>
+                <RegionalSettingsPage />
+              </RoutePermissionGuard>
+            ),
+          },
           {
             path: 'alert-workflow',
             element: (

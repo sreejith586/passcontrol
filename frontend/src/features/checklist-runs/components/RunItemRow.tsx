@@ -60,6 +60,7 @@ interface RunItemRowProps {
   item: ChecklistRunItemSnapshot;
   runId: string;
   runStatus: string;
+  temperatureUnitFallback?: string;
   disabled?: boolean;
   isUpdating?: boolean;
   canViewEvidence?: boolean;
@@ -75,6 +76,7 @@ export function RunItemRow({
   item,
   runId,
   runStatus,
+  temperatureUnitFallback,
   disabled,
   isUpdating,
   canViewEvidence = false,
@@ -101,6 +103,7 @@ export function RunItemRow({
     result: item.result,
     valueJson: item.valueJson,
     configSnapshotJson: item.configSnapshotJson,
+    temperatureUnitFallback,
     disabled: disabled ?? isCompleted,
     onUpdate: (id: string, data: { result?: string; valueJson?: Record<string, unknown> }) =>
       onUpdate(id, data),

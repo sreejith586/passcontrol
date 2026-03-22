@@ -7,6 +7,8 @@ interface TemperatureItemInputProps {
   label: string;
   valueJson: Record<string, unknown> | null;
   configSnapshotJson: Record<string, unknown> | null;
+  /** Resolved regional temperature unit when item config does not specify */
+  temperatureUnitFallback?: string;
   disabled?: boolean;
   onUpdate: (itemId: string, data: { valueJson: Record<string, unknown> }) => void;
   isUpdating?: boolean;
@@ -16,11 +18,13 @@ export function TemperatureItemInput({
   itemId,
   valueJson,
   configSnapshotJson,
+  temperatureUnitFallback = 'F',
   disabled,
   onUpdate,
   isUpdating,
 }: TemperatureItemInputProps) {
-  const unit = (configSnapshotJson?.unit as string) ?? '°C';
+  const configUnit = configSnapshotJson?.unit as string | undefined;
+  const unit = configUnit ?? (temperatureUnitFallback === 'C' ? '°C' : '°F');
   const rawValue = valueJson?.value;
   const initialValue = typeof rawValue === 'number' ? String(rawValue) : '';
   const [localValue, setLocalValue] = useState(initialValue);

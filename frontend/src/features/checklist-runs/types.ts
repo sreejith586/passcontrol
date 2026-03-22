@@ -36,6 +36,7 @@ export interface ChecklistRun {
   runNumber: number;
   templateNameSnapshot: string;
   templateKeySnapshot: string;
+  locationId?: string | null;
   assignedToUserId: string | null;
   assignedToUser?: { id: string; name: string } | null;
   performedByUserId?: string | null;

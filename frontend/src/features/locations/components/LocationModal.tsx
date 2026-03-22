@@ -42,6 +42,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
   const [brandId, setBrandId] = useState('');
   const [name, setName] = useState('');
   const [timezone, setTimezone] = useState(getBrowserTimezone);
+  const [temperatureUnit, setTemperatureUnit] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const isEdit = !!location;
@@ -57,6 +58,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
       setBrandId(location?.brandId ?? '');
       setName(location?.name ?? '');
       setTimezone(location?.timezone ?? getBrowserTimezone());
+      setTemperatureUnit(location?.temperatureUnit ?? '');
       setError(null);
     }
   }, [open, location]);
@@ -79,6 +81,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
       brandId?: string;
       name?: string;
       timezone?: string;
+      temperatureUnit?: 'F' | 'C' | null;
     }) => updateLocation(location!.id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.all });
@@ -107,17 +110,20 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
       return;
     }
     setError(null);
+    const tempUnit = temperatureUnit === 'F' || temperatureUnit === 'C' ? temperatureUnit : null;
     if (isEdit) {
       updateMutation.mutate({
         brandId,
         name: trimmedName,
         timezone: timezone.trim(),
+        temperatureUnit: tempUnit,
       });
     } else {
       createMutation.mutate({
         brandId,
         name: trimmedName,
         timezone: timezone.trim(),
+        temperatureUnit: tempUnit ?? undefined,
       });
     }
   };
@@ -183,6 +189,24 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
                 {tz}
               </option>
             ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label
+            htmlFor="location-temperature-unit"
+            className="block text-sm font-medium text-foreground"
+          >
+            Temperature unit
+          </label>
+          <select
+            id="location-temperature-unit"
+            value={temperatureUnit}
+            onChange={(e) => setTemperatureUnit(e.target.value)}
+            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
+          >
+            <option value="">Use organization default</option>
+            <option value="F">Fahrenheit (°F)</option>
+            <option value="C">Celsius (°C)</option>
           </select>
         </div>
         {error && (

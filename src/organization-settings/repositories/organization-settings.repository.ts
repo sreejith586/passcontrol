@@ -16,6 +16,41 @@ export class OrganizationSettingsRepository {
     return org;
   }
 
+  async getRegionalSettings(organizationId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        defaultTimezone: true,
+        defaultTemperatureUnit: true,
+      },
+    });
+    return org;
+  }
+
+  async updateRegionalSettings(
+    organizationId: string,
+    data: {
+      defaultTimezone?: string | null;
+      defaultTemperatureUnit?: string | null;
+    },
+  ) {
+    const updateData: Record<string, string | null> = {};
+    if (data.defaultTimezone !== undefined) {
+      updateData.defaultTimezone = data.defaultTimezone ?? null;
+    }
+    if (data.defaultTemperatureUnit !== undefined) {
+      updateData.defaultTemperatureUnit = data.defaultTemperatureUnit ?? null;
+    }
+    if (Object.keys(updateData).length === 0) {
+      return this.getRegionalSettings(organizationId);
+    }
+    await this.prisma.organization.updateMany({
+      where: { id: organizationId },
+      data: updateData,
+    });
+    return this.getRegionalSettings(organizationId);
+  }
+
   async updateAlertWorkflowSettings(
     organizationId: string,
     data: {

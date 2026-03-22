@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { KeyboardEvent } from 'react';
 import { useRef, useEffect, useState } from 'react';
 import { getRunById, updateRunItem, submitRun, updateRunAssignment } from './api';
+import { getRegionalResolved } from '@/features/organization-settings/api';
 import { queryKeys } from './query-keys';
 import {
   computeRunMetrics,
@@ -55,6 +56,13 @@ export function ChecklistRunDetailPage() {
     queryKey: queryKeys.detail(id!),
     queryFn: () => getRunById(id!),
     enabled: !!id,
+  });
+
+  const runData = runQuery.data;
+  const regionalResolvedQuery = useQuery({
+    queryKey: ['organization-settings', 'regional-resolved', runData?.locationId ?? null],
+    queryFn: () => getRegionalResolved({ locationId: runData?.locationId ?? undefined }),
+    enabled: !!runData,
   });
 
   const flatItemIdsRef = useRef<string[]>([]);
@@ -212,7 +220,8 @@ export function ChecklistRunDetailPage() {
     );
   }
 
-  const run = runQuery.data;
+  const run = runQuery.data!;
+  const temperatureUnitFallback = regionalResolvedQuery.data?.temperatureUnit ?? 'F';
   const isCompleted = run.status === 'COMPLETED';
 
   // Progress counts and flat item list derived from itemSnapshots
@@ -355,6 +364,7 @@ export function ChecklistRunDetailPage() {
                     item={item}
                     runId={run.id}
                     runStatus={run.status}
+                    temperatureUnitFallback={temperatureUnitFallback}
                     disabled={isCompleted}
                     isUpdating={updatingItemId === item.id}
                     canViewEvidence={canViewEvidence}

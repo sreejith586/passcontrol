@@ -33,15 +33,19 @@ export class LocationsRepository {
 
   async create(
     organizationId: string,
-    data: { brandId: string; name: string; timezone: string },
+    data: { brandId: string; name: string; timezone: string; temperatureUnit?: string | null },
   ) {
+    const createData: Parameters<typeof this.prisma.location.create>[0]['data'] = {
+      organizationId,
+      brandId: data.brandId,
+      name: data.name.trim(),
+      timezone: data.timezone.trim(),
+    };
+    if (data.temperatureUnit !== undefined) {
+      createData.temperatureUnit = data.temperatureUnit ?? null;
+    }
     return this.prisma.location.create({
-      data: {
-        organizationId,
-        brandId: data.brandId,
-        name: data.name.trim(),
-        timezone: data.timezone.trim(),
-      },
+      data: createData,
       include: LOCATION_INCLUDE,
     });
   }
@@ -49,13 +53,14 @@ export class LocationsRepository {
   async update(
     organizationId: string,
     id: string,
-    data: { brandId?: string; name?: string; timezone?: string },
+    data: { brandId?: string; name?: string; timezone?: string; temperatureUnit?: string | null },
   ) {
-    const updateData: { brandId?: string; name?: string; timezone?: string } =
+    const updateData: { brandId?: string; name?: string; timezone?: string; temperatureUnit?: string | null } =
       {};
     if (data.brandId !== undefined) updateData.brandId = data.brandId;
     if (data.name !== undefined) updateData.name = data.name.trim();
     if (data.timezone !== undefined) updateData.timezone = data.timezone.trim();
+    if (data.temperatureUnit !== undefined) updateData.temperatureUnit = data.temperatureUnit ?? null;
 
     await this.prisma.location.updateMany({
       where: { id, organizationId },
