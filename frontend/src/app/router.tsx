@@ -12,8 +12,7 @@ import { SetPasswordPage } from '@/features/auth/SetPasswordPage';
 import { AlertListPage } from '@/features/alerts/AlertListPage';
 import { AlertDetailPage } from '@/features/alerts/AlertDetailPage';
 import { EscalationsPage } from '@/features/escalations/EscalationsPage';
-import { AlertWorkflowSettingsPage } from '@/features/organization-settings/AlertWorkflowSettingsPage';
-import { RegionalSettingsPage } from '@/features/organization-settings/RegionalSettingsPage';
+import { OrganizationSettingsPage } from '@/features/organization-settings/OrganizationSettingsPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ChecklistRunsListPage } from '@/features/checklist-runs/ChecklistRunsListPage';
 import { ChecklistRunDetailPage } from '@/features/checklist-runs/ChecklistRunDetailPage';
@@ -156,22 +155,22 @@ const router = createBrowserRouter([
       {
         path: 'settings',
         children: [
-          { index: true, element: <Navigate to="/settings/alert-workflow" replace /> },
+          { index: true, element: <Navigate to="/settings/organization" replace /> },
           {
-            path: 'regional',
+            path: 'organization',
             element: (
               <RoutePermissionGuard>
-                <RegionalSettingsPage />
+                <OrganizationSettingsPage />
               </RoutePermissionGuard>
             ),
           },
           {
+            path: 'regional',
+            element: <Navigate to="/settings/organization" replace />,
+          },
+          {
             path: 'alert-workflow',
-            element: (
-              <RoutePermissionGuard>
-                <AlertWorkflowSettingsPage />
-              </RoutePermissionGuard>
-            ),
+            element: <Navigate to="/settings/organization" replace />,
           },
           {
             path: 'users',

@@ -12,7 +12,6 @@ import {
   Settings,
   Users,
   Shield,
-  Globe,
   PanelLeftClose,
   PanelLeft,
   ShieldCheck,
@@ -30,8 +29,7 @@ const navItems = [
   { to: '/checklist-runs', label: 'Checklist Runs', icon: ClipboardList, permission: 'checklist.run.view' as const },
   { to: '/alerts', label: 'Alerts', icon: AlertTriangle, permission: 'alert.view' as const },
   { to: '/escalations', label: 'Escalations', icon: TrendingUp, permission: 'alert.view' as const },
-  { to: '/settings/alert-workflow', label: 'Alert workflow', icon: Settings, permission: 'alert.workflow-policy.view' as const },
-  { to: '/settings/regional', label: 'Regional', icon: Globe, permission: 'alert.workflow-policy.view' as const },
+  { to: '/settings/organization', label: 'Organization Settings', icon: Settings, permission: 'alert.workflow-policy.view' as const },
   { to: '/settings/users', label: 'Users', icon: Users, permission: 'user.view' as const },
   { to: '/settings/roles', label: 'Roles', icon: Shield, permission: 'user.view' as const },
 ];
