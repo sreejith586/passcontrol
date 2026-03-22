@@ -2,7 +2,12 @@ import type React from 'react';
 import { cn } from '@/lib/cn';
 
 const INPUT_CLASS =
-  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400';
+  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400';
+
+const SELECT_ARROW_SVG =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")";
+
+const SELECT_CLASS = `${INPUT_CLASS} appearance-none pr-8`;
 
 interface FilterBarProps {
   children: React.ReactNode;
@@ -41,7 +46,13 @@ export function FilterSelect({
       onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
         onChange(e.target.value)
       }
-      className={INPUT_CLASS}
+      className={SELECT_CLASS}
+      style={{
+        backgroundImage: SELECT_ARROW_SVG,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'right 0.5rem center',
+        backgroundSize: '16px',
+      }}
       aria-label={ariaLabel}
     >
       {options.map((o) => (

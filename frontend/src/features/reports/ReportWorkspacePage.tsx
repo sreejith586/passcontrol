@@ -165,7 +165,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
       />
 
       <Card className="p-4">
-        <FilterBar className="flex-wrap gap-4">
+        <FilterBar className="flex-wrap items-end gap-4">
           <div>
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Brand
@@ -326,13 +326,18 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
               />
             </div>
           )}
-          <div className="flex items-end gap-2">
-            <Button variant="primary" size="sm" onClick={handleApply}>
-              Apply
-            </Button>
-            <Button variant="secondary" size="sm" onClick={handleReset}>
-              Reset
-            </Button>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground invisible">
+              Actions
+            </span>
+            <div className="flex h-9 items-center gap-2">
+              <Button variant="primary" size="sm" onClick={handleApply}>
+                Apply
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleReset}>
+                Reset
+              </Button>
+            </div>
           </div>
         </FilterBar>
       </Card>
