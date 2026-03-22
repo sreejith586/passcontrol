@@ -82,14 +82,6 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'checklist-templates/new',
-        element: (
-          <RoutePermissionGuard>
-            <ChecklistTemplateEditorPage />
-          </RoutePermissionGuard>
-        ),
-      },
-      {
         path: 'checklist-templates/:id',
         element: (
           <RoutePermissionGuard>
