@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-22 (Phase 15D)
+**Last updated:** 2026-03-22 (Temperature unit display UX)
 
 ## Implemented Features
 
@@ -115,6 +115,7 @@
 - [x] Phase 15C — Manual Run Reassignment: PATCH /checklist-runs/:id/assignment; assign/reassign/clear from Run Detail page; allowed for PENDING/IN_PROGRESS only; org-scoped user validation; does not affect schedule or other runs
 - [x] Phase 15D — Run Performer Visibility: performedByUser relation on ChecklistRun; RUN_INCLUDE/RUN_SUMMARY_SELECT include performedByUser (id, name); Assigned To and Performed By both shown in run detail right rail and run list; read-only display, null-safe (— when no performer)
 - [x] Phase 15E — My Runs / Assignee-Based Filtering: assignedToMe, assignedToUserId query params on today/overdue/failed list endpoints; FilterBar "Assigned to me" checkbox on run list page; URL-synced; applies to all tabs; no assignee dropdown in this phase
+- [x] Temperature checklist item unit display UX: TemperatureItemInput shows active unit (°F/°C) inline beside the input; resolution order: item config (`configSnapshot.unit`) → regional `temperatureUnitFallback` (location/regional settings) → default °F; no backend/API/label changes; display-only clarity improvement
 
 ### Backend (recent fixes)
 

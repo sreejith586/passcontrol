@@ -22,7 +22,9 @@ Implementation guidance:
 - [files to modify]
 - [patterns to follow]
 
-After implementation, summarize:
+After implementation:
+- **Update AI docs** — Add capability to `02-current-progress.md`, bump "Last updated" date. See `docs/ai/ai-doc-update-policy.md` (§ Explicit Reminder).
+- Summarize:
 - Files changed
 - Exact behavior
 - Assumptions

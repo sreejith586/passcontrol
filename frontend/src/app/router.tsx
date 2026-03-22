@@ -106,14 +106,6 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'checklist-schedules/new',
-        element: (
-          <RoutePermissionGuard>
-            <ChecklistScheduleEditorPage />
-          </RoutePermissionGuard>
-        ),
-      },
-      {
         path: 'checklist-schedules/:id',
         element: (
           <RoutePermissionGuard>

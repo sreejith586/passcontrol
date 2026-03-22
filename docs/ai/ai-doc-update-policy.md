@@ -24,6 +24,16 @@ Update the AI Collaboration Kit when you change architecture, APIs, or domain be
 - **Config or env** — No API or domain impact
 - **Dependency bumps** — Without API or behavior impact
 
+## Explicit Reminder: After Every Implementation Phase
+
+**Update the AI docs as part of the implementation phase**, not only at PR time. When you complete a feature, backend change, or frontend module:
+
+1. Update `02-current-progress.md` with the new capability (add a checked item under the relevant section).
+2. Update the **Last updated** date at the top of `02-current-progress.md`.
+3. If the change affects APIs, domain model, or architecture, update the corresponding doc (`05-api-surface.md`, `04-domain-model.md`, `06-decisions-log.md`).
+
+This keeps the AI Collaboration Kit current for the next session and avoids drift.
+
 ## Before Merging
 
 If the CI workflow comments on your PR, review this policy. If your changes are purely internal, you can ignore the reminder. Otherwise, update the relevant docs.
