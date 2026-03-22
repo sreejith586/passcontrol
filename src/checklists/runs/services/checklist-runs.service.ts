@@ -28,6 +28,7 @@ import { STORAGE_SERVICE } from '../../../files/storage/storage.interface';
 import type { StorageServiceInterface } from '../../../files/storage/storage.interface';
 import type { EvidenceUploadFile } from '../types/uploaded-file.interface';
 import { TemperatureReadingsService } from '../../../temperature/services/temperature-readings.service';
+import { RegionalSettingsResolverService } from '../../../common/services/regional-settings-resolver.service';
 import { ListTodayRunsQueryDto } from '../dto/list-today-runs.dto';
 import { ListOverdueRunsQueryDto } from '../dto/list-overdue-runs.dto';
 import { ListFailedRunsQueryDto } from '../dto/list-failed-runs.dto';
@@ -53,6 +54,7 @@ export class ChecklistRunsService {
     @Inject(STORAGE_SERVICE)
     private readonly storage: StorageServiceInterface,
     private readonly temperatureReadings: TemperatureReadingsService,
+    private readonly regionalSettings: RegionalSettingsResolverService,
   ) {}
 
   /**
@@ -87,7 +89,15 @@ export class ChecklistRunsService {
     ctx: { organizationId: string },
     query: ChecklistRunMetricsQueryDto,
   ) {
-    const todayRange = this.getDateRange(query.timezone, query.date);
+    const timezone =
+      query.timezone ??
+      (
+        await this.regionalSettings.resolveRegionalSettings(
+          ctx.organizationId,
+          query.locationId,
+        )
+      ).timezone;
+    const todayRange = this.getDateRange(timezone, query.date);
     // resolvedAlertsToday: always UTC today (per spec), not affected by timezone/date params
     const utcToday = DateTime.utc();
     const resolvedTodayRange = {
@@ -128,7 +138,15 @@ export class ChecklistRunsService {
     ctx: { organizationId: string; userId?: string },
     query: ListTodayRunsQueryDto,
   ) {
-    const { start, end } = this.getDateRange(query.timezone, query.date);
+    const timezone =
+      query.timezone ??
+      (
+        await this.regionalSettings.resolveRegionalSettings(
+          ctx.organizationId,
+          query.locationId,
+        )
+      ).timezone;
+    const { start, end } = this.getDateRange(timezone, query.date);
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
     const assignedToUserId = this.resolveAssignmentFilter(

@@ -23,6 +23,15 @@ const TIMEZONES = [
   'Australia/Sydney',
 ];
 
+function getBrowserTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return TIMEZONES.includes(tz) ? tz : 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
 interface LocationModalProps {
   open: boolean;
   onClose: () => void;
@@ -32,7 +41,7 @@ interface LocationModalProps {
 export function LocationModal({ open, onClose, location }: LocationModalProps) {
   const [brandId, setBrandId] = useState('');
   const [name, setName] = useState('');
-  const [timezone, setTimezone] = useState('America/New_York');
+  const [timezone, setTimezone] = useState(getBrowserTimezone);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const isEdit = !!location;
@@ -47,7 +56,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
     if (open) {
       setBrandId(location?.brandId ?? '');
       setName(location?.name ?? '');
-      setTimezone(location?.timezone ?? 'America/New_York');
+      setTimezone(location?.timezone ?? getBrowserTimezone());
       setError(null);
     }
   }, [open, location]);

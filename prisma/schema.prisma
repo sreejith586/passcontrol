@@ -59,6 +59,8 @@ model Organization {
   name                         String
   requireResolutionNoteOnResolve Boolean  @default(false) @map("require_resolution_note_on_resolve")
   requireReopenNoteOnReopen      Boolean  @default(false) @map("require_reopen_note_on_reopen")
+  defaultTimezone               String?  @map("default_timezone")
+  defaultTemperatureUnit        String?  @map("default_temperature_unit")
   createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt                    DateTime? @map("deleted_at") @db.Timestamptz
@@ -109,6 +111,7 @@ model Location {
   brandId        String   @map("brand_id") @db.Uuid
   name           String
   timezone       String
+  temperatureUnit String?  @map("temperature_unit")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

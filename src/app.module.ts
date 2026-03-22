@@ -18,6 +18,7 @@ import { ChecklistSchedulesModule } from './checklists/schedules/checklist-sched
 import { ChecklistRunsModule } from './checklists/runs/checklist-runs.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { UsersModule } from './users/users.module';
+import { RegionalSettingsModule } from './regional-settings/regional-settings.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -41,6 +42,7 @@ import { HealthController } from './health.controller';
     ChecklistRunsModule,
     OnboardingModule,
     UsersModule,
+    RegionalSettingsModule,
   ],
   controllers: [HealthController],
 })

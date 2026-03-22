@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { ChecklistTemplatesService } from '../checklists/templates/services/checklist-templates.service';
 import { ChecklistSchedulesService } from '../checklists/schedules/services/checklist-schedules.service';
 import { PrismaService } from '../infra/prisma/prisma.service';
+import { RegionalSettingsResolverService } from '../common/services/regional-settings-resolver.service';
 
 const QUICK_SETUP_TEMPLATE_KEY = 'quick-setup-starter';
 
@@ -12,6 +13,7 @@ export class OnboardingService {
     private readonly templates: ChecklistTemplatesService,
     private readonly schedules: ChecklistSchedulesService,
     private readonly prisma: PrismaService,
+    private readonly regionalSettings: RegionalSettingsResolverService,
   ) {}
 
   /**
@@ -77,17 +79,21 @@ export class OnboardingService {
       select: { id: true },
     });
 
+    const { timezone } = await this.regionalSettings.resolveRegionalSettings(
+      ctx.organizationId,
+    );
+
     if (!schedule) {
       const created = await this.schedules.create(ctx, {
         checklistTemplateId: template.id,
         name: 'Daily quick inspection',
-        timezone: 'America/New_York',
+        timezone,
         rrule: 'FREQ=DAILY;BYHOUR=6;BYMINUTE=0',
       });
       schedule = { id: created.id };
     }
 
-    const dueAt = DateTime.now().setZone('America/New_York').endOf('day').toISO();
+    const dueAt = DateTime.now().setZone(timezone).endOf('day').toISO();
     try {
       const run = await this.schedules.generateRun(ctx, schedule.id, {
         dueAt: dueAt ?? undefined,

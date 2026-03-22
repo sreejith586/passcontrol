@@ -42,6 +42,15 @@ const TIMEZONES = [
   'Australia/Sydney',
 ];
 
+function getBrowserTimezone(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return TIMEZONES.includes(tz) ? tz : 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
 function toIsoDateLocal(d: Date | null): string {
   if (!d) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -83,7 +92,7 @@ export function ChecklistScheduleEditorPage() {
 
   const [checklistTemplateId, setChecklistTemplateId] = useState('');
   const [name, setName] = useState('');
-  const [timezone, setTimezone] = useState('America/New_York');
+  const [timezone, setTimezone] = useState(getBrowserTimezone);
   const [presetId, setPresetId] = useState('');
   const [customRrule, setCustomRrule] = useState(''); // preserved when preset is custom
   const [startsAt, setStartsAt] = useState<string>('');
