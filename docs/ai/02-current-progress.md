@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-22 (Phase 14B.1)
+**Last updated:** 2025-03-22 (Phase 14C.4)
 
 ## Implemented Features
 
@@ -109,6 +109,7 @@
 - [x] Phase 14C.1 — Organizational Structure Backend: Brands API (GET/POST/PATCH /brands), Locations API (GET/POST/PATCH /locations), Zones API (GET/POST/PATCH /zones); permissions brand.view/manage, location.view/manage, zone.view/manage; scope validation for checklist templates and schedules (brandId, locationId, zoneId must exist in org and hierarchy must be consistent)
 - [x] Phase 14C.2 — Organizational Structure UI: Brands, Locations, Zones list pages with create/edit modals; sidebar nav; route permissions; API integration with brands, locations, zones endpoints
 - [x] Phase 14C.3 — Scope Selectors for Templates & Schedules: Optional Brand/Location/Zone cascading selectors in template and schedule editors; ScopeSelectors component; scope included in create/update payloads; help text "Leave blank to make this available organization-wide"
+- [x] Phase 14C.4 — Scope Clearing Support: Users can clear Brand/Location/Zone on existing templates and schedules via update; cleared values sent as null; reverts entities back to organization-wide scope
 
 ### Backend (recent fixes)
 

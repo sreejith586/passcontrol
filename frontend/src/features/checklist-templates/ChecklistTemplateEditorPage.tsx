@@ -115,10 +115,10 @@ function toUpdatePayload(
         sortOrder: ii,
       })),
     })),
+    brandId: scope.brandId || null,
+    locationId: scope.locationId || null,
+    zoneId: scope.zoneId || null,
   };
-  if (scope.brandId) payload.brandId = scope.brandId;
-  if (scope.locationId) payload.locationId = scope.locationId;
-  if (scope.zoneId) payload.zoneId = scope.zoneId;
   return payload;
 }
 

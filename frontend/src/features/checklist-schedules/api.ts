@@ -43,9 +43,9 @@ export interface UpdateSchedulePayload {
   name?: string;
   timezone?: string;
   rrule?: string;
-  brandId?: string;
-  locationId?: string;
-  zoneId?: string;
+  brandId?: string | null;
+  locationId?: string | null;
+  zoneId?: string | null;
   startsAt?: string;
   endsAt?: string;
 }

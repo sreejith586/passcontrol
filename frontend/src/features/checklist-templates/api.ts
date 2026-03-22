@@ -69,9 +69,9 @@ export interface CreateItemPayload {
 export interface UpdateTemplatePayload {
   name?: string;
   description?: string;
-  brandId?: string;
-  locationId?: string;
-  zoneId?: string;
+  brandId?: string | null;
+  locationId?: string | null;
+  zoneId?: string | null;
   sections?: UpdateSectionPayload[];
 }
 

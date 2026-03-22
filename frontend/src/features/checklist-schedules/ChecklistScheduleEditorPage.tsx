@@ -206,10 +206,16 @@ export function ChecklistScheduleEditorPage() {
     const startsAtIso = startsAtDate?.toISOString();
     const endsAtIso = endsAtDate?.toISOString();
 
-    const scopePayload: { brandId?: string; locationId?: string; zoneId?: string } = {};
-    if (brandId) scopePayload.brandId = brandId;
-    if (locationId) scopePayload.locationId = locationId;
-    if (zoneId) scopePayload.zoneId = zoneId;
+    const scopeForCreate: { brandId?: string; locationId?: string; zoneId?: string } = {};
+    if (brandId) scopeForCreate.brandId = brandId;
+    if (locationId) scopeForCreate.locationId = locationId;
+    if (zoneId) scopeForCreate.zoneId = zoneId;
+
+    const scopeForUpdate = {
+      brandId: brandId || null,
+      locationId: locationId || null,
+      zoneId: zoneId || null,
+    };
 
     if (isNew) {
       createMutation.mutate({
@@ -217,7 +223,7 @@ export function ChecklistScheduleEditorPage() {
         name: name.trim(),
         timezone: timezone.trim(),
         rrule: effectiveRrule.trim(),
-        ...scopePayload,
+        ...scopeForCreate,
         startsAt: startsAtIso,
         endsAt: endsAtIso,
       });
@@ -228,7 +234,7 @@ export function ChecklistScheduleEditorPage() {
           name: name.trim(),
           timezone: timezone.trim(),
           rrule: effectiveRrule.trim(),
-          ...scopePayload,
+          ...scopeForUpdate,
           startsAt: startsAtIso,
           endsAt: endsAtIso,
         },
