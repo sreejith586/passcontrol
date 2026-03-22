@@ -405,6 +405,12 @@ export function ChecklistRunDetailPage() {
                 <dt className="text-xs font-medium text-slate-500">Run #</dt>
                 <dd className="mt-1 font-medium text-slate-900">{run.runNumber}</dd>
               </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Assigned To</dt>
+                <dd className="mt-1 font-medium text-slate-900">
+                  {run.assignedToUser?.name ?? 'Unassigned'}
+                </dd>
+              </div>
               {run.dueAt && (
                 <div>
                   <dt className="text-xs font-medium text-slate-500">Due</dt>

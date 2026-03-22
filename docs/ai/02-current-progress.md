@@ -111,6 +111,7 @@
 - [x] Phase 14C.3 — Scope Selectors for Templates & Schedules: Optional Brand/Location/Zone cascading selectors in template and schedule editors; ScopeSelectors component; scope included in create/update payloads; help text "Leave blank to make this available organization-wide"
 - [x] Phase 14C.4 — Scope Clearing Support: Users can clear Brand/Location/Zone on existing templates and schedules via update; cleared values sent as null; reverts entities back to organization-wide scope
 - [x] Phase 15A — Schedule Ownership: ChecklistSchedule.ownerUserId (optional); owner validated against org membership; owner selector in schedule editor; Owner column in schedules list; clearing supported
+- [x] Phase 15B — Run Assignment (Ownership Continuity): ChecklistRun.assignedToUserId inherited from schedule.ownerUserId when runs are generated; Assigned To column in run list; Assigned To in run detail right rail; null-safe for existing runs
 
 ### Backend (recent fixes)
 

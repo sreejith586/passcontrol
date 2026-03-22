@@ -3,6 +3,9 @@ import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
 const RUN_INCLUDE = {
+  assignedToUser: {
+    select: { id: true, name: true },
+  },
   sectionSnapshots: {
     orderBy: { sortOrder: 'asc' as const },
     include: {
@@ -25,6 +28,10 @@ const RUN_SUMMARY_SELECT = {
   brandId: true,
   locationId: true,
   zoneId: true,
+  assignedToUserId: true,
+  assignedToUser: {
+    select: { id: true, name: true },
+  },
   runSource: true,
   status: true,
   dueAt: true,

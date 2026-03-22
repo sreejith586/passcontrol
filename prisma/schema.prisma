@@ -32,6 +32,7 @@ model User {
   auditLogs             AuditLog[]           @relation("AuditActor")
   assignedAlerts        AlertEvent[]         @relation("AssignedTo")
   ownedSchedules        ChecklistSchedule[]  @relation("ScheduleOwner")
+  assignedChecklistRuns ChecklistRun[]        @relation("ChecklistRunAssignedToUser")
   passwordSetupTokens   PasswordSetupToken[]
 
   @@map("users")
@@ -578,6 +579,7 @@ model ChecklistRun {
   brandId              String?   @map("brand_id") @db.Uuid
   locationId           String?   @map("location_id") @db.Uuid
   zoneId               String?   @map("zone_id") @db.Uuid
+  assignedToUserId     String?   @map("assigned_to_user_id") @db.Uuid
   runSource            String    @default("MANUAL") @map("run_source")
   status               String    @default("PENDING")
   dueAt                DateTime? @map("due_at") @db.Timestamptz
@@ -592,6 +594,7 @@ model ChecklistRun {
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   organization     Organization                  @relation(fields: [organizationId], references: [id])
+  assignedToUser   User?                         @relation("ChecklistRunAssignedToUser", fields: [assignedToUserId], references: [id])
   sectionSnapshots ChecklistRunSectionSnapshot[]
   itemSnapshots    ChecklistRunItemSnapshot[]
 

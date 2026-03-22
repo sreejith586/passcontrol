@@ -345,6 +345,7 @@ export class ChecklistSchedulesService {
           brandId: schedule.brandId,
           locationId: schedule.locationId,
           zoneId: schedule.zoneId,
+          assignedToUserId: schedule.ownerUserId ?? null,
           runSource: 'SCHEDULE',
           status: 'PENDING',
           dueAt: effectiveDueAt,
@@ -392,6 +393,9 @@ export class ChecklistSchedulesService {
       return tx.checklistRun.findUniqueOrThrow({
         where: { id: created.id },
         include: {
+          assignedToUser: {
+            select: { id: true, name: true },
+          },
           sectionSnapshots: {
             orderBy: { sortOrder: 'asc' as const },
             include: {

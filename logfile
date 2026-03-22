@@ -78,3 +78,18 @@
 2026-03-22 17:34:58.187 +04 [70852] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.118 s, sync=0.005 s, total=1.132 s; sync files=12, longest=0.003 s, average=0.001 s; distance=13 kB, estimate=3845 kB; lsn=0/45F2A48, redo lsn=0/45F2A10
 2026-03-22 17:39:57.196 +04 [70852] LOG:  checkpoint starting: time
 2026-03-22 17:39:59.943 +04 [70852] LOG:  checkpoint complete: wrote 28 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.737 s, sync=0.004 s, total=2.748 s; sync files=15, longest=0.002 s, average=0.001 s; distance=83 kB, estimate=3469 kB; lsn=0/46076F8, redo lsn=0/46076C0
+2026-03-22 18:01:29.180 +04 [70852] LOG:  checkpoint starting: time
+2026-03-22 18:01:30.618 +04 [70852] LOG:  checkpoint complete: wrote 14 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.425 s, sync=0.003 s, total=1.438 s; sync files=13, longest=0.002 s, average=0.001 s; distance=40 kB, estimate=3126 kB; lsn=0/46117C8, redo lsn=0/4611790
+2026-03-22 18:08:50.589 +04 [92327] FATAL:  terminating connection due to administrator command
+2026-03-22 18:08:50.690 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-22 18:08:50.703 +04 [70852] LOG:  checkpoint complete: wrote 5 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.005 s, sync=0.004 s, total=0.013 s; sync files=5, longest=0.003 s, average=0.001 s; distance=5249 kB, estimate=5249 kB; lsn=0/4B31CA0, redo lsn=0/4B31C68
+2026-03-22 18:08:52.217 +04 [92341] FATAL:  terminating connection due to administrator command
+2026-03-22 18:08:52.320 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-22 18:08:52.328 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.003 s, sync=0.002 s, total=0.008 s; sync files=6, longest=0.002 s, average=0.001 s; distance=5263 kB, estimate=5263 kB; lsn=0/5055C08, redo lsn=0/5055BD0
+2026-03-22 18:08:54.254 +04 [92345] FATAL:  terminating connection due to administrator command
+2026-03-22 18:08:54.355 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-22 18:08:54.361 +04 [70852] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.003 s, total=0.006 s; sync files=4, longest=0.002 s, average=0.001 s; distance=5249 kB, estimate=5262 kB; lsn=0/5576300, redo lsn=0/55762C8
+2026-03-22 18:08:55.529 +04 [70852] LOG:  checkpoint starting: immediate force wait
+2026-03-22 18:08:55.536 +04 [70852] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.001 s, total=0.008 s; sync files=4, longest=0.001 s, average=0.001 s; distance=5249 kB, estimate=5261 kB; lsn=0/5A96AD0, redo lsn=0/5A96A98
+2026-03-22 18:13:55.546 +04 [70852] LOG:  checkpoint starting: time
+2026-03-22 18:13:58.417 +04 [70852] LOG:  checkpoint complete: wrote 29 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.862 s, sync=0.001 s, total=2.872 s; sync files=24, longest=0.001 s, average=0.001 s; distance=135 kB, estimate=4748 kB; lsn=0/5AB8858, redo lsn=0/5AB8820

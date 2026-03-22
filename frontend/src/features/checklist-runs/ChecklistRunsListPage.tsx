@@ -156,6 +156,15 @@ export function ChecklistRunsListPage() {
       ),
     },
     {
+      key: 'assignedTo',
+      header: 'Assigned To',
+      render: (row: ChecklistRun) => (
+        <span className="text-slate-600">
+          {row.assignedToUser?.name ?? 'Unassigned'}
+        </span>
+      ),
+    },
+    {
       key: 'progress',
       header: 'Execution',
       render: (row: ChecklistRun) => {
