@@ -24,7 +24,12 @@ export function TemperatureItemInput({
   isUpdating,
 }: TemperatureItemInputProps) {
   const configUnit = configSnapshotJson?.unit as string | undefined;
-  const unit = configUnit ?? (temperatureUnitFallback === 'C' ? '°C' : '°F');
+  const isCelsius =
+    configUnit === 'C' ||
+    configUnit === '°C' ||
+    (!configUnit && temperatureUnitFallback === 'C');
+  const displayUnit = isCelsius ? '°C' : '°F';
+  const apiUnit = isCelsius ? 'C' : 'F';
   const rawValue = valueJson?.value;
   const initialValue = typeof rawValue === 'number' ? String(rawValue) : '';
   const [localValue, setLocalValue] = useState(initialValue);
@@ -43,9 +48,9 @@ export function TemperatureItemInput({
           ? rawValue
           : parseFloat(String(rawValue ?? ''));
       if (!Number.isNaN(serverNum) && num === serverNum) return;
-      onUpdate(itemId, { valueJson: { value: num, unit } });
+      onUpdate(itemId, { valueJson: { value: num, unit: apiUnit } });
     },
-    [itemId, rawValue, unit, onUpdate]
+    [itemId, rawValue, apiUnit, onUpdate]
   );
 
   const handleKeyDown = useCallback(
@@ -68,10 +73,10 @@ export function TemperatureItemInput({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         disabled={disabled || isUpdating}
-        placeholder={`Enter temperature (${unit})`}
+        placeholder={`Enter temperature (${displayUnit})`}
         className="max-w-[140px]"
       />
-      <span className="text-sm text-muted-foreground">{unit}</span>
+      <span className="text-sm text-muted-foreground">{displayUnit}</span>
     </div>
   );
 }
