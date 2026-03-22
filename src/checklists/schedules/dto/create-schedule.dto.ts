@@ -33,6 +33,11 @@ export class CreateScheduleDto {
   @IsUUID()
   zoneId?: string;
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Owner user UUID' })
+  @IsOptional()
+  @IsUUID()
+  ownerUserId?: string;
+
   @ApiPropertyOptional({ example: '2025-01-01T00:00:00Z', format: 'date-time' })
   @IsOptional()
   @IsDateString()

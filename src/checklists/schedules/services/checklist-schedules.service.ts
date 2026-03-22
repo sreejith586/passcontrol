@@ -9,6 +9,7 @@ import { ChecklistScheduleRecurrenceService } from './checklist-schedule-recurre
 import { AuditLogsService } from '../../../audit/services/audit-logs.service';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { ScopeValidationService } from '../../../common/scope-validation/scope-validation.service';
+import { UsersService } from '../../../users/services/users.service';
 import { CreateScheduleDto } from '../dto/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/update-schedule.dto';
 import { ListSchedulesQueryDto } from '../dto/list-schedules.dto';
@@ -27,6 +28,7 @@ export class ChecklistSchedulesService {
     private readonly audit: AuditLogsService,
     private readonly prisma: PrismaService,
     private readonly scopeValidation: ScopeValidationService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(
@@ -56,6 +58,18 @@ export class ChecklistSchedulesService {
       throw new BadRequestException(
         'Checklist template not found or not published',
       );
+    }
+
+    if (dto.ownerUserId) {
+      const belongsToOrg = await this.usersService.belongsToOrganization(
+        dto.ownerUserId,
+        ctx.organizationId,
+      );
+      if (!belongsToOrg) {
+        throw new BadRequestException(
+          'Owner user not found or does not belong to this organization',
+        );
+      }
     }
 
     const created = await this.repo.create(ctx.organizationId, {
@@ -142,6 +156,18 @@ export class ChecklistSchedulesService {
         : existing.endsAt;
     validateStartsAtEndsAt(effectiveStartsAt, effectiveEndsAt);
 
+    if (dto.ownerUserId !== undefined && dto.ownerUserId != null) {
+      const belongsToOrg = await this.usersService.belongsToOrganization(
+        dto.ownerUserId,
+        ctx.organizationId,
+      );
+      if (!belongsToOrg) {
+        throw new BadRequestException(
+          'Owner user not found or does not belong to this organization',
+        );
+      }
+    }
+
     const updated = await this.repo.update(ctx.organizationId, id, {
       name: dto.name,
       timezone: dto.timezone,
@@ -149,6 +175,7 @@ export class ChecklistSchedulesService {
       brandId: dto.brandId,
       locationId: dto.locationId,
       zoneId: dto.zoneId,
+      ownerUserId: dto.ownerUserId,
       startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
       endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
     });

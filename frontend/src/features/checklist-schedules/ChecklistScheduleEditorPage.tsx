@@ -10,6 +10,8 @@ import {
 } from './api';
 import type { CreateSchedulePayload, UpdateSchedulePayload } from './api';
 import { listTemplates } from '@/features/checklist-templates/api';
+import { listUsers } from '@/features/users/api';
+import { queryKeys as usersQueryKeys } from '@/features/users/query-keys';
 import { queryKeys } from './query-keys';
 import {
   RRULE_PRESETS,
@@ -89,6 +91,7 @@ export function ChecklistScheduleEditorPage() {
   const [brandId, setBrandId] = useState('');
   const [locationId, setLocationId] = useState('');
   const [zoneId, setZoneId] = useState('');
+  const [ownerUserId, setOwnerUserId] = useState('');
 
   const scheduleQuery = useQuery({
     queryKey: queryKeys.detail(id!),
@@ -99,6 +102,11 @@ export function ChecklistScheduleEditorPage() {
   const templatesQuery = useQuery({
     queryKey: ['checklist-templates', 'list', { status: 'PUBLISHED' }],
     queryFn: () => listTemplates({ status: 'PUBLISHED', limit: 100 }),
+  });
+
+  const usersQuery = useQuery({
+    queryKey: usersQueryKeys.users.list({ page: 1, limit: 100 }),
+    queryFn: () => listUsers({ page: 1, limit: 100 }),
   });
 
   useEffect(() => {
@@ -120,6 +128,7 @@ export function ChecklistScheduleEditorPage() {
       setBrandId(s.brandId ?? '');
       setLocationId(s.locationId ?? '');
       setZoneId(s.zoneId ?? '');
+      setOwnerUserId(s.ownerUserId ?? '');
     }
   }, [scheduleQuery.data]);
 
@@ -206,15 +215,17 @@ export function ChecklistScheduleEditorPage() {
     const startsAtIso = startsAtDate?.toISOString();
     const endsAtIso = endsAtDate?.toISOString();
 
-    const scopeForCreate: { brandId?: string; locationId?: string; zoneId?: string } = {};
+    const scopeForCreate: { brandId?: string; locationId?: string; zoneId?: string; ownerUserId?: string } = {};
     if (brandId) scopeForCreate.brandId = brandId;
     if (locationId) scopeForCreate.locationId = locationId;
     if (zoneId) scopeForCreate.zoneId = zoneId;
+    if (ownerUserId) scopeForCreate.ownerUserId = ownerUserId;
 
     const scopeForUpdate = {
       brandId: brandId || null,
       locationId: locationId || null,
       zoneId: zoneId || null,
+      ownerUserId: ownerUserId || null,
     };
 
     if (isNew) {
@@ -403,6 +414,28 @@ export function ChecklistScheduleEditorPage() {
               setZoneId(z);
             }}
           />
+        </div>
+
+        <div>
+          <label
+            htmlFor="schedule-owner"
+            className="mb-1.5 block text-sm font-medium text-foreground"
+          >
+            Owner (optional)
+          </label>
+          <select
+            id="schedule-owner"
+            value={ownerUserId}
+            onChange={(e) => setOwnerUserId(e.target.value)}
+            className="flex h-10 w-full max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            <option value="">None</option>
+            {(usersQuery.data?.items ?? []).map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

@@ -168,8 +168,8 @@ Base: `/v1` (versioned)
 |--------|------|------------|-------------|
 | GET | /checklist-schedules | checklist.schedule.view | List schedules (query: checklistTemplateId, isActive, page, limit) |
 | GET | /checklist-schedules/:id | checklist.schedule.view | Get schedule by ID |
-| POST | /checklist-schedules | checklist.schedule.create | Create schedule (checklistTemplateId, name, timezone, rrule, startsAt?, endsAt?) |
-| PATCH | /checklist-schedules/:id | checklist.schedule.update | Update schedule (partial: name, timezone, rrule, startsAt?, endsAt?) |
+| POST | /checklist-schedules | checklist.schedule.create | Create schedule (checklistTemplateId, name, timezone, rrule, brandId?, locationId?, zoneId?, ownerUserId?, startsAt?, endsAt?) |
+| PATCH | /checklist-schedules/:id | checklist.schedule.update | Update schedule (partial: name, timezone, rrule, brandId?, locationId?, zoneId?, ownerUserId?, startsAt?, endsAt?; null clears scope/owner) |
 | POST | /checklist-schedules/:id/activate | checklist.schedule.activate | Activate schedule |
 | POST | /checklist-schedules/:id/deactivate | checklist.schedule.deactivate | Deactivate schedule |
 | POST | /checklist-schedules/:id/generate-run | checklist.run.generate | Generate run from schedule (optional body `{ dueAt?: string }`; v1 frontend sends empty body) |
@@ -177,6 +177,8 @@ Base: `/v1` (versioned)
 Frontend v1: uses RRULE presets (Daily 6/9/18, Twice daily, Weekly Mon/Sun); no raw RRULE editor; no brand/location/zone scope in UI. Generate-run without dueAt creates run for schedule's next occurrence; on duplicate/day conflict, backend returns error with message.
 
 Scope validation (Phase 14C.1): Checklist templates and schedules validate brandId, locationId, zoneId when provided — each must exist in org; if both brandId and locationId provided, location must belong to brand; if both locationId and zoneId provided, zone must belong to location.
+
+Owner (Phase 15A): Checklist schedules support optional ownerUserId; create/update validate owner belongs to org; response includes ownerUserId and ownerUser: { id, name }.
 
 ## Other
 

@@ -23,6 +23,8 @@ export interface ChecklistSchedule {
   brandId: string | null;
   locationId: string | null;
   zoneId: string | null;
+  ownerUserId: string | null;
+  ownerUser?: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +37,7 @@ export interface CreateSchedulePayload {
   brandId?: string;
   locationId?: string;
   zoneId?: string;
+  ownerUserId?: string;
   startsAt?: string;
   endsAt?: string;
 }
@@ -46,6 +49,7 @@ export interface UpdateSchedulePayload {
   brandId?: string | null;
   locationId?: string | null;
   zoneId?: string | null;
+  ownerUserId?: string | null;
   startsAt?: string;
   endsAt?: string;
 }

@@ -31,6 +31,7 @@ model User {
   roleAssignments       UserRoleAssignment[]
   auditLogs             AuditLog[]           @relation("AuditActor")
   assignedAlerts        AlertEvent[]         @relation("AssignedTo")
+  ownedSchedules        ChecklistSchedule[]  @relation("ScheduleOwner")
   passwordSetupTokens   PasswordSetupToken[]
 
   @@map("users")
@@ -545,6 +546,7 @@ model ChecklistSchedule {
   brandId                   String?   @map("brand_id") @db.Uuid
   locationId                String?   @map("location_id") @db.Uuid
   zoneId                    String?   @map("zone_id") @db.Uuid
+  ownerUserId               String?   @map("owner_user_id") @db.Uuid
   timezone                  String
   rrule                     String
   nextRunAt                 DateTime? @map("next_run_at") @db.Timestamptz
@@ -560,6 +562,7 @@ model ChecklistSchedule {
 
   organization      Organization      @relation(fields: [organizationId], references: [id])
   checklistTemplate ChecklistTemplate @relation(fields: [checklistTemplateId], references: [id])
+  ownerUser         User?              @relation("ScheduleOwner", fields: [ownerUserId], references: [id])
 
   @@index([organizationId, isActive, nextRunAt])
   @@index([organizationId, brandId, locationId, zoneId, isActive])

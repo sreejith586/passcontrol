@@ -32,6 +32,11 @@ export class UpdateScheduleDto {
   @IsUUID()
   zoneId?: string;
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Owner user UUID; null to clear' })
+  @IsOptional()
+  @IsUUID()
+  ownerUserId?: string | null;
+
   @ApiPropertyOptional({ format: 'date-time' })
   @IsOptional()
   @IsDateString()

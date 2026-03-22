@@ -107,6 +107,15 @@ export function ChecklistSchedulesListPage() {
       ),
     },
     {
+      key: 'owner',
+      header: 'Owner',
+      render: (row: ChecklistSchedule) => (
+        <span className="text-slate-600">
+          {row.ownerUser?.name ?? '—'}
+        </span>
+      ),
+    },
+    {
       key: 'nextRun',
       header: 'Next run',
       render: (row: ChecklistSchedule) => (

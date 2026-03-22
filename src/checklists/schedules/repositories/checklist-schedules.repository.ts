@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -11,6 +11,9 @@ const SCHEDULE_INCLUDE = {
       version: true,
       status: true,
     },
+  },
+  ownerUser: {
+    select: { id: true, name: true },
   },
 } as const;
 
@@ -28,6 +31,7 @@ export class ChecklistSchedulesRepository {
       brandId?: string | null;
       locationId?: string | null;
       zoneId?: string | null;
+      ownerUserId?: string | null;
       startsAt?: Date | null;
       endsAt?: Date | null;
     },
@@ -42,6 +46,7 @@ export class ChecklistSchedulesRepository {
         brandId: data.brandId ?? null,
         locationId: data.locationId ?? null,
         zoneId: data.zoneId ?? null,
+        ownerUserId: data.ownerUserId ?? null,
         startsAt: data.startsAt ?? null,
         endsAt: data.endsAt ?? null,
         isActive: true,
@@ -95,6 +100,7 @@ export class ChecklistSchedulesRepository {
       brandId?: string | null;
       locationId?: string | null;
       zoneId?: string | null;
+      ownerUserId?: string | null;
       startsAt?: Date | null;
       endsAt?: Date | null;
     },
@@ -106,14 +112,28 @@ export class ChecklistSchedulesRepository {
     if (data.brandId !== undefined) updateData.brandId = data.brandId;
     if (data.locationId !== undefined) updateData.locationId = data.locationId;
     if (data.zoneId !== undefined) updateData.zoneId = data.zoneId;
+    if (data.ownerUserId !== undefined) {
+      updateData.ownerUser =
+        data.ownerUserId != null
+          ? { connect: { id: data.ownerUserId } }
+          : { disconnect: true };
+    }
     if (data.startsAt !== undefined) updateData.startsAt = data.startsAt;
     if (data.endsAt !== undefined) updateData.endsAt = data.endsAt;
 
-    await this.prisma.checklistSchedule.updateMany({
+    const existing = await this.prisma.checklistSchedule.findFirst({
       where: { id, organizationId },
-      data: updateData,
+      select: { id: true },
     });
-    return this.findById(organizationId, id);
+    if (!existing) {
+      throw new NotFoundException('Checklist schedule not found');
+    }
+
+    return this.prisma.checklistSchedule.update({
+      where: { id },
+      data: updateData,
+      include: SCHEDULE_INCLUDE,
+    });
   }
 
   async activate(organizationId: string, id: string) {
