@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2025-03-22 (Phase 15A)
+**Last updated:** 2025-03-22 (Phase 15D)
 
 ## Implemented Features
 
@@ -113,6 +113,7 @@
 - [x] Phase 15A — Schedule Ownership: ChecklistSchedule.ownerUserId (optional); owner validated against org membership; owner selector in schedule editor; Owner column in schedules list; clearing supported
 - [x] Phase 15B — Run Assignment (Ownership Continuity): ChecklistRun.assignedToUserId inherited from schedule.ownerUserId when runs are generated; Assigned To column in run list; Assigned To in run detail right rail; null-safe for existing runs
 - [x] Phase 15C — Manual Run Reassignment: PATCH /checklist-runs/:id/assignment; assign/reassign/clear from Run Detail page; allowed for PENDING/IN_PROGRESS only; org-scoped user validation; does not affect schedule or other runs
+- [x] Phase 15D — Run Performer Visibility: performedByUser relation on ChecklistRun; RUN_INCLUDE/RUN_SUMMARY_SELECT include performedByUser (id, name); Assigned To and Performed By both shown in run detail right rail and run list; read-only display, null-safe (— when no performer)
 
 ### Backend (recent fixes)
 

@@ -127,3 +127,8 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Single POST /onboarding/quick-setup endpoint creates template (quick-setup-starter), schedule, and run; returns runId. Permission: checklist.template.create. Idempotent for template/schedule: reuses if exists; on duplicate run for same day, returns existing runId.
 - **Rationale:** Minimal first-value flow without full template/schedule UI; admins can reach first run in one click; no new permission (reuses template.create); backend orchestrates existing services.
+
+### Run performer visibility (Phase 15D)
+
+- **Decision:** Add `performedByUser` Prisma relation to ChecklistRun (reverse: `performedChecklistRuns` on User). Include performedByUser in RUN_INCLUDE and RUN_SUMMARY_SELECT. Display "Performed By" in run detail right rail and run list; read-only, null-safe (— when no performer). No new endpoints; no execution logic changes.
+- **Rationale:** Clarifies distinction between Assigned To (accountable) and Performed By (executor). performedByUserId already set by markRunInProgress and submitRun; relation enables name resolution; consistent with assignedToUser pattern.

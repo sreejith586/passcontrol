@@ -38,6 +38,8 @@ export interface ChecklistRun {
   templateKeySnapshot: string;
   assignedToUserId: string | null;
   assignedToUser?: { id: string; name: string } | null;
+  performedByUserId?: string | null;
+  performedByUser?: { id: string; name: string } | null;
   sectionSnapshots: ChecklistRunSectionSnapshot[];
 }
 

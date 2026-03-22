@@ -165,6 +165,15 @@ export function ChecklistRunsListPage() {
       ),
     },
     {
+      key: 'performedBy',
+      header: 'Performed By',
+      render: (row: ChecklistRun) => (
+        <span className="text-slate-600">
+          {row.performedByUser?.name ?? '—'}
+        </span>
+      ),
+    },
+    {
       key: 'progress',
       header: 'Execution',
       render: (row: ChecklistRun) => {

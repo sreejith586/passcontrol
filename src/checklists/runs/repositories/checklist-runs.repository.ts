@@ -6,6 +6,9 @@ const RUN_INCLUDE = {
   assignedToUser: {
     select: { id: true, name: true },
   },
+  performedByUser: {
+    select: { id: true, name: true },
+  },
   sectionSnapshots: {
     orderBy: { sortOrder: 'asc' as const },
     include: {
@@ -38,6 +41,9 @@ const RUN_SUMMARY_SELECT = {
   startedAt: true,
   completedAt: true,
   performedByUserId: true,
+  performedByUser: {
+    select: { id: true, name: true },
+  },
   runNumber: true,
   templateVersion: true,
   templateKeySnapshot: true,

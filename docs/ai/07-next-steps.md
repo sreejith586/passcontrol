@@ -42,7 +42,13 @@
 
 ---
 
-## 4. Platform Hardening (MEDIUM PRIORITY)
+## 4. Phase 15 Ownership & Visibility (15D COMPLETE)
+
+- ~~**Phase 15D — Run Performer Visibility**~~ — *Done.* performedByUser relation; RUN_INCLUDE/RUN_SUMMARY_SELECT; Performed By in run detail and list; read-only, null-safe.
+
+---
+
+## 5. Platform Hardening (MEDIUM PRIORITY)
 
 - **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.
 - **Query/index optimization for escalation queries** — Add or tune indexes for `alert_events` escalation filters (organization_id, status, created_at, location_id). Profile and optimize raw SQL.
@@ -50,7 +56,7 @@
 
 ---
 
-## 5. Future Enhancements (LOWER PRIORITY)
+## 6. Future Enhancements (LOWER PRIORITY)
 
 - **Email delivery for invites** — Send setup link via email instead of manual copy; requires email service integration.
 - **Password reset** — Forgot-password flow for existing users with password.

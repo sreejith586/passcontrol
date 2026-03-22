@@ -439,6 +439,12 @@ export function ChecklistRunDetailPage() {
                   )}
                 </dd>
               </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-500">Performed By</dt>
+                <dd className="mt-1 font-medium text-slate-900">
+                  {run.performedByUser?.name ?? '—'}
+                </dd>
+              </div>
               {run.dueAt && (
                 <div>
                   <dt className="text-xs font-medium text-slate-500">Due</dt>
