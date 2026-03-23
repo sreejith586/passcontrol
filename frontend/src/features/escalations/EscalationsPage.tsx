@@ -274,14 +274,15 @@ export function EscalationsPage() {
     params.sort != null
       ? (() => {
           const s = params.sort!;
+          const order: 'asc' | 'desc' = s.endsWith('_asc') ? 'asc' : 'desc';
           if (s.startsWith('created_at_'))
-            return { sortBy: 'created_at' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+            return { sortBy: 'created_at' as const, order };
           if (s.startsWith('status_'))
-            return { sortBy: 'status' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+            return { sortBy: 'status' as const, order };
           if (s.startsWith('severity_'))
-            return { sortBy: 'severity' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+            return { sortBy: 'severity' as const, order };
           if (s.startsWith('assigned_'))
-            return { sortBy: 'assigned' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+            return { sortBy: 'assigned' as const, order };
           return undefined;
         })()
       : undefined;

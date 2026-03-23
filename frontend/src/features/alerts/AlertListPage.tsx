@@ -228,10 +228,11 @@ export function AlertListPage() {
 
   const sortState = (() => {
     const s = params.sort ?? 'triggered_at_desc';
-    if (s.startsWith('triggered_at_')) return { sortBy: 'triggered_at' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
-    if (s.startsWith('status_')) return { sortBy: 'status' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
-    if (s.startsWith('severity_')) return { sortBy: 'severity' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
-    if (s.startsWith('assigned_')) return { sortBy: 'assigned' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+    const order: 'asc' | 'desc' = s.endsWith('_asc') ? 'asc' : 'desc';
+    if (s.startsWith('triggered_at_')) return { sortBy: 'triggered_at' as const, order };
+    if (s.startsWith('status_')) return { sortBy: 'status' as const, order };
+    if (s.startsWith('severity_')) return { sortBy: 'severity' as const, order };
+    if (s.startsWith('assigned_')) return { sortBy: 'assigned' as const, order };
     return { sortBy: 'created_at' as const, order: 'desc' as const };
   })();
 
