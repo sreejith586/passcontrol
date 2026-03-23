@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getRegionalSettings,
@@ -15,8 +16,17 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { Button } from '@/shared/ui/Button';
 import { toast } from '@/shared/feedback/useToast';
+import { cn } from '@/lib/cn';
+
+type Section = 'regional' | 'alert-workflow';
+
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: 'regional', label: 'Regional' },
+  { id: 'alert-workflow', label: 'Alert Workflow' },
+];
 
 export function OrganizationSettingsPage() {
+  const [activeSection, setActiveSection] = useState<Section>('regional');
   const queryClient = useQueryClient();
 
   const regionalQuery = useQuery({
@@ -126,27 +136,57 @@ export function OrganizationSettingsPage() {
         description="Configure organization-wide defaults and policies."
       />
 
-      <Card className="space-y-6 p-5">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Regional
-        </h3>
-        <RegionalSettingsForm
-          settings={regionalQuery.data}
-          onSubmit={(dto) => regionalMutation.mutate(dto)}
-          isSubmitting={regionalMutation.isPending}
-        />
-      </Card>
+      <div
+        role="tablist"
+        aria-label="Settings sections"
+        className="inline-flex rounded-lg border border-border bg-muted/50 p-0.5"
+      >
+        {SECTIONS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={activeSection === id}
+            aria-controls={`panel-${id}`}
+            id={`tab-${id}`}
+            onClick={() => setActiveSection(id)}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              activeSection === id
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <Card className="space-y-6 p-5">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Alert Workflow
-        </h3>
-        <WorkflowPolicyForm
-          settings={alertWorkflowQuery.data}
-          onSubmit={(dto) => alertWorkflowMutation.mutate(dto)}
-          isSubmitting={alertWorkflowMutation.isPending}
-        />
-      </Card>
+      {activeSection === 'regional' && (
+        <Card id="panel-regional" role="tabpanel" aria-labelledby="tab-regional" className="space-y-6 p-5">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+            Regional
+          </h3>
+          <RegionalSettingsForm
+            settings={regionalQuery.data}
+            onSubmit={(dto) => regionalMutation.mutate(dto)}
+            isSubmitting={regionalMutation.isPending}
+          />
+        </Card>
+      )}
+
+      {activeSection === 'alert-workflow' && (
+        <Card id="panel-alert-workflow" role="tabpanel" aria-labelledby="tab-alert-workflow" className="space-y-6 p-5">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+            Alert Workflow
+          </h3>
+          <WorkflowPolicyForm
+            settings={alertWorkflowQuery.data}
+            onSubmit={(dto) => alertWorkflowMutation.mutate(dto)}
+            isSubmitting={alertWorkflowMutation.isPending}
+          />
+        </Card>
+      )}
     </div>
   );
 }
