@@ -4050,3 +4050,11 @@
 2026-03-23 15:48:29.206 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.609 s, sync=0.002 s, total=0.618 s; sync files=3, longest=0.002 s, average=0.001 s; distance=52 kB, estimate=122 kB; lsn=0/71AA3D8, redo lsn=0/71AA3A0
 2026-03-23 15:53:28.217 +04 [70852] LOG:  checkpoint starting: time
 2026-03-23 15:53:28.858 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.627 s, sync=0.004 s, total=0.642 s; sync files=3, longest=0.002 s, average=0.001 s; distance=49 kB, estimate=114 kB; lsn=0/71B6B98, redo lsn=0/71B6B60
+2026-03-23 15:58:28.991 +04 [70852] LOG:  checkpoint starting: time
+2026-03-23 15:58:29.698 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.660 s, sync=0.001 s, total=0.714 s; sync files=3, longest=0.001 s, average=0.001 s; distance=53 kB, estimate=108 kB; lsn=0/71C4140, redo lsn=0/71C4108
+2026-03-23 16:03:28.708 +04 [70852] LOG:  checkpoint starting: time
+2026-03-23 16:03:29.361 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.639 s, sync=0.003 s, total=0.653 s; sync files=3, longest=0.002 s, average=0.001 s; distance=51 kB, estimate=102 kB; lsn=0/71D0F10, redo lsn=0/71D0ED8
+2026-03-23 16:08:28.382 +04 [70852] LOG:  checkpoint starting: time
+2026-03-23 16:08:29.016 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.625 s, sync=0.004 s, total=0.634 s; sync files=3, longest=0.002 s, average=0.002 s; distance=47 kB, estimate=97 kB; lsn=0/71DCE80, redo lsn=0/71DCE48
+2026-03-23 16:13:28.110 +04 [70852] LOG:  checkpoint starting: time
+2026-03-23 16:13:28.728 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.613 s, sync=0.002 s, total=0.618 s; sync files=3, longest=0.002 s, average=0.001 s; distance=49 kB, estimate=92 kB; lsn=0/71E9498, redo lsn=0/71E9460

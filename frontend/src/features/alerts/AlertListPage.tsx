@@ -12,12 +12,8 @@ import { DataTable, DataTablePagination } from '@/shared/ui';
 import { SortableColumnHeader } from '@/shared/ui/DataTable/SortableColumnHeader';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
-import {
-  FilterBar,
-  FilterSelect,
-  FilterCheckbox,
-  FilterInput,
-} from '@/shared/layout/FilterBar';
+import { FilterBar, FilterSelect, FilterInput } from '@/shared/layout/FilterBar';
+import { Card } from '@/shared/ui/Card';
 import { StatusBadge } from './components/StatusBadge';
 import { SeverityBadge } from './components/SeverityBadge';
 import { AssigneeBadge } from './components/AssigneeBadge';
@@ -52,6 +48,62 @@ const SOURCE_TYPE_OPTIONS = [
   { value: 'TEMPERATURE_READING', label: 'Temperature reading' },
   { value: 'OTHER', label: 'Other' },
 ] as const;
+
+const ASSIGNEE_OPTIONS = [
+  { value: 'anyone', label: 'Anyone' },
+  { value: 'me', label: 'Assigned to me' },
+  { value: 'unassigned', label: 'Unassigned only' },
+] as const;
+
+type AssigneeMode = (typeof ASSIGNEE_OPTIONS)[number]['value'];
+
+interface AlertFilters {
+  status?: string;
+  severity?: string;
+  sourceType?: string;
+  from?: string;
+  to?: string;
+  assigneeMode: AssigneeMode;
+  assignedUserId?: string;
+}
+
+function filtersToParams(f: AlertFilters): Partial<ListAlertsParams> {
+  return {
+    status: f.status && ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'].includes(f.status) ? (f.status as ListAlertsParams['status']) : undefined,
+    severity: f.severity || undefined,
+    sourceType: f.sourceType || undefined,
+    from: f.from || undefined,
+    to: f.to || undefined,
+    assignedToMe: f.assigneeMode === 'me',
+    unassignedOnly: f.assigneeMode === 'unassigned',
+    assignedUserId: f.assigneeMode === 'anyone' && f.assignedUserId ? f.assignedUserId : undefined,
+  };
+}
+
+function paramsToFilters(p: ListAlertsParams): AlertFilters {
+  let assigneeMode: AssigneeMode = 'anyone';
+  if (p.unassignedOnly) assigneeMode = 'unassigned';
+  else if (p.assignedToMe) assigneeMode = 'me';
+  return {
+    status: p.status ?? '',
+    severity: p.severity ?? '',
+    sourceType: p.sourceType ?? '',
+    from: p.from ?? '',
+    to: p.to ?? '',
+    assigneeMode,
+    assignedUserId: p.assignedUserId ?? '',
+  };
+}
+
+const DEFAULT_FILTERS: AlertFilters = {
+  status: '',
+  severity: '',
+  sourceType: '',
+  from: '',
+  to: '',
+  assigneeMode: 'anyone',
+  assignedUserId: '',
+};
 
 const VALID_SORT = [
   'triggered_at_asc',
@@ -103,7 +155,9 @@ export function AlertListPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const params = parseParams(searchParams);
-  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState<AlertFilters>(() =>
+    paramsToFilters(params)
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkResolveOpen, setBulkResolveOpen] = useState(false);
   const [bulkResolveError, setBulkResolveError] = useState<string | null>(null);
@@ -116,8 +170,11 @@ export function AlertListPage() {
   const { data: usersData } = useQuery({
     queryKey: usersQueryKeys.users.list({ page: 1, limit: 100 }),
     queryFn: () => listUsers({ page: 1, limit: 100 }),
-    enabled: advancedFiltersOpen,
   });
+
+  useEffect(() => {
+    setDraftFilters(paramsToFilters(parseParams(searchParams)));
+  }, [searchParams]);
 
   const items = data?.items ?? [];
 
@@ -133,6 +190,33 @@ export function AlertListPage() {
       next.set(key, String(value));
     }
     if (key !== 'page') next.set('page', '1');
+    setSearchParams(next);
+  }
+
+  function handleApply() {
+    const applied = filtersToParams(draftFilters);
+    const next = new URLSearchParams(searchParams);
+    next.set('page', '1');
+    const filterKeys = ['status', 'severity', 'sourceType', 'from', 'to', 'assignedToMe', 'unassignedOnly', 'assignedUserId'];
+    filterKeys.forEach((k) => next.delete(k));
+    if (applied.status) next.set('status', applied.status);
+    if (applied.severity) next.set('severity', applied.severity);
+    if (applied.sourceType) next.set('sourceType', applied.sourceType);
+    if (applied.from) next.set('from', applied.from);
+    if (applied.to) next.set('to', applied.to);
+    if (applied.assignedToMe) next.set('assignedToMe', 'true');
+    if (applied.unassignedOnly) next.set('unassignedOnly', 'true');
+    if (applied.assignedUserId) next.set('assignedUserId', applied.assignedUserId);
+    setSearchParams(next);
+  }
+
+  function handleReset() {
+    setDraftFilters(DEFAULT_FILTERS);
+    const next = new URLSearchParams(searchParams);
+    next.set('page', '1');
+    ['status', 'severity', 'sourceType', 'from', 'to', 'assignedToMe', 'unassignedOnly', 'assignedUserId'].forEach((k) =>
+      next.delete(k)
+    );
     setSearchParams(next);
   }
 
@@ -347,83 +431,138 @@ export function AlertListPage() {
         description="Manage and triage operational alerts"
       />
 
-      <div className="space-y-3">
-        <FilterBar>
-          <FilterSelect
-            value={params.status ?? ''}
-            onChange={(v) => setParam('status', v)}
-            options={STATUS_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
-            aria-label="Filter by status"
-          />
-          <FilterCheckbox
-            checked={params.assignedToMe ?? false}
-            onChange={(v) => setParam('assignedToMe', v)}
-            label="Assigned to me"
-          />
-          <FilterCheckbox
-            checked={params.unassignedOnly ?? false}
-            onChange={(v) => setParam('unassignedOnly', v)}
-            label="Unassigned only"
-          />
-          <button
-            type="button"
-            onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
-            className="text-sm text-primary hover:underline"
-          >
-            {advancedFiltersOpen ? 'Fewer filters' : 'More filters'}
-          </button>
-        </FilterBar>
-
-        {advancedFiltersOpen && (
-          <FilterBar>
+      <Card className="p-4">
+        <FilterBar className="flex-wrap items-end gap-4">
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Status
+            </span>
             <FilterSelect
-              value={params.severity ?? ''}
-              onChange={(v) => setParam('severity', v)}
+              value={draftFilters.status ?? ''}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, status: v || '' }))
+              }
+              options={STATUS_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
+              aria-label="Filter by status"
+            />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Severity
+            </span>
+            <FilterSelect
+              value={draftFilters.severity ?? ''}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, severity: v || '' }))
+              }
               options={SEVERITY_OPTIONS.map((o) => ({
                 value: o.value,
                 label: o.label,
               }))}
               aria-label="Filter by severity"
             />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Source type
+            </span>
             <FilterSelect
-              value={params.sourceType ?? ''}
-              onChange={(v) => setParam('sourceType', v)}
+              value={draftFilters.sourceType ?? ''}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, sourceType: v || '' }))
+              }
               options={SOURCE_TYPE_OPTIONS.map((o) => ({
                 value: o.value,
                 label: o.label,
               }))}
               aria-label="Filter by source type"
             />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Assignee
+            </span>
+            <FilterSelect
+              value={draftFilters.assigneeMode}
+              onChange={(v) =>
+                setDraftFilters((f) => ({
+                  ...f,
+                  assigneeMode: v as AssigneeMode,
+                  assignedUserId: v !== 'anyone' ? '' : f.assignedUserId,
+                }))
+              }
+              options={ASSIGNEE_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
+              aria-label="Filter by assignee"
+            />
+          </div>
+          {draftFilters.assigneeMode === 'anyone' && (
+            <div>
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                Assigned to
+              </span>
+              <FilterSelect
+                value={draftFilters.assignedUserId ?? ''}
+                onChange={(v) =>
+                  setDraftFilters((f) => ({ ...f, assignedUserId: v || '' }))
+                }
+                options={[
+                  { value: '', label: 'Any assignee' },
+                  ...(usersData?.items ?? []).map((u) => ({
+                    value: u.id,
+                    label: u.name,
+                  })),
+                ]}
+                aria-label="Filter by assigned user"
+              />
+            </div>
+          )}
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              From date
+            </span>
             <FilterInput
               type="date"
-              value={params.from ?? ''}
-              onChange={(v) => setParam('from', v)}
+              value={draftFilters.from ?? ''}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, from: v || '' }))
+              }
               aria-label="From date"
             />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              To date
+            </span>
             <FilterInput
               type="date"
-              value={params.to ?? ''}
-              onChange={(v) => setParam('to', v)}
+              value={draftFilters.to ?? ''}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, to: v || '' }))
+              }
               aria-label="To date"
             />
-            <FilterSelect
-              value={params.assignedUserId ?? ''}
-              onChange={(v) => setParam('assignedUserId', v)}
-              options={[
-                { value: '', label: 'Any assignee' },
-                ...(usersData?.items ?? []).map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })),
-              ]}
-              aria-label="Filter by assigned user"
-            />
-          </FilterBar>
-        )}
-      </div>
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground invisible">
+              Actions
+            </span>
+            <div className="flex h-9 items-center gap-2">
+              <Button variant="primary" size="sm" onClick={handleApply}>
+                Apply
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleReset}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        </FilterBar>
+      </Card>
 
       {selectedIds.size > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">

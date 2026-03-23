@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Eye, UserPlus } from 'lucide-react';
@@ -10,12 +10,8 @@ import { DataTable, DataTablePagination } from '@/shared/ui';
 import { SortableColumnHeader } from '@/shared/ui/DataTable/SortableColumnHeader';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
-import {
-  FilterBar,
-  FilterSelect,
-  FilterCheckbox,
-  FilterInput,
-} from '@/shared/layout/FilterBar';
+import { FilterBar, FilterSelect, FilterInput } from '@/shared/layout/FilterBar';
+import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { formatDateTime } from '@/lib/date';
@@ -50,6 +46,67 @@ const SEVERITY_OPTIONS = [
   { value: 'HIGH', label: 'High' },
   { value: 'CRITICAL', label: 'Critical' },
 ] as const;
+
+const ASSIGNEE_OPTIONS = [
+  { value: 'anyone', label: 'Anyone' },
+  { value: 'me', label: 'Assigned to me' },
+  { value: 'unassigned', label: 'Unassigned only' },
+] as const;
+
+const BREACH_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'breached', label: 'Breached only' },
+] as const;
+
+type AssigneeMode = (typeof ASSIGNEE_OPTIONS)[number]['value'];
+type BreachMode = (typeof BREACH_OPTIONS)[number]['value'];
+
+interface EscalationFilters {
+  status: string;
+  severity: string;
+  breach: BreachMode;
+  assigneeMode: AssigneeMode;
+  assignedUserId: string;
+  search: string;
+}
+
+function filtersToParams(f: EscalationFilters): Partial<EscalationsListParams> {
+  return {
+    status:
+      f.status && ['OPEN', 'ACKNOWLEDGED'].includes(f.status)
+        ? (f.status as 'OPEN' | 'ACKNOWLEDGED')
+        : undefined,
+    severity: f.severity || undefined,
+    onlyBreached: f.breach === 'breached',
+    assignedToMe: f.assigneeMode === 'me',
+    unassignedOnly: f.assigneeMode === 'unassigned',
+    assignedUserId:
+      f.assigneeMode === 'anyone' && f.assignedUserId ? f.assignedUserId : undefined,
+  };
+}
+
+function paramsToFilters(p: EscalationsListParams): EscalationFilters {
+  let assigneeMode: AssigneeMode = 'anyone';
+  if (p.unassignedOnly) assigneeMode = 'unassigned';
+  else if (p.assignedToMe) assigneeMode = 'me';
+  return {
+    status: p.status ?? '',
+    severity: p.severity ?? '',
+    breach: p.onlyBreached ? 'breached' : 'all',
+    assigneeMode,
+    assignedUserId: p.assignedUserId ?? '',
+    search: '',
+  };
+}
+
+const DEFAULT_ESCALATION_FILTERS: EscalationFilters = {
+  status: '',
+  severity: '',
+  breach: 'all',
+  assigneeMode: 'anyone',
+  assignedUserId: '',
+  search: '',
+};
 
 function parseParams(searchParams: URLSearchParams): EscalationsListParams {
   const page = searchParams.get('page');
@@ -115,8 +172,9 @@ export function EscalationsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const params = parseParams(searchParams);
-  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [draftFilters, setDraftFilters] = useState<EscalationFilters>(() =>
+    paramsToFilters(params)
+  );
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.escalations.list(params),
@@ -126,14 +184,20 @@ export function EscalationsPage() {
   const { data: usersData } = useQuery({
     queryKey: usersQueryKeys.users.list({ page: 1, limit: 100 }),
     queryFn: () => listUsers({ page: 1, limit: 100 }),
-    enabled: advancedFiltersOpen,
   });
 
   const items = data?.items ?? [];
   const filteredItems = useMemo(
-    () => items.filter((row) => matchesSearch(row, searchQuery)),
-    [items, searchQuery]
+    () => items.filter((row) => matchesSearch(row, draftFilters.search)),
+    [items, draftFilters.search]
   );
+
+  useEffect(() => {
+    setDraftFilters((prev) => ({
+      ...paramsToFilters(parseParams(searchParams)),
+      search: prev.search,
+    }));
+  }, [searchParams]);
 
   const summary = useMemo(() => {
     const open = items.filter((r) => r.status === 'OPEN' || r.status === 'ACKNOWLEDGED');
@@ -163,6 +227,43 @@ export function EscalationsPage() {
     setSearchParams(next);
   }
 
+  function handleApply() {
+    const applied = filtersToParams(draftFilters);
+    const next = new URLSearchParams(searchParams);
+    next.set('page', '1');
+    const filterKeys = [
+      'status',
+      'severity',
+      'onlyBreached',
+      'assignedToMe',
+      'unassignedOnly',
+      'assignedUserId',
+    ];
+    filterKeys.forEach((k) => next.delete(k));
+    if (applied.status) next.set('status', applied.status);
+    if (applied.severity) next.set('severity', applied.severity);
+    if (applied.onlyBreached) next.set('onlyBreached', 'true');
+    if (applied.assignedToMe) next.set('assignedToMe', 'true');
+    if (applied.unassignedOnly) next.set('unassignedOnly', 'true');
+    if (applied.assignedUserId) next.set('assignedUserId', applied.assignedUserId);
+    setSearchParams(next);
+  }
+
+  function handleReset() {
+    setDraftFilters(DEFAULT_ESCALATION_FILTERS);
+    const next = new URLSearchParams(searchParams);
+    next.set('page', '1');
+    [
+      'status',
+      'severity',
+      'onlyBreached',
+      'assignedToMe',
+      'unassignedOnly',
+      'assignedUserId',
+    ].forEach((k) => next.delete(k));
+    setSearchParams(next);
+  }
+
   function handleSort(sortBy: string, order: 'asc' | 'desc') {
     const suffix = order === 'asc' ? '_asc' : '_desc';
     const sortValue = `${sortBy}${suffix}` as (typeof ESCALATION_VALID_SORT)[number];
@@ -184,21 +285,6 @@ export function EscalationsPage() {
           return undefined;
         })()
       : undefined;
-
-  function setAssignmentFilter(
-    mode: 'assignedToMe' | 'unassignedOnly' | 'assignedUserId',
-    value: boolean | string
-  ) {
-    const next = new URLSearchParams(searchParams);
-    next.delete('assignedToMe');
-    next.delete('unassignedOnly');
-    next.delete('assignedUserId');
-    if (mode === 'assignedToMe' && value === true) next.set('assignedToMe', 'true');
-    else if (mode === 'unassignedOnly' && value === true) next.set('unassignedOnly', 'true');
-    else if (mode === 'assignedUserId' && value) next.set('assignedUserId', String(value));
-    next.set('page', '1');
-    setSearchParams(next);
-  }
 
   const getRowClassName = (row: EscalationItem) => {
     const hasResolveBreach = row.sla.resolveBreached;
@@ -429,15 +515,17 @@ export function EscalationsPage() {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <Card className="p-4">
         <FilterBar className="flex-wrap items-end gap-4">
           <div>
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Status
             </span>
             <FilterSelect
-              value={params.status ?? ''}
-              onChange={(v) => setParam('status', v)}
+              value={draftFilters.status}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, status: v || '' }))
+              }
               options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
               aria-label="Filter by status"
             />
@@ -447,67 +535,97 @@ export function EscalationsPage() {
               Severity
             </span>
             <FilterSelect
-              value={params.severity ?? ''}
-              onChange={(v) => setParam('severity', v)}
+              value={draftFilters.severity}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, severity: v || '' }))
+              }
               options={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
               aria-label="Filter by severity"
             />
           </div>
-          <FilterCheckbox
-            checked={params.assignedToMe ?? false}
-            onChange={(v) => setAssignmentFilter('assignedToMe', v)}
-            label="Assigned to me"
-          />
-          <FilterCheckbox
-            checked={params.unassignedOnly ?? false}
-            onChange={(v) => setAssignmentFilter('unassignedOnly', v)}
-            label="Unassigned only"
-          />
-          <FilterCheckbox
-            checked={params.onlyBreached ?? false}
-            onChange={(v) => setParam('onlyBreached', v)}
-            label="Breached only"
-          />
-          <div className="ml-auto">
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              SLA / Breach
+            </span>
+            <FilterSelect
+              value={draftFilters.breach}
+              onChange={(v) =>
+                setDraftFilters((f) => ({
+                  ...f,
+                  breach: v as BreachMode,
+                }))
+              }
+              options={BREACH_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              aria-label="Filter by breach state"
+            />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Assignee
+            </span>
+            <FilterSelect
+              value={draftFilters.assigneeMode}
+              onChange={(v) =>
+                setDraftFilters((f) => ({
+                  ...f,
+                  assigneeMode: v as AssigneeMode,
+                  assignedUserId: v !== 'anyone' ? '' : f.assignedUserId,
+                }))
+              }
+              options={ASSIGNEE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              aria-label="Filter by assignee"
+            />
+          </div>
+          {draftFilters.assigneeMode === 'anyone' && (
+            <div>
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                Assigned to
+              </span>
+              <FilterSelect
+                value={draftFilters.assignedUserId}
+                onChange={(v) =>
+                  setDraftFilters((f) => ({ ...f, assignedUserId: v || '' }))
+                }
+                options={[
+                  { value: '', label: 'Any assignee' },
+                  ...(usersData?.items ?? []).map((u) => ({
+                    value: u.id,
+                    label: u.name,
+                  })),
+                ]}
+                aria-label="Filter by assigned user"
+              />
+            </div>
+          )}
+          <div>
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Search
             </span>
             <FilterInput
               type="text"
-              value={searchQuery}
-              onChange={setSearchQuery}
+              value={draftFilters.search}
+              onChange={(v) =>
+                setDraftFilters((f) => ({ ...f, search: v || '' }))
+              }
               placeholder="Checklist, item, assignee…"
               aria-label="Search escalations"
             />
           </div>
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
-              className="text-sm text-primary hover:underline"
-            >
-              {advancedFiltersOpen ? 'Fewer filters' : 'More filters'}
-            </button>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground invisible">
+              Actions
+            </span>
+            <div className="flex h-9 items-center gap-2">
+              <Button variant="primary" size="sm" onClick={handleApply}>
+                Apply
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleReset}>
+                Reset
+              </Button>
+            </div>
           </div>
         </FilterBar>
-
-        {advancedFiltersOpen && (
-          <FilterBar>
-            <FilterSelect
-              value={params.assignedUserId ?? ''}
-              onChange={(v) => setAssignmentFilter('assignedUserId', v)}
-              options={[
-                { value: '', label: 'Any assignee' },
-                ...(usersData?.items ?? []).map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })),
-              ]}
-              aria-label="Filter by assigned user"
-            />
-          </FilterBar>
-        )}
-      </div>
+      </Card>
 
       <DataTable
         columns={columns}
