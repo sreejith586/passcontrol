@@ -13,6 +13,10 @@ export interface ListUsersResult {
     email: string;
     isActive: boolean;
     hasPassword: boolean;
+    /** True when user can be re-invited (not onboarded and deactivated). */
+    canReinvite: boolean;
+    /** Present when Re-invite would show but is blocked (needs deactivation first). */
+    reinviteBlockedReason: 'must_deactivate' | null;
     roles: Array<{ id: string; name: string; key: string }>;
   }>;
   total: number;
@@ -43,7 +47,16 @@ export class UsersRepository {
 
     const userMap = new Map<
       string,
-      { id: string; name: string; email: string; isActive: boolean; hasPassword: boolean; roles: Map<string, { id: string; name: string; key: string }> }
+      {
+        id: string;
+        name: string;
+        email: string;
+        isActive: boolean;
+        hasPassword: boolean;
+        canReinvite: boolean;
+        reinviteBlockedReason: 'must_deactivate' | null;
+        roles: Map<string, { id: string; name: string; key: string }>;
+      }
     >();
     for (const a of assignments) {
       const existing = userMap.get(a.userId);
@@ -51,12 +64,19 @@ export class UsersRepository {
       if (existing) {
         existing.roles.set(a.role.id, role);
       } else {
+        const hasPassword = a.user.passwordHash != null;
+        const isActive = a.user.isActive;
+        const canReinvite = !hasPassword && !isActive;
+        const reinviteBlockedReason: 'must_deactivate' | null =
+          !hasPassword && isActive ? 'must_deactivate' : null;
         userMap.set(a.userId, {
           id: a.user.id,
           name: a.user.name,
           email: a.user.email,
-          isActive: a.user.isActive,
-          hasPassword: a.user.passwordHash != null,
+          isActive,
+          hasPassword,
+          canReinvite,
+          reinviteBlockedReason,
           roles: new Map([[a.role.id, role]]),
         });
       }
@@ -68,6 +88,8 @@ export class UsersRepository {
       email: u.email,
       isActive: u.isActive,
       hasPassword: u.hasPassword,
+      canReinvite: u.canReinvite,
+      reinviteBlockedReason: u.reinviteBlockedReason,
       roles: Array.from(u.roles.values()),
     }));
     uniqueUsers.sort((a, b) => a.name.localeCompare(b.name));

@@ -4299,3 +4299,12 @@
 2026-03-24 02:29:22.240 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.613 s, sync=0.002 s, total=0.623 s; sync files=3, longest=0.002 s, average=0.001 s; distance=43 kB, estimate=2649 kB; lsn=0/1335D608, redo lsn=0/1335D5D0
 2026-03-24 02:34:21.250 +04 [70852] LOG:  checkpoint starting: time
 2026-03-24 02:34:22.280 +04 [70852] LOG:  checkpoint complete: wrote 11 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.018 s, sync=0.002 s, total=1.030 s; sync files=7, longest=0.002 s, average=0.001 s; distance=31 kB, estimate=2388 kB; lsn=0/133653D0, redo lsn=0/13365398
+2026-03-24 02:39:21.294 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 02:39:21.846 +04 [70852] LOG:  checkpoint complete: wrote 6 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.514 s, sync=0.030 s, total=0.553 s; sync files=6, longest=0.019 s, average=0.005 s; distance=19 kB, estimate=2151 kB; lsn=0/1336A0B8, redo lsn=0/1336A080
+2026-03-24 02:44:21.856 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 02:44:22.871 +04 [70852] LOG:  checkpoint complete: wrote 11 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.011 s, sync=0.003 s, total=1.016 s; sync files=7, longest=0.002 s, average=0.001 s; distance=58 kB, estimate=1941 kB; lsn=0/133789B8, redo lsn=0/13378980
+2026-03-24 02:49:21.881 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 02:49:22.517 +04 [70852] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.627 s, sync=0.002 s, total=0.637 s; sync files=3, longest=0.001 s, average=0.001 s; distance=42 kB, estimate=1751 kB; lsn=0/13383278, redo lsn=0/13383240
+2026-03-24 02:54:21.554 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 02:54:21.970 +04 [70852] LOG:  checkpoint complete: wrote 5 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.411 s, sync=0.002 s, total=0.416 s; sync files=3, longest=0.001 s, average=0.001 s; distance=15 kB, estimate=1578 kB; lsn=0/13386EF0, redo lsn=0/13386EB8
+2026-03-24 02:59:21.980 +04 [70852] LOG:  checkpoint starting: time

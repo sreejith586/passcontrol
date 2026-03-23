@@ -283,6 +283,10 @@ export class UsersService {
     return result;
   }
 
+  /**
+   * Re-send invitation for a user who has not completed onboarding.
+   * Eligibility (same as list canReinvite): passwordHash === null AND isActive === false.
+   */
   async reinvite(
     ctx: { organizationId: string },
     userId: string,

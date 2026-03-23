@@ -13,6 +13,10 @@ export interface UserForAssignment {
   email: string;
   isActive?: boolean;
   hasPassword?: boolean;
+  /** Backend-derived: true when user can be re-invited now (not onboarded and deactivated). */
+  canReinvite?: boolean;
+  /** When present, Re-invite shows disabled with tooltip. */
+  reinviteBlockedReason?: 'must_deactivate' | null;
   roles?: UserRole[];
   setupToken?: string;
 }

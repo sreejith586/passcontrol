@@ -133,19 +133,30 @@ export function UsersPage() {
             >
               Edit roles
             </Button>
-            {row.hasPassword === false && row.isActive === false && (
+            {(row.canReinvite || row.reinviteBlockedReason === 'must_deactivate') && (
               <PermissionGate permission="user.invite">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={reinviteMutation.isPending}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    reinviteMutation.mutate(row.id);
-                  }}
+                <span
+                  title={
+                    row.reinviteBlockedReason === 'must_deactivate'
+                      ? 'User must be deactivated before re-inviting'
+                      : undefined
+                  }
+                  className="inline-flex"
                 >
-                  Re-invite
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={
+                      reinviteMutation.isPending || !row.canReinvite
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (row.canReinvite) reinviteMutation.mutate(row.id);
+                    }}
+                  >
+                    Re-invite
+                  </Button>
+                </span>
               </PermissionGate>
             )}
             {row.isActive !== false ? (
