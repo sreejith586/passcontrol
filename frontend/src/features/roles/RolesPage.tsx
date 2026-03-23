@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Check, Pencil, UserPlus } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { listRoles, listUsers } from '@/features/users/api';
 import { queryKeys } from '@/features/users/query-keys';
@@ -43,10 +42,6 @@ function sortRoles(roles: Role[]): Role[] {
   });
 }
 
-function isSystemRole(scopeLabel: string): boolean {
-  return scopeLabel === 'Platform';
-}
-
 function RoleDetailsPanel({
   role,
   userCount,
@@ -56,61 +51,37 @@ function RoleDetailsPanel({
 }) {
   const metadata = getRoleMetadata(role.key);
   const grouped = groupPermissionsByCategory(role.permissions);
-  const systemRole = isSystemRole(metadata.scopeLabel);
   const isHighAccess = role.key === 'super_admin';
 
   return (
     <div className="flex flex-col">
       <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">
-                {metadata.displayName}
-              </h2>
-              {isHighAccess && (
-                <Badge variant="warning" className="text-xs">
-                  High access
-                </Badge>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <span>{metadata.scopeLabel}</span>
-              <span aria-hidden>·</span>
-              <span>{metadata.intendedUserType}</span>
-              {userCount !== undefined && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span>
-                    {userCount} {userCount === 1 ? 'user' : 'users'}
-                  </span>
-                </>
-              )}
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              {metadata.description}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={systemRole}
-              className="gap-1.5"
-              title={systemRole ? 'System roles cannot be edited' : undefined}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit Role
-            </Button>
-            <Link
-              to="/settings/users"
-              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              Assign Users
-            </Link>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">
+            {metadata.displayName}
+          </h2>
+          {isHighAccess && (
+            <Badge variant="warning" className="text-xs">
+              High access
+            </Badge>
+          )}
         </div>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span>{metadata.scopeLabel}</span>
+          <span aria-hidden>·</span>
+          <span>{metadata.intendedUserType}</span>
+          {userCount !== undefined && (
+            <>
+              <span aria-hidden>·</span>
+              <span>
+                {userCount} {userCount === 1 ? 'user' : 'users'}
+              </span>
+            </>
+          )}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {metadata.description}
+        </p>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-4">
         <h3 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
