@@ -1,14 +1,18 @@
 import {
   Controller,
   Get,
+  Put,
   Patch,
+  Body,
   Param,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { NotificationsService } from '../services/notifications.service';
+import { NotificationPreferencesService } from '../services/notification-preferences.service';
 import { ListNotificationsQueryDto } from '../dto/list-notifications-query.dto';
+import { PutPreferencesDto } from '../dto/put-preferences.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions } from '../../access/rbac/permissions.decorator';
@@ -23,7 +27,36 @@ import {
 @ApiTags('Notifications')
 @ApiBearerAuth()
 export class NotificationsController {
-  constructor(private readonly service: NotificationsService) {}
+  constructor(
+    private readonly service: NotificationsService,
+    private readonly preferencesService: NotificationPreferencesService,
+  ) {}
+
+  @Get('preferences')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Get notification preferences',
+    description: 'Returns effective notification preferences for all supported types. Uses defaults where no preference row exists.',
+  })
+  async getPreferences(@CurrentTenantContext() ctx: TenantContext) {
+    const result = await this.preferencesService.getPreferences(ctx);
+    return ApiResponse.ok(result);
+  }
+
+  @Put('preferences')
+  @RequirePermissions('alert.view')
+  @ApiOperation({
+    summary: 'Update notification preferences',
+    description: 'Upserts notification preferences for the current user. Only supported notification types and boolean values accepted.',
+  })
+  @ApiBody({ type: PutPreferencesDto })
+  async putPreferences(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Body() dto: PutPreferencesDto,
+  ) {
+    const result = await this.preferencesService.putPreferences(ctx, dto.items);
+    return ApiResponse.ok(result);
+  }
 
   @Get()
   @RequirePermissions('alert.view')
