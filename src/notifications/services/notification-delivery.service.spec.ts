@@ -76,6 +76,7 @@ describe('NotificationDeliveryService', () => {
       'user@example.com',
       'ESCALATION_ASSIGNED',
       expect.objectContaining({ alertEventId: 'alert-1' }),
+      { organizationId: 'org-1' },
     );
 
     expect(deliveryRepo.updateStatus).toHaveBeenCalledWith(

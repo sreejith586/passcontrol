@@ -6,11 +6,18 @@ import { RegionalSettingsModule } from '../regional-settings/regional-settings.m
 import { OrganizationSettingsController } from './controllers/organization-settings.controller';
 import { OrganizationSettingsService } from './services/organization-settings.service';
 import { OrganizationSettingsRepository } from './repositories/organization-settings.repository';
+import { OrganizationEmailSettingsService } from './services/organization-email-settings.service';
+import { OrganizationEmailSettingsRepository } from './repositories/organization-email-settings.repository';
 
 @Module({
   imports: [InfraModule, AccessModule, AuditModule, RegionalSettingsModule],
   controllers: [OrganizationSettingsController],
-  providers: [OrganizationSettingsService, OrganizationSettingsRepository],
-  exports: [OrganizationSettingsService],
+  providers: [
+    OrganizationSettingsService,
+    OrganizationSettingsRepository,
+    OrganizationEmailSettingsService,
+    OrganizationEmailSettingsRepository,
+  ],
+  exports: [OrganizationSettingsService, OrganizationEmailSettingsService],
 })
 export class OrganizationSettingsModule {}

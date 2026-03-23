@@ -17,11 +17,14 @@ export class EmailChannelService {
     to: string,
     notificationType: NotificationType,
     payload: Record<string, unknown>,
+    options?: { organizationId?: string },
   ): Promise<{ success: true; messageId?: string } | { success: false; error: string }> {
     try {
       const subject = getEmailSubject(notificationType, payload);
       const body = getEmailBody(notificationType, payload);
-      const result = await this.mail.send(to, subject, body);
+      const result = await this.mail.send(to, subject, body, undefined, {
+        organizationId: options?.organizationId,
+      });
       return { success: true, messageId: result.messageId };
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);

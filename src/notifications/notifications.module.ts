@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { InfraModule } from '../infra/infra.module';
 import { AccessModule } from '../access/access.module';
 import { ChecklistSchedulesModule } from '../checklists/schedules/checklist-schedules.module';
+import { OrganizationSettingsModule } from '../organization-settings/organization-settings.module';
 import { NotificationsRepository } from './repositories/notifications.repository';
 import { UserNotificationPreferenceRepository } from './repositories/user-notification-preference.repository';
 import { NotificationDeliveryRepository } from './repositories/notification-delivery.repository';
@@ -14,7 +15,7 @@ import { MailService } from './mail/mail.service';
 import { EmailChannelService } from './mail/email-channel.service';
 
 @Module({
-  imports: [InfraModule, AccessModule, ChecklistSchedulesModule],
+  imports: [InfraModule, AccessModule, ChecklistSchedulesModule, OrganizationSettingsModule],
   controllers: [NotificationsController],
   providers: [
     NotificationsRepository,

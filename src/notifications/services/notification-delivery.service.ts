@@ -73,6 +73,7 @@ export class NotificationDeliveryService {
           user.email,
           n.type,
           n.payload as Record<string, unknown>,
+          { organizationId: n.organizationId },
         );
 
         if (result.success) {

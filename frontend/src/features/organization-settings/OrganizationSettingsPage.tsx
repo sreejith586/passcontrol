@@ -5,12 +5,15 @@ import {
   updateRegionalSettings,
   getAlertWorkflow,
   updateAlertWorkflow,
+  getEmailSettings,
+  updateEmailSettings,
 } from './api';
 import { queryKeys } from './query-keys';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { Breadcrumbs } from '@/shared/layout/Breadcrumbs';
 import { RegionalSettingsForm } from './components/RegionalSettingsForm';
 import { WorkflowPolicyForm } from './components/WorkflowPolicyForm';
+import { EmailSettingsForm } from './components/EmailSettingsForm';
 import { Card } from '@/shared/ui/Card';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
@@ -18,11 +21,12 @@ import { Button } from '@/shared/ui/Button';
 import { toast } from '@/shared/feedback/useToast';
 import { cn } from '@/lib/cn';
 
-type Section = 'regional' | 'alert-workflow';
+type Section = 'regional' | 'alert-workflow' | 'email';
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'regional', label: 'Regional' },
   { id: 'alert-workflow', label: 'Alert Workflow' },
+  { id: 'email', label: 'Email Settings' },
 ];
 
 export function OrganizationSettingsPage() {
@@ -37,6 +41,11 @@ export function OrganizationSettingsPage() {
   const alertWorkflowQuery = useQuery({
     queryKey: queryKeys.organizationSettings.alertWorkflow,
     queryFn: getAlertWorkflow,
+  });
+
+  const emailQuery = useQuery({
+    queryKey: queryKeys.organizationSettings.email,
+    queryFn: getEmailSettings,
   });
 
   const regionalMutation = useMutation({
@@ -58,6 +67,18 @@ export function OrganizationSettingsPage() {
         queryKey: queryKeys.organizationSettings.alertWorkflow,
       });
       toast.success('Workflow settings updated');
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Failed to update settings'),
+  });
+
+  const emailMutation = useMutation({
+    mutationFn: updateEmailSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organizationSettings.email,
+      });
+      toast.success('Email settings updated');
     },
     onError: (err) =>
       toast.error(err instanceof Error ? err.message : 'Failed to update settings'),
@@ -92,6 +113,7 @@ export function OrganizationSettingsPage() {
               onClick={() => {
                 regionalQuery.refetch();
                 alertWorkflowQuery.refetch();
+                emailQuery.refetch();
               }}
             >
               Try again
@@ -185,6 +207,27 @@ export function OrganizationSettingsPage() {
             onSubmit={(dto) => alertWorkflowMutation.mutate(dto)}
             isSubmitting={alertWorkflowMutation.isPending}
           />
+        </Card>
+      )}
+
+      {activeSection === 'email' && (
+        <Card id="panel-email" role="tabpanel" aria-labelledby="tab-email" className="space-y-6 p-5">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+            Email Settings
+          </h3>
+          {emailQuery.isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : (
+            <EmailSettingsForm
+              settings={emailQuery.data ?? null}
+              onSubmit={(dto) => emailMutation.mutate(dto)}
+              isSubmitting={emailMutation.isPending}
+            />
+          )}
         </Card>
       )}
     </div>

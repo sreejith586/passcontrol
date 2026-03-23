@@ -8,6 +8,7 @@ import { TemperatureModule } from './temperature/temperature.module';
 import { AlertEventsModule } from './alert-events/alert-events.module';
 import { AlertSlaPoliciesModule } from './alert-sla-policies/alert-sla-policies.module';
 import { OrganizationSettingsModule } from './organization-settings/organization-settings.module';
+import { SettingsModule } from './settings/settings.module';
 import { FilesModule } from './files/files.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { BrandsModule } from './brands/brands.module';
@@ -34,6 +35,7 @@ import { HealthController } from './health.controller';
     AlertEventsModule,
     AlertSlaPoliciesModule,
     OrganizationSettingsModule,
+    SettingsModule,
     FilesModule,
     AttachmentsModule,
     BrandsModule,

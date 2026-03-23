@@ -1,5 +1,10 @@
-import { get, patch } from '@/core/api/client';
-import type { AlertWorkflowSettings, RegionalSettings } from './types';
+import { get, patch, put } from '@/core/api/client';
+import type {
+  AlertWorkflowSettings,
+  RegionalSettings,
+  EmailSettings,
+  UpdateEmailSettingsDto,
+} from './types';
 
 export async function getAlertWorkflow(): Promise<AlertWorkflowSettings> {
   return get<AlertWorkflowSettings>('/organization-settings/alert-workflow');
@@ -33,4 +38,14 @@ export async function getRegionalResolved(params?: {
     '/organization-settings/regional-resolved',
     searchParams
   );
+}
+
+export async function getEmailSettings(): Promise<EmailSettings | null> {
+  return get<EmailSettings | null>('/settings/email');
+}
+
+export async function updateEmailSettings(
+  dto: UpdateEmailSettingsDto
+): Promise<EmailSettings> {
+  return put<EmailSettings>('/settings/email', dto);
 }
