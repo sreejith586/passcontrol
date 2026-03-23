@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { listUsers, updateUserStatus } from './api';
+import { listUsers, updateUserStatus, reinviteUser } from './api';
 import { queryKeys } from './query-keys';
 import type { UserForAssignment } from './api';
 import { DataTable, DataTablePagination } from '@/shared/ui';
@@ -57,6 +57,19 @@ export function UsersPage() {
     onError: (err) => {
       toast.error(
         err instanceof Error ? err.message : 'Failed to update user status'
+      );
+    },
+  });
+
+  const reinviteMutation = useMutation({
+    mutationFn: (userId: string) => reinviteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      toast.success('Invitation re-sent');
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to re-send invitation'
       );
     },
   });
@@ -120,6 +133,21 @@ export function UsersPage() {
             >
               Edit roles
             </Button>
+            {row.hasPassword === false && row.isActive === false && (
+              <PermissionGate permission="user.invite">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={reinviteMutation.isPending}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    reinviteMutation.mutate(row.id);
+                  }}
+                >
+                  Re-invite
+                </Button>
+              </PermissionGate>
+            )}
             {row.isActive !== false ? (
               <Button
                 variant="ghost"

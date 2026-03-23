@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { UsersRepository } from '../repositories/users.repository';
 import { RolesService } from '../../roles/services/roles.service';
@@ -12,6 +17,8 @@ import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly repo: UsersRepository,
     private readonly rolesService: RolesService,
@@ -274,5 +281,68 @@ export class UsersService {
       throw new BadRequestException('Failed to load user after status update');
     }
     return result;
+  }
+
+  async reinvite(
+    ctx: { organizationId: string },
+    userId: string,
+  ): Promise<{ message: string }> {
+    const user = await this.repo.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const belongs = await this.repo.belongsToOrganization(
+      userId,
+      ctx.organizationId,
+    );
+    if (!belongs) {
+      throw new NotFoundException('User not found in this organization');
+    }
+
+    if (user.passwordHash !== null) {
+      throw new BadRequestException(
+        'User is already active and cannot be re-invited.',
+      );
+    }
+
+    if (user.isActive !== false) {
+      throw new BadRequestException(
+        'User must be deactivated before re-inviting.',
+      );
+    }
+
+    await this.passwordSetupTokenRepo.invalidateUnusedByUserId(userId);
+    const setupToken = await this.passwordSetupTokenRepo.create(userId);
+
+    const org = await this.prisma.organization.findUnique({
+      where: { id: ctx.organizationId },
+      select: { name: true },
+    });
+    const orgName = org?.name ?? 'PassControl';
+    const baseUrl = process.env.APP_BASE_URL ?? 'http://localhost:3000';
+    const setupUrl = `${baseUrl.replace(/\/$/, '')}/set-password?token=${encodeURIComponent(setupToken)}`;
+
+    const subject = `[PassControl] You've been invited to join ${orgName}`;
+    const body = [
+      `You've been invited to join ${orgName} on PassControl.`,
+      '',
+      'Click the link below to set your password and get started:',
+      setupUrl,
+      '',
+      'This link expires in 7 days.',
+      '',
+      '— PassControl',
+    ].join('\n');
+
+    try {
+      await this.mail.send(user.email, subject, body, undefined, {
+        organizationId: ctx.organizationId,
+      });
+    } catch (err) {
+      this.logger.warn('Re-invite email send failed', err);
+    }
+
+    return { message: 'Invitation re-sent' };
   }
 }

@@ -12,6 +12,7 @@ export interface UserForAssignment {
   name: string;
   email: string;
   isActive?: boolean;
+  hasPassword?: boolean;
   roles?: UserRole[];
   setupToken?: string;
 }
@@ -87,4 +88,12 @@ export async function updateUserStatus(
   isActive: boolean
 ): Promise<UserForAssignment> {
   return patch<UserForAssignment>(`/users/${userId}/status`, { isActive });
+}
+
+/**
+ * Re-invite user (re-send setup email). Backend POST /v1/users/:id/reinvite.
+ * Only allowed when user has no password and is deactivated.
+ */
+export async function reinviteUser(userId: string): Promise<{ message: string }> {
+  return post<{ message: string }>(`/users/${userId}/reinvite`, {});
 }

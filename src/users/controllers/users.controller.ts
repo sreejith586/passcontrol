@@ -55,6 +55,22 @@ export class UsersController {
     return ApiResponse.ok(data);
   }
 
+  @Post(':id/reinvite')
+  @RequirePermissions('user.invite')
+  @ApiOperation({
+    summary: 'Re-invite user',
+    description:
+      'Re-sends invitation email to a user who has not set a password. User must be deactivated. Invalidates prior setup tokens.',
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  async reinvite(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Param('id') id: string,
+  ) {
+    const data = await this.service.reinvite(ctx, id);
+    return ApiResponse.ok(data);
+  }
+
   @Get('me')
   @RequireAnyPermission('user.view', 'alert.workflow-policy.view')
   @ApiOperation({ summary: 'Get my profile', description: 'Returns the current user profile for the organization' })

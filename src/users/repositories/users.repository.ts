@@ -12,6 +12,7 @@ export interface ListUsersResult {
     name: string;
     email: string;
     isActive: boolean;
+    hasPassword: boolean;
     roles: Array<{ id: string; name: string; key: string }>;
   }>;
   total: number;
@@ -35,14 +36,14 @@ export class UsersRepository {
       where: { organizationId },
       select: {
         userId: true,
-        user: { select: { id: true, name: true, email: true, isActive: true } },
+        user: { select: { id: true, name: true, email: true, isActive: true, passwordHash: true } },
         role: { select: { id: true, name: true, key: true } },
       },
     });
 
     const userMap = new Map<
       string,
-      { id: string; name: string; email: string; isActive: boolean; roles: Map<string, { id: string; name: string; key: string }> }
+      { id: string; name: string; email: string; isActive: boolean; hasPassword: boolean; roles: Map<string, { id: string; name: string; key: string }> }
     >();
     for (const a of assignments) {
       const existing = userMap.get(a.userId);
@@ -55,6 +56,7 @@ export class UsersRepository {
           name: a.user.name,
           email: a.user.email,
           isActive: a.user.isActive,
+          hasPassword: a.user.passwordHash != null,
           roles: new Map([[a.role.id, role]]),
         });
       }
@@ -65,6 +67,7 @@ export class UsersRepository {
       name: u.name,
       email: u.email,
       isActive: u.isActive,
+      hasPassword: u.hasPassword,
       roles: Array.from(u.roles.values()),
     }));
     uniqueUsers.sort((a, b) => a.name.localeCompare(b.name));
