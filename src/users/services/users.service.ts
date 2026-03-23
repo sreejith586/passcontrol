@@ -1,7 +1,9 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../infra/prisma/prisma.service';
 import { UsersRepository } from '../repositories/users.repository';
 import { RolesService } from '../../roles/services/roles.service';
 import { PasswordSetupTokenRepository } from '../../auth/repositories/password-setup-token.repository';
+import { MailService } from '../../notifications/mail/mail.service';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { InviteUserDto } from '../dto/invite-user.dto';
 import { AddRoleDto } from '../dto/add-role.dto';
@@ -14,6 +16,8 @@ export class UsersService {
     private readonly repo: UsersRepository,
     private readonly rolesService: RolesService,
     private readonly passwordSetupTokenRepo: PasswordSetupTokenRepository,
+    private readonly mail: MailService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async list(ctx: { organizationId: string }, query: ListUsersQueryDto) {
@@ -70,6 +74,35 @@ export class UsersService {
     if (user.passwordHash === null) {
       await this.passwordSetupTokenRepo.invalidateUnusedByUserId(user.id);
       const setupToken = await this.passwordSetupTokenRepo.create(user.id);
+
+      const org = await this.prisma.organization.findUnique({
+        where: { id: ctx.organizationId },
+        select: { name: true },
+      });
+      const orgName = org?.name ?? 'PassControl';
+      const baseUrl = process.env.APP_BASE_URL ?? 'http://localhost:3000';
+      const setupUrl = `${baseUrl.replace(/\/$/, '')}/set-password?token=${encodeURIComponent(setupToken)}`;
+
+      const subject = `[PassControl] You've been invited to join ${orgName}`;
+      const body = [
+        `You've been invited to join ${orgName} on PassControl.`,
+        '',
+        'Click the link below to set your password and get started:',
+        setupUrl,
+        '',
+        'This link expires in 7 days.',
+        '',
+        '— PassControl',
+      ].join('\n');
+
+      try {
+        await this.mail.send(user.email, subject, body, undefined, {
+          organizationId: ctx.organizationId,
+        });
+      } catch {
+        // Log but do not fail the invite; setup token is still returned
+      }
+
       return { ...result, setupToken };
     }
 

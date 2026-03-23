@@ -4,6 +4,8 @@ import { UsersService } from './users.service';
 import { UsersRepository } from '../repositories/users.repository';
 import { RolesService } from '../../roles/services/roles.service';
 import { PasswordSetupTokenRepository } from '../../auth/repositories/password-setup-token.repository';
+import { MailService } from '../../notifications/mail/mail.service';
+import { PrismaService } from '../../infra/prisma/prisma.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -30,6 +32,10 @@ describe('UsersService', () => {
       invalidateUnusedByUserId: jest.fn().mockResolvedValue(undefined),
       create: jest.fn().mockResolvedValue('setup-token-abc123'),
     };
+    const mockMail = { send: jest.fn().mockResolvedValue({}) };
+    const mockPrisma = {
+      organization: { findUnique: jest.fn().mockResolvedValue({ name: 'Test Org' }) },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +43,8 @@ describe('UsersService', () => {
         { provide: UsersRepository, useValue: mockRepo },
         { provide: RolesService, useValue: mockRolesService },
         { provide: PasswordSetupTokenRepository, useValue: mockPasswordSetupTokenRepo },
+        { provide: MailService, useValue: mockMail },
+        { provide: PrismaService, useValue: mockPrisma },
       ],
     }).compile();
 

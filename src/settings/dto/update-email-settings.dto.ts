@@ -33,4 +33,9 @@ export class UpdateEmailSettingsDto {
   @IsOptional()
   @IsString()
   fromName?: string | null;
+
+  @ApiPropertyOptional({ description: 'PEM-encoded CA certificate for TLS (e.g. for internal/private mail relays)' })
+  @IsOptional()
+  @IsString()
+  smtpCaCertPem?: string | null;
 }

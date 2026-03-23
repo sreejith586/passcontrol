@@ -9,6 +9,7 @@ export interface OrganizationEmailSettingsDto {
   smtpUser?: string | null;
   fromEmail: string;
   fromName?: string | null;
+  smtpCaCertPem?: string | null;
   hasPassword?: boolean;
 }
 
@@ -17,6 +18,7 @@ export interface UpdateOrganizationEmailSettingsDto {
   smtpPort?: number;
   smtpUser?: string | null;
   smtpPassword?: string | null;
+  smtpCaCertPem?: string | null;
   fromEmail?: string;
   fromName?: string | null;
 }
@@ -28,6 +30,7 @@ export interface SmtpConfig {
   password?: string;
   fromEmail: string;
   fromName?: string;
+  smtpCaCertPem?: string | null;
 }
 
 @Injectable()
@@ -47,6 +50,7 @@ export class OrganizationEmailSettingsService {
       smtpUser: row.smtpUser,
       fromEmail: row.fromEmail,
       fromName: row.fromName,
+      smtpCaCertPem: row.smtpCaCertPem ?? null,
       hasPassword: !!row.smtpPasswordEncrypted,
     };
   }
@@ -117,6 +121,7 @@ export class OrganizationEmailSettingsService {
       smtpUser: updated.smtpUser,
       fromEmail: updated.fromEmail,
       fromName: updated.fromName,
+      smtpCaCertPem: updated.smtpCaCertPem ?? null,
       hasPassword: !!updated.smtpPasswordEncrypted,
     };
   }
@@ -141,6 +146,7 @@ export class OrganizationEmailSettingsService {
       password,
       fromEmail: row.fromEmail,
       fromName: row.fromName ?? undefined,
+      smtpCaCertPem: row.smtpCaCertPem ?? null,
     };
   }
 }

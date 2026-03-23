@@ -85,6 +85,7 @@ model OrganizationEmailSettings {
   smtpPort             Int       @map("smtp_port")
   smtpUser             String?   @map("smtp_user")
   smtpPasswordEncrypted String?  @map("smtp_password_encrypted")
+  smtpCaCertPem        String?   @map("smtp_ca_cert_pem")
   fromEmail            String    @map("from_email")
   fromName             String?   @map("from_name")
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz

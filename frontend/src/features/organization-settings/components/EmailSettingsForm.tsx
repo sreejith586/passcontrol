@@ -3,12 +3,15 @@ import { useForm } from 'react-hook-form';
 import type { EmailSettings, UpdateEmailSettingsDto } from '../types';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { Textarea } from '@/shared/ui/Textarea';
 import { usePermission } from '@/core/permissions/use-permission';
 
 interface EmailSettingsFormProps {
   settings: EmailSettings | null;
   onSubmit: (dto: UpdateEmailSettingsDto) => void | Promise<void>;
+  onSendTest?: () => Promise<void>;
   isSubmitting?: boolean;
+  isSendingTest?: boolean;
 }
 
 const DEFAULT_PORT = 587;
@@ -16,7 +19,9 @@ const DEFAULT_PORT = 587;
 export function EmailSettingsForm({
   settings,
   onSubmit,
+  onSendTest,
   isSubmitting = false,
+  isSendingTest = false,
 }: EmailSettingsFormProps) {
   const canManage = usePermission('alert.workflow-policy.manage');
 
@@ -26,6 +31,7 @@ export function EmailSettingsForm({
       smtpPort: DEFAULT_PORT,
       smtpUser: '',
       smtpPassword: '',
+      smtpCaCertPem: '',
       fromEmail: '',
       fromName: '',
     },
@@ -60,6 +66,7 @@ export function EmailSettingsForm({
           smtpHost: dto.smtpHost?.trim() || undefined,
           smtpPort: dto.smtpPort ? Number(dto.smtpPort) : undefined,
           smtpUser: dto.smtpUser?.trim() || null,
+          smtpCaCertPem: dto.smtpCaCertPem?.trim() || null,
           fromEmail: dto.fromEmail?.trim() || undefined,
           fromName: dto.fromName?.trim() || null,
         };
@@ -136,6 +143,21 @@ export function EmailSettingsForm({
         </div>
         <div>
           <label className="mb-1.5 block font-medium text-foreground">
+            SMTP CA Certificate
+          </label>
+          <Textarea
+            {...register('smtpCaCertPem')}
+            placeholder="Optional — PEM-encoded CA certificate"
+            disabled={!canManage}
+            rows={4}
+            className="font-mono text-sm"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Only needed for internal or private CA mail relays. Paste the PEM content of your CA certificate.
+          </p>
+        </div>
+        <div>
+          <label className="mb-1.5 block font-medium text-foreground">
             From Email
           </label>
           <Input
@@ -167,10 +189,27 @@ export function EmailSettingsForm({
           />
         </div>
       </div>
-      {canManage && (
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : 'Save changes'}
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        {canManage && (
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save changes'}
+          </Button>
+        )}
+        {onSendTest && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onSendTest}
+            disabled={isSendingTest}
+          >
+            {isSendingTest ? 'Sending...' : 'Send Test Email'}
+          </Button>
+        )}
+      </div>
+      {onSendTest && (
+        <p className="text-xs text-muted-foreground">
+          The test email is sent to your account email using the saved settings above.
+        </p>
       )}
     </form>
   );

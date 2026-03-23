@@ -14,6 +14,7 @@ export interface EmailSettings {
   smtpUser?: string | null;
   fromEmail: string;
   fromName?: string | null;
+  smtpCaCertPem?: string | null;
   hasPassword?: boolean;
 }
 
@@ -22,6 +23,7 @@ export interface UpdateEmailSettingsDto {
   smtpPort?: number;
   smtpUser?: string | null;
   smtpPassword?: string | null;
+  smtpCaCertPem?: string | null;
   fromEmail?: string;
   fromName?: string | null;
 }

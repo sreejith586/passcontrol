@@ -21,6 +21,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { UsersModule } from './users/users.module';
 import { RegionalSettingsModule } from './regional-settings/regional-settings.module';
 import { ReportsModule } from './reports/reports.module';
+import { MailModule } from './notifications/mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
 
@@ -48,6 +49,7 @@ import { HealthController } from './health.controller';
     UsersModule,
     RegionalSettingsModule,
     ReportsModule,
+    MailModule,
     NotificationsModule,
   ],
   controllers: [HealthController],

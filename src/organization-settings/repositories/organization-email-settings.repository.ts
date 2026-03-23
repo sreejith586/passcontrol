@@ -16,6 +16,7 @@ export class OrganizationEmailSettingsRepository {
     smtpPort: number;
     smtpUser?: string | null;
     smtpPasswordEncrypted?: string | null;
+    smtpCaCertPem?: string | null;
     fromEmail: string;
     fromName?: string | null;
   }) {

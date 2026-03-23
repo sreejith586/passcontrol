@@ -7,6 +7,7 @@ import {
   updateAlertWorkflow,
   getEmailSettings,
   updateEmailSettings,
+  sendTestEmail,
 } from './api';
 import { queryKeys } from './query-keys';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -82,6 +83,19 @@ export function OrganizationSettingsPage() {
     },
     onError: (err) =>
       toast.error(err instanceof Error ? err.message : 'Failed to update settings'),
+  });
+
+  const sendTestMutation = useMutation({
+    mutationFn: sendTestEmail,
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Failed to send test email'),
   });
 
   const isError = regionalQuery.isError || alertWorkflowQuery.isError;
@@ -225,7 +239,9 @@ export function OrganizationSettingsPage() {
             <EmailSettingsForm
               settings={emailQuery.data ?? null}
               onSubmit={(dto) => emailMutation.mutate(dto)}
+              onSendTest={async () => { await sendTestMutation.mutateAsync(); }}
               isSubmitting={emailMutation.isPending}
+              isSendingTest={sendTestMutation.isPending}
             />
           )}
         </Card>

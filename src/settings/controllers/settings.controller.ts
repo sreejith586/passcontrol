@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { SettingsService } from '../services/settings.service';
 import { UpdateEmailSettingsDto } from '../dto/update-email-settings.dto';
@@ -33,5 +33,13 @@ export class SettingsController {
   ) {
     const settings = await this.service.updateEmailSettings(ctx, dto);
     return ApiResponse.ok(settings);
+  }
+
+  @Post('email/test')
+  @RequirePermissions('alert.workflow-policy.view')
+  @ApiOperation({ summary: 'Send a test email to the current user' })
+  async sendTestEmail(@CurrentTenantContext() ctx: TenantContext) {
+    const result = await this.service.sendTestEmail(ctx);
+    return ApiResponse.ok(result);
   }
 }

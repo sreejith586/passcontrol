@@ -1,4 +1,4 @@
-import { get, patch, put } from '@/core/api/client';
+import { get, patch, post, put } from '@/core/api/client';
 import type {
   AlertWorkflowSettings,
   RegionalSettings,
@@ -48,4 +48,8 @@ export async function updateEmailSettings(
   dto: UpdateEmailSettingsDto
 ): Promise<EmailSettings> {
   return put<EmailSettings>('/settings/email', dto);
+}
+
+export async function sendTestEmail(): Promise<{ success: boolean; message: string }> {
+  return post<{ success: boolean; message: string }>('/settings/email/test');
 }
