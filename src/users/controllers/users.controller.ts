@@ -5,6 +5,7 @@ import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { InviteUserDto } from '../dto/invite-user.dto';
 import { AddRoleDto } from '../dto/add-role.dto';
 import { UpdateUserStatusDto } from '../dto/update-user-status.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
 import { RequirePermissions, RequireAnyPermission } from '../../access/rbac/permissions.decorator';
@@ -51,6 +52,24 @@ export class UsersController {
     @Body() dto: InviteUserDto,
   ) {
     const data = await this.service.invite(ctx, dto);
+    return ApiResponse.ok(data);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get my profile', description: 'Returns the current user profile for the organization' })
+  async getMe(@CurrentTenantContext() ctx: TenantContext) {
+    const data = await this.service.getMe(ctx);
+    return ApiResponse.ok(data);
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update my profile', description: 'Updates name, phoneNumber, jobTitle for the current user' })
+  @ApiBody({ type: UpdateProfileDto })
+  async updateProfile(
+    @CurrentTenantContext() ctx: TenantContext,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    const data = await this.service.updateProfile(ctx, dto);
     return ApiResponse.ok(data);
   }
 

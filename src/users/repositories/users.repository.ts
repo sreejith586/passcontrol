@@ -169,6 +169,50 @@ export class UsersRepository {
   }
 
   /**
+   * Get profile for user in org (id, name, email, phoneNumber, jobTitle, roles).
+   * Returns null if user is not in organization.
+   */
+  async getProfileForUserInOrg(
+    userId: string,
+    organizationId: string,
+  ): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    phoneNumber: string | null;
+    jobTitle: string | null;
+    roles: Array<{ id: string; name: string; key: string }>;
+  } | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, name: true, email: true, phoneNumber: true, jobTitle: true },
+    });
+    if (!user) return null;
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: { userId, organizationId },
+      include: { role: { select: { id: true, name: true, key: true } } },
+    });
+    if (assignments.length === 0) return null;
+    return {
+      ...user,
+      roles: assignments.map((a) => a.role),
+    };
+  }
+
+  /**
+   * Update user profile fields.
+   */
+  async updateProfile(
+    userId: string,
+    data: { name?: string; phoneNumber?: string | null; jobTitle?: string | null },
+  ) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+  }
+
+  /**
    * Get user with roles in org. Returns user with empty roles if no assignments.
    */
   async getUserWithRolesOrMinimal(

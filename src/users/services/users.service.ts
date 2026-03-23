@@ -6,6 +6,7 @@ import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { InviteUserDto } from '../dto/invite-user.dto';
 import { AddRoleDto } from '../dto/add-role.dto';
 import { UpdateUserStatusDto } from '../dto/update-user-status.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -80,6 +81,51 @@ export class UsersService {
     organizationId: string,
   ): Promise<boolean> {
     return this.repo.belongsToOrganization(userId, organizationId);
+  }
+
+  async getMe(ctx: { organizationId: string; userId?: string }) {
+    if (!ctx.userId) {
+      throw new BadRequestException('User context is required');
+    }
+    const profile = await this.repo.getProfileForUserInOrg(
+      ctx.userId,
+      ctx.organizationId,
+    );
+    if (!profile) {
+      throw new NotFoundException('User not found in this organization');
+    }
+    return profile;
+  }
+
+  async updateProfile(
+    ctx: { organizationId: string; userId?: string },
+    dto: UpdateProfileDto,
+  ) {
+    if (!ctx.userId) {
+      throw new BadRequestException('User context is required');
+    }
+    const belongs = await this.repo.belongsToOrganization(
+      ctx.userId,
+      ctx.organizationId,
+    );
+    if (!belongs) {
+      throw new NotFoundException('User not found in this organization');
+    }
+    const data: { name?: string; phoneNumber?: string | null; jobTitle?: string | null } = {};
+    if (dto.name !== undefined) {
+      data.name = (dto.name ?? '').trim() || undefined;
+    }
+    if (dto.phoneNumber !== undefined) {
+      data.phoneNumber = (dto.phoneNumber ?? '').trim() || null;
+    }
+    if (dto.jobTitle !== undefined) {
+      data.jobTitle = (dto.jobTitle ?? '').trim() || null;
+    }
+    if (Object.keys(data).length === 0) {
+      return this.getMe(ctx);
+    }
+    await this.repo.updateProfile(ctx.userId!, data);
+    return this.getMe(ctx);
   }
 
   async addRole(
