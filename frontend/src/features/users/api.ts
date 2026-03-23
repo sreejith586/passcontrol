@@ -17,6 +17,10 @@ export interface UserForAssignment {
   canReinvite?: boolean;
   /** When present, Re-invite shows disabled with tooltip. */
   reinviteBlockedReason?: 'must_deactivate' | null;
+  /** True when this row is the current user (cannot deactivate self). */
+  isCurrentUser?: boolean;
+  /** True when this user is the last active SuperAdmin (cannot deactivate). */
+  isLastSuperAdmin?: boolean;
   roles?: UserRole[];
   setupToken?: string;
 }

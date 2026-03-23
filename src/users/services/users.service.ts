@@ -27,12 +27,12 @@ export class UsersService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async list(ctx: { organizationId: string }, query: ListUsersQueryDto) {
+  async list(ctx: { organizationId: string; userId?: string }, query: ListUsersQueryDto) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
     const { items, total } = await this.repo.listByOrganization(
       ctx.organizationId,
-      { page, limit },
+      { page, limit, currentUserId: ctx.userId },
     );
     return { items, total, page, limit };
   }
@@ -248,8 +248,8 @@ export class UsersService {
   }
 
   async updateStatus(
-    ctx: { organizationId: string },
-    userId: string,
+    ctx: { organizationId: string; userId?: string },
+    targetUserId: string,
     dto: UpdateUserStatusDto,
   ): Promise<{
     id: string;
@@ -258,23 +258,48 @@ export class UsersService {
     isActive: boolean;
     roles: Array<{ id: string; name: string; key: string }>;
   }> {
-    const user = await this.repo.findById(userId);
+    const user = await this.repo.findById(targetUserId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     const belongs = await this.repo.belongsToOrganization(
-      userId,
+      targetUserId,
       ctx.organizationId,
     );
     if (!belongs) {
       throw new NotFoundException('User not found in this organization');
     }
 
-    await this.repo.updateIsActive(userId, dto.isActive);
+    if (dto.isActive === false) {
+      if (ctx.userId && targetUserId === ctx.userId) {
+        throw new BadRequestException(
+          'You cannot deactivate your own account.',
+        );
+      }
+
+      const userWithRoles = await this.repo.getUserWithRolesOrMinimal(
+        targetUserId,
+        ctx.organizationId,
+      );
+      const hasSuperAdmin = userWithRoles?.roles.some((r) => r.key === 'super_admin');
+      if (hasSuperAdmin) {
+        const otherActiveSuperAdmins = await this.repo.countActiveSuperAdminsInOrg(
+          ctx.organizationId,
+          targetUserId,
+        );
+        if (otherActiveSuperAdmins === 0) {
+          throw new BadRequestException(
+            'Cannot deactivate the last SuperAdmin. Assign another SuperAdmin first.',
+          );
+        }
+      }
+    }
+
+    await this.repo.updateIsActive(targetUserId, dto.isActive);
 
     const result = await this.repo.getUserWithRolesOrMinimal(
-      userId,
+      targetUserId,
       ctx.organizationId,
     );
     if (!result) {

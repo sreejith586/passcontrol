@@ -160,17 +160,31 @@ export function UsersPage() {
               </PermissionGate>
             )}
             {row.isActive !== false ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatusUser({ user: row, targetActive: false });
-                }}
+              <span
+                title={
+                  row.isCurrentUser
+                    ? 'You cannot deactivate your own account'
+                    : row.isLastSuperAdmin
+                      ? 'Assign another SuperAdmin before deactivating this user'
+                      : undefined
+                }
+                className="inline-flex"
               >
-                Deactivate
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={row.isCurrentUser || row.isLastSuperAdmin}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!row.isCurrentUser && !row.isLastSuperAdmin) {
+                      setStatusUser({ user: row, targetActive: false });
+                    }
+                  }}
+                >
+                  Deactivate
+                </Button>
+              </span>
             ) : (
               <Button
                 variant="ghost"

@@ -4,6 +4,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 export interface ListUsersFilters {
   page: number;
   limit: number;
+  currentUserId?: string;
 }
 
 export interface ListUsersResult {
@@ -17,6 +18,10 @@ export interface ListUsersResult {
     canReinvite: boolean;
     /** Present when Re-invite would show but is blocked (needs deactivation first). */
     reinviteBlockedReason: 'must_deactivate' | null;
+    /** True when this row is the current user (cannot deactivate self). */
+    isCurrentUser: boolean;
+    /** True when this user is the last active SuperAdmin (cannot deactivate). */
+    isLastSuperAdmin: boolean;
     roles: Array<{ id: string; name: string; key: string }>;
   }>;
   total: number;
@@ -35,6 +40,26 @@ export class UsersRepository {
     filters: ListUsersFilters,
   ): Promise<ListUsersResult> {
     const skip = (filters.page - 1) * filters.limit;
+    const currentUserId = filters.currentUserId;
+
+    const superAdminRole = await this.prisma.role.findFirst({
+      where: { key: 'super_admin' },
+    });
+    let lastSuperAdminUserId: string | null = null;
+    if (superAdminRole) {
+      const superAdminAssignments = await this.prisma.userRoleAssignment.findMany({
+        where: {
+          organizationId,
+          roleId: superAdminRole.id,
+          user: { isActive: true, deletedAt: null },
+        },
+        select: { userId: true },
+      });
+      const superAdminUserIds = [...new Set(superAdminAssignments.map((a) => a.userId))];
+      if (superAdminUserIds.length === 1) {
+        lastSuperAdminUserId = superAdminUserIds[0];
+      }
+    }
 
     const assignments = await this.prisma.userRoleAssignment.findMany({
       where: { organizationId },
@@ -55,6 +80,8 @@ export class UsersRepository {
         hasPassword: boolean;
         canReinvite: boolean;
         reinviteBlockedReason: 'must_deactivate' | null;
+        isCurrentUser: boolean;
+        isLastSuperAdmin: boolean;
         roles: Map<string, { id: string; name: string; key: string }>;
       }
     >();
@@ -77,6 +104,8 @@ export class UsersRepository {
           hasPassword,
           canReinvite,
           reinviteBlockedReason,
+          isCurrentUser: a.user.id === currentUserId,
+          isLastSuperAdmin: a.user.id === lastSuperAdminUserId,
           roles: new Map([[a.role.id, role]]),
         });
       }
@@ -90,6 +119,8 @@ export class UsersRepository {
       hasPassword: u.hasPassword,
       canReinvite: u.canReinvite,
       reinviteBlockedReason: u.reinviteBlockedReason,
+      isCurrentUser: u.isCurrentUser,
+      isLastSuperAdmin: u.isLastSuperAdmin,
       roles: Array.from(u.roles.values()),
     }));
     uniqueUsers.sort((a, b) => a.name.localeCompare(b.name));
@@ -180,6 +211,28 @@ export class UsersRepository {
     return this.prisma.user.update({
       where: { id: userId },
       data: { isActive },
+    });
+  }
+
+  /**
+   * Count active users with Super Admin role in organization, optionally excluding one user.
+   */
+  async countActiveSuperAdminsInOrg(
+    organizationId: string,
+    excludeUserId?: string,
+  ): Promise<number> {
+    const superAdminRole = await this.prisma.role.findFirst({
+      where: { key: 'super_admin' },
+    });
+    if (!superAdminRole) return 0;
+
+    return this.prisma.userRoleAssignment.count({
+      where: {
+        organizationId,
+        roleId: superAdminRole.id,
+        user: { isActive: true, deletedAt: null },
+        ...(excludeUserId && { userId: { not: excludeUserId } }),
+      },
     });
   }
 
