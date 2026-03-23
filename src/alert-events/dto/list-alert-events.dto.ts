@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsInt,
   IsString,
+  IsIn,
   Min,
   Max,
   IsDateString,
@@ -81,5 +82,25 @@ export class ListAlertEventsQueryDto {
   limit?: number = 25;
 
   @IsOptional()
-  sort?: 'triggered_at_asc' | 'triggered_at_desc' | 'created_at_desc';
+  @IsIn([
+    'triggered_at_asc',
+    'triggered_at_desc',
+    'created_at_desc',
+    'status_asc',
+    'status_desc',
+    'severity_asc',
+    'severity_desc',
+    'assigned_asc',
+    'assigned_desc',
+  ])
+  sort?:
+    | 'triggered_at_asc'
+    | 'triggered_at_desc'
+    | 'created_at_desc'
+    | 'status_asc'
+    | 'status_desc'
+    | 'severity_asc'
+    | 'severity_desc'
+    | 'assigned_asc'
+    | 'assigned_desc';
 }

@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +11,7 @@ import type { ChecklistSchedule } from './api';
 import { queryKeys } from './query-keys';
 import { getPresetLabelForRrule } from './rrule-presets';
 import { DataTable } from '@/shared/ui';
+import { SortableColumnHeader } from '@/shared/ui/DataTable/SortableColumnHeader';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { Button } from '@/shared/ui/Button';
@@ -18,9 +20,15 @@ import { formatDateTime } from '@/lib/date';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { toast } from '@/shared/feedback/useToast';
 
+type SortKey = 'name' | 'template' | 'status' | 'nextRunAt' | 'updatedAt';
+
 export function ChecklistSchedulesListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [sort, setSort] = useState<{ sortBy: SortKey; order: 'asc' | 'desc' }>({
+    sortBy: 'name',
+    order: 'asc',
+  });
 
   const { data: schedules, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.list(),
@@ -64,17 +72,55 @@ export function ChecklistSchedulesListPage() {
     },
   });
 
+  const sortedSchedules = useMemo(() => {
+    const list = schedules ?? [];
+    return [...list].sort((a, b) => {
+      const mul = sort.order === 'asc' ? 1 : -1;
+      if (sort.sortBy === 'name') return mul * a.name.localeCompare(b.name);
+      if (sort.sortBy === 'template') {
+        const na = a.checklistTemplate?.name ?? '';
+        const nb = b.checklistTemplate?.name ?? '';
+        return mul * na.localeCompare(nb);
+      }
+      if (sort.sortBy === 'status') {
+        const aa = a.isActive ? 1 : 0;
+        const ab = b.isActive ? 1 : 0;
+        return mul * (aa - ab);
+      }
+      if (sort.sortBy === 'nextRunAt') {
+        const ta = a.nextRunAt ? new Date(a.nextRunAt).getTime() : 0;
+        const tb = b.nextRunAt ? new Date(b.nextRunAt).getTime() : 0;
+        return mul * (ta - tb);
+      }
+      return mul * (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+    });
+  }, [schedules, sort]);
+
   const columns = [
     {
       key: 'name',
-      header: 'Name',
+      header: (
+        <SortableColumnHeader
+          label="Name"
+          sortKey="name"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: ChecklistSchedule) => (
         <span className="font-semibold text-slate-900">{row.name}</span>
       ),
     },
     {
       key: 'template',
-      header: 'Template',
+      header: (
+        <SortableColumnHeader
+          label="Template"
+          sortKey="template"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: ChecklistSchedule) => (
         <span className="text-slate-700">
           {row.checklistTemplate?.name ?? '—'}
@@ -99,7 +145,14 @@ export function ChecklistSchedulesListPage() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: (
+        <SortableColumnHeader
+          label="Status"
+          sortKey="status"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: ChecklistSchedule) => (
         <Badge variant={row.isActive ? 'success' : 'outline'}>
           {row.isActive ? 'Active' : 'Inactive'}
@@ -117,7 +170,14 @@ export function ChecklistSchedulesListPage() {
     },
     {
       key: 'nextRun',
-      header: 'Next run',
+      header: (
+        <SortableColumnHeader
+          label="Next run"
+          sortKey="nextRunAt"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: ChecklistSchedule) => (
         <span className="text-slate-600">
           {row.nextRunAt ? formatDateTime(row.nextRunAt) : '—'}
@@ -126,7 +186,14 @@ export function ChecklistSchedulesListPage() {
     },
     {
       key: 'updated',
-      header: 'Updated',
+      header: (
+        <SortableColumnHeader
+          label="Updated"
+          sortKey="updatedAt"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: ChecklistSchedule) => (
         <span className="text-slate-600">{formatDateTime(row.updatedAt)}</span>
       ),
@@ -226,7 +293,7 @@ export function ChecklistSchedulesListPage() {
       />
       <DataTable
         columns={columns}
-        data={schedules ?? []}
+        data={sortedSchedules}
         loading={isLoading}
         emptyMessage="No schedules yet"
         emptyDescription="Create a schedule to generate runs from published templates."

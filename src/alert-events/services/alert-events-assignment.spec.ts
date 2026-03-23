@@ -241,8 +241,6 @@ describe('AlertEventsService (assignment)', () => {
       expect(repo.list).toHaveBeenCalledWith(
         mockOrgId,
         expect.objectContaining({ assignedToUserId: 'user-2' }),
-        expect.any(Object),
-        expect.any(Object),
       );
     });
 
@@ -252,8 +250,6 @@ describe('AlertEventsService (assignment)', () => {
       expect(repo.list).toHaveBeenCalledWith(
         mockOrgId,
         expect.objectContaining({ assignedToUserId: 'user-1' }),
-        expect.any(Object),
-        expect.any(Object),
       );
     });
 
@@ -263,8 +259,6 @@ describe('AlertEventsService (assignment)', () => {
       expect(repo.list).toHaveBeenCalledWith(
         mockOrgId,
         expect.objectContaining({ assignedToUserId: null }),
-        expect.any(Object),
-        expect.any(Object),
       );
     });
 
@@ -277,8 +271,6 @@ describe('AlertEventsService (assignment)', () => {
       expect(repo.list).toHaveBeenCalledWith(
         mockOrgId,
         expect.objectContaining({ assignedToUserId: null }),
-        expect.any(Object),
-        expect.any(Object),
       );
     });
 
@@ -292,6 +284,7 @@ describe('AlertEventsService (assignment)', () => {
         expect.objectContaining({ assignedToUserId: 'user-2' }),
         expect.any(Object),
         expect.any(Date),
+        undefined,
       );
     });
 

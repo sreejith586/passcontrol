@@ -7,6 +7,7 @@ import { queryKeys } from './query-keys';
 import { formatAge } from './format-age';
 import type { EscalationsListParams, EscalationItem } from './types';
 import { DataTable, DataTablePagination } from '@/shared/ui';
+import { SortableColumnHeader } from '@/shared/ui/DataTable/SortableColumnHeader';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import {
@@ -31,6 +32,17 @@ const STATUS_OPTIONS = [
   { value: 'ACKNOWLEDGED', label: 'Acknowledged' },
 ] as const;
 
+const ESCALATION_VALID_SORT = [
+  'created_at_asc',
+  'created_at_desc',
+  'status_asc',
+  'status_desc',
+  'severity_asc',
+  'severity_desc',
+  'assigned_asc',
+  'assigned_desc',
+] as const;
+
 const SEVERITY_OPTIONS = [
   { value: '', label: 'All' },
   { value: 'LOW', label: 'Low' },
@@ -42,6 +54,7 @@ const SEVERITY_OPTIONS = [
 function parseParams(searchParams: URLSearchParams): EscalationsListParams {
   const page = searchParams.get('page');
   const limit = searchParams.get('limit');
+  const sortParam = searchParams.get('sort');
   const status = searchParams.get('status');
   const onlyBreached = searchParams.get('onlyBreached');
   const severity = searchParams.get('severity');
@@ -60,9 +73,15 @@ function parseParams(searchParams: URLSearchParams): EscalationsListParams {
     effectiveAssignedUserId = assignedUserId;
   }
 
+  const sort =
+    sortParam && ESCALATION_VALID_SORT.includes(sortParam as (typeof ESCALATION_VALID_SORT)[number])
+      ? (sortParam as (typeof ESCALATION_VALID_SORT)[number])
+      : undefined;
+
   return {
     page: page ? parseInt(page, 10) : 1,
     limit: limit ? parseInt(limit, 10) : 25,
+    sort,
     status:
       status && ['OPEN', 'ACKNOWLEDGED'].includes(status)
         ? (status as 'OPEN' | 'ACKNOWLEDGED')
@@ -144,6 +163,28 @@ export function EscalationsPage() {
     setSearchParams(next);
   }
 
+  function handleSort(sortBy: string, order: 'asc' | 'desc') {
+    const suffix = order === 'asc' ? '_asc' : '_desc';
+    const sortValue = `${sortBy}${suffix}` as (typeof ESCALATION_VALID_SORT)[number];
+    setParam('sort', sortValue);
+  }
+
+  const sortState =
+    params.sort != null
+      ? (() => {
+          const s = params.sort!;
+          if (s.startsWith('created_at_'))
+            return { sortBy: 'created_at' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+          if (s.startsWith('status_'))
+            return { sortBy: 'status' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+          if (s.startsWith('severity_'))
+            return { sortBy: 'severity' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+          if (s.startsWith('assigned_'))
+            return { sortBy: 'assigned' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+          return undefined;
+        })()
+      : undefined;
+
   function setAssignmentFilter(
     mode: 'assignedToMe' | 'unassignedOnly' | 'assignedUserId',
     value: boolean | string
@@ -177,14 +218,28 @@ export function EscalationsPage() {
   const columns = [
     {
       key: 'status',
-      header: 'Status',
+      header: (
+        <SortableColumnHeader
+          label="Status"
+          sortKey="status"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: EscalationItem) => (
         <StatusBadge status={row.status as 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED'} />
       ),
     },
     {
       key: 'severity',
-      header: 'Severity',
+      header: (
+        <SortableColumnHeader
+          label="Severity"
+          sortKey="severity"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: EscalationItem) => <SeverityBadge severity={row.severity} />,
     },
     {
@@ -235,7 +290,14 @@ export function EscalationsPage() {
     },
     {
       key: 'assignedTo',
-      header: 'Assigned To',
+      header: (
+        <SortableColumnHeader
+          label="Assigned To"
+          sortKey="assigned"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: EscalationItem) => {
         const name = row.assignedToUser?.name;
         if (name) {
@@ -257,7 +319,14 @@ export function EscalationsPage() {
     },
     {
       key: 'createdAt',
-      header: 'Created',
+      header: (
+        <SortableColumnHeader
+          label="Created"
+          sortKey="created_at"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: EscalationItem) => (
         <span className="text-muted-foreground text-xs">
           {formatDateTime(row.createdAt)}

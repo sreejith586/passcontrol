@@ -175,7 +175,11 @@ describe('AlertEventsRepository', () => {
 
   describe('list', () => {
     it('date-only from: uses gte start of day UTC', async () => {
-      await repo.list(mockOrgId, { from: '2025-03-15' }, { page: 1, limit: 25 }, { triggeredAt: 'desc' });
+      await repo.list(mockOrgId, {
+        from: '2025-03-15',
+        pagination: { page: 1, limit: 25 },
+        sort: 'triggered_at_desc',
+      });
 
       expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
       const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
@@ -186,7 +190,11 @@ describe('AlertEventsRepository', () => {
     });
 
     it('date-only to: uses lt next day UTC (through end of day)', async () => {
-      await repo.list(mockOrgId, { to: '2025-03-15' }, { page: 1, limit: 25 }, { triggeredAt: 'desc' });
+      await repo.list(mockOrgId, {
+        to: '2025-03-15',
+        pagination: { page: 1, limit: 25 },
+        sort: 'triggered_at_desc',
+      });
 
       expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
       const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
@@ -197,12 +205,12 @@ describe('AlertEventsRepository', () => {
     });
 
     it('date-only from and to: includes full UTC day', async () => {
-      await repo.list(
-        mockOrgId,
-        { from: '2025-03-15', to: '2025-03-15' },
-        { page: 1, limit: 25 },
-        { triggeredAt: 'desc' },
-      );
+      await repo.list(mockOrgId, {
+        from: '2025-03-15',
+        to: '2025-03-15',
+        pagination: { page: 1, limit: 25 },
+        sort: 'triggered_at_desc',
+      });
 
       expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
       const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;
@@ -211,12 +219,11 @@ describe('AlertEventsRepository', () => {
     });
 
     it('full ISO datetime to: preserves precise lte', async () => {
-      await repo.list(
-        mockOrgId,
-        { to: '2025-03-15T10:30:00.000Z' },
-        { page: 1, limit: 25 },
-        { triggeredAt: 'desc' },
-      );
+      await repo.list(mockOrgId, {
+        to: '2025-03-15T10:30:00.000Z',
+        pagination: { page: 1, limit: 25 },
+        sort: 'triggered_at_desc',
+      });
 
       expect(prisma.alertEvent!.findMany).toHaveBeenCalledTimes(1);
       const where = (prisma.alertEvent!.findMany as jest.Mock).mock.calls[0][0].where;

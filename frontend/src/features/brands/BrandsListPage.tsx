@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listBrands } from './api';
 import type { Brand } from './api';
 import { queryKeys } from './query-keys';
 import { BrandModal } from './components/BrandModal';
 import { DataTable } from '@/shared/ui';
+import { SortableColumnHeader } from '@/shared/ui/DataTable/SortableColumnHeader';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { Button } from '@/shared/ui/Button';
@@ -12,9 +13,15 @@ import { formatDateTime } from '@/lib/date';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { usePermissions } from '@/core/permissions/use-permission';
 
+type SortKey = 'name' | 'updatedAt';
+
 export function BrandsListPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [sort, setSort] = useState<{ sortBy: SortKey; order: 'asc' | 'desc' }>({
+    sortBy: 'name',
+    order: 'asc',
+  });
   const canManage = usePermissions('brand.manage');
 
   const { data: brands, isLoading, isError, error, refetch } = useQuery({
@@ -37,17 +44,42 @@ export function BrandsListPage() {
     setEditingBrand(null);
   };
 
+  const sortedBrands = useMemo(() => {
+    const list = brands ?? [];
+    return [...list].sort((a, b) => {
+      const mul = sort.order === 'asc' ? 1 : -1;
+      if (sort.sortBy === 'name') {
+        return mul * a.name.localeCompare(b.name);
+      }
+      return mul * (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+    });
+  }, [brands, sort]);
+
   const columns = [
     {
       key: 'name',
-      header: 'Name',
+      header: (
+        <SortableColumnHeader
+          label="Name"
+          sortKey="name"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: Brand) => (
         <span className="font-semibold text-slate-900">{row.name}</span>
       ),
     },
     {
       key: 'updated',
-      header: 'Updated',
+      header: (
+        <SortableColumnHeader
+          label="Updated"
+          sortKey="updatedAt"
+          currentSort={sort}
+          onSort={(sortBy, order) => setSort({ sortBy: sortBy as SortKey, order })}
+        />
+      ),
       render: (row: Brand) => (
         <span className="text-slate-600">{formatDateTime(row.updatedAt)}</span>
       ),
@@ -108,7 +140,7 @@ export function BrandsListPage() {
       />
       <DataTable
         columns={columns}
-        data={brands ?? []}
+        data={sortedBrands}
         loading={isLoading}
         emptyMessage="No brands yet"
         emptyDescription="Brands group your operating locations. Create one to get started."

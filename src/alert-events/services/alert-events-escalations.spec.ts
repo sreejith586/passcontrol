@@ -298,6 +298,7 @@ describe('AlertEventsService (escalations)', () => {
         }),
         { page: 1, limit: 25 },
         expect.any(Date),
+        undefined,
       );
     });
 
@@ -357,6 +358,7 @@ describe('AlertEventsService (escalations)', () => {
         expect.objectContaining({ onlyBreached: true }),
         { page: 1, limit: 25 },
         expect.any(Date),
+        undefined,
       );
     });
 
@@ -389,6 +391,7 @@ describe('AlertEventsService (escalations)', () => {
         },
         { page: 2, limit: 50 },
         expect.any(Date),
+        undefined,
       );
     });
 
@@ -405,6 +408,41 @@ describe('AlertEventsService (escalations)', () => {
         expect.any(Object),
         { page: 1, limit: 100 },
         expect.any(Date),
+        undefined,
+      );
+    });
+
+    it('passes sort to repository when provided and not default', async () => {
+      repo.listEscalations.mockResolvedValue({ items: [], total: 0 });
+
+      await service.getEscalations(
+        { organizationId: mockOrgId },
+        { sort: 'created_at_desc' },
+      );
+
+      expect(repo.listEscalations).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.any(Object),
+        { page: 1, limit: 25 },
+        expect.any(Date),
+        'created_at_desc',
+      );
+    });
+
+    it('omits sort when default (uses urgency ordering)', async () => {
+      repo.listEscalations.mockResolvedValue({ items: [], total: 0 });
+
+      await service.getEscalations(
+        { organizationId: mockOrgId },
+        { sort: 'default' },
+      );
+
+      expect(repo.listEscalations).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.any(Object),
+        { page: 1, limit: 25 },
+        expect.any(Date),
+        undefined,
       );
     });
 

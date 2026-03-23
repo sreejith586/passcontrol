@@ -347,11 +347,13 @@ export class AlertEventsService {
       assignedToUserId,
       onlyBreached: query.onlyBreached === true,
     };
+    const sort = query.sort && query.sort !== 'default' ? query.sort : undefined;
     const { items, total } = await this.repo.listEscalations(
       ctx.organizationId,
       filters,
       pagination,
       new Date(),
+      sort,
     );
     return {
       items: items.map((item) => ({
@@ -405,12 +407,7 @@ export class AlertEventsService {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 25, 100);
     const pagination = { page, limit };
-    const sort =
-      query.sort === 'triggered_at_asc'
-        ? { triggeredAt: 'asc' as const }
-        : query.sort === 'triggered_at_desc'
-        ? { triggeredAt: 'desc' as const }
-        : { createdAt: 'desc' as const };
+    const sort = query.sort ?? 'triggered_at_desc';
 
     const assignedToUserId = this.resolveAssignmentFilter(
       query.unassignedOnly,
@@ -419,24 +416,21 @@ export class AlertEventsService {
       ctx.userId,
     );
 
-    const { items, total } = await this.repo.list(
-      ctx.organizationId,
-      {
-        brandId: query.brandId,
-        locationId: query.locationId,
-        zoneId: query.zoneId,
-        assetId: query.assetId,
-        type: query.type,
-        status: query.status,
-        severity: query.severity,
-        sourceType: query.sourceType,
-        assignedToUserId,
-        from: query.from,
-        to: query.to,
-      },
+    const { items, total } = await this.repo.list(ctx.organizationId, {
+      brandId: query.brandId,
+      locationId: query.locationId,
+      zoneId: query.zoneId,
+      assetId: query.assetId,
+      type: query.type,
+      status: query.status,
+      severity: query.severity,
+      sourceType: query.sourceType,
+      assignedToUserId,
+      from: query.from,
+      to: query.to,
       pagination,
       sort,
-    );
+    });
 
     return { items, total, page, limit };
   }

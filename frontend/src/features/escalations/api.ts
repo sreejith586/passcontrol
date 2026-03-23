@@ -12,9 +12,9 @@ export async function listEscalations(
 ): Promise<PaginatedData<EscalationItem>> {
   const cleanParams: Record<string, string | number | boolean> = {};
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== '') {
-      cleanParams[k] = v as string | number | boolean;
-    }
+    if (v === undefined || v === '') return;
+    if (k === 'sort' && v === 'default') return; // omit sort => backend uses urgency default
+    cleanParams[k] = v as string | number | boolean;
   });
   return get<PaginatedData<EscalationItem>>(
     '/alert-events/escalations',

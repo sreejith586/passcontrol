@@ -9,6 +9,7 @@ import {
 import { queryKeys } from './query-keys';
 import type { AlertEvent, ListAlertsParams } from './types';
 import { DataTable, DataTablePagination } from '@/shared/ui';
+import { SortableColumnHeader } from '@/shared/ui/DataTable/SortableColumnHeader';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import {
@@ -52,9 +53,22 @@ const SOURCE_TYPE_OPTIONS = [
   { value: 'OTHER', label: 'Other' },
 ] as const;
 
+const VALID_SORT = [
+  'triggered_at_asc',
+  'triggered_at_desc',
+  'created_at_desc',
+  'status_asc',
+  'status_desc',
+  'severity_asc',
+  'severity_desc',
+  'assigned_asc',
+  'assigned_desc',
+] as const;
+
 function parseParams(searchParams: URLSearchParams): ListAlertsParams {
   const page = searchParams.get('page');
   const limit = searchParams.get('limit');
+  const sortParam = searchParams.get('sort');
   const status = searchParams.get('status');
   const assignedToMe = searchParams.get('assignedToMe');
   const unassignedOnly = searchParams.get('unassignedOnly');
@@ -66,6 +80,10 @@ function parseParams(searchParams: URLSearchParams): ListAlertsParams {
   return {
     page: page ? parseInt(page, 10) : 1,
     limit: limit ? parseInt(limit, 10) : 25,
+    sort:
+      sortParam && VALID_SORT.includes(sortParam as (typeof VALID_SORT)[number])
+        ? (sortParam as ListAlertsParams['sort'])
+        : 'triggered_at_desc',
     status:
       status && ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'].includes(status)
         ? (status as ListAlertsParams['status'])
@@ -117,6 +135,21 @@ export function AlertListPage() {
     if (key !== 'page') next.set('page', '1');
     setSearchParams(next);
   }
+
+  function handleSort(sortBy: string, order: 'asc' | 'desc') {
+    const suffix = order === 'asc' ? '_asc' : '_desc';
+    const sortValue = `${sortBy}${suffix}` as (typeof VALID_SORT)[number];
+    setParam('sort', sortValue);
+  }
+
+  const sortState = (() => {
+    const s = params.sort ?? 'triggered_at_desc';
+    if (s.startsWith('triggered_at_')) return { sortBy: 'triggered_at' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+    if (s.startsWith('status_')) return { sortBy: 'status' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+    if (s.startsWith('severity_')) return { sortBy: 'severity' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+    if (s.startsWith('assigned_')) return { sortBy: 'assigned' as const, order: (s.endsWith('_asc') ? 'asc' : 'desc') as const };
+    return { sortBy: 'created_at' as const, order: 'desc' as const };
+  })();
 
   function handleSelectionChange(ids: string[]) {
     setSelectedIds(new Set(ids));
@@ -198,7 +231,14 @@ export function AlertListPage() {
   const columns = [
     {
       key: 'status',
-      header: 'Status',
+      header: (
+        <SortableColumnHeader
+          label="Status"
+          sortKey="status"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: AlertEvent) => (
         <div className="flex flex-col gap-0.5">
           <StatusBadge status={row.status} />
@@ -207,7 +247,14 @@ export function AlertListPage() {
     },
     {
       key: 'severity',
-      header: 'Severity',
+      header: (
+        <SortableColumnHeader
+          label="Severity"
+          sortKey="severity"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: AlertEvent) => (
         <div className="flex flex-col gap-0.5">
           <SeverityBadge severity={row.severity} />
@@ -231,7 +278,14 @@ export function AlertListPage() {
     },
     {
       key: 'assignedTo',
-      header: 'Assigned',
+      header: (
+        <SortableColumnHeader
+          label="Assigned"
+          sortKey="assigned"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: AlertEvent) => (
         <div className="flex flex-col gap-0.5">
           <AssigneeBadge
@@ -243,7 +297,14 @@ export function AlertListPage() {
     },
     {
       key: 'triggeredAt',
-      header: 'Triggered',
+      header: (
+        <SortableColumnHeader
+          label="Triggered"
+          sortKey="triggered_at"
+          currentSort={sortState}
+          onSort={handleSort}
+        />
+      ),
       render: (row: AlertEvent) => (
         <div className="flex flex-col gap-0.5">
           <span className="font-semibold text-slate-900">

@@ -81,4 +81,42 @@ export class AlertEscalationsQueryDto {
   @Min(1)
   @Max(100)
   limit?: number = 25;
+
+  @ApiPropertyOptional({
+    description:
+      'Sort order. Omit or "default" for urgency-based ordering. Explicit values override default.',
+    enum: [
+      'default',
+      'created_at_asc',
+      'created_at_desc',
+      'status_asc',
+      'status_desc',
+      'severity_asc',
+      'severity_desc',
+      'assigned_asc',
+      'assigned_desc',
+    ],
+  })
+  @IsOptional()
+  @IsIn([
+    'default',
+    'created_at_asc',
+    'created_at_desc',
+    'status_asc',
+    'status_desc',
+    'severity_asc',
+    'severity_desc',
+    'assigned_asc',
+    'assigned_desc',
+  ])
+  sort?:
+    | 'default'
+    | 'created_at_asc'
+    | 'created_at_desc'
+    | 'status_asc'
+    | 'status_desc'
+    | 'severity_asc'
+    | 'severity_desc'
+    | 'assigned_asc'
+    | 'assigned_desc';
 }

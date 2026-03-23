@@ -36,6 +36,16 @@ export interface EscalationsListParams {
   onlyBreached?: boolean;
   page?: number;
   limit?: number;
+  /** When omitted, backend uses urgency-based default ordering. */
+  sort?:
+    | 'created_at_asc'
+    | 'created_at_desc'
+    | 'status_asc'
+    | 'status_desc'
+    | 'severity_asc'
+    | 'severity_desc'
+    | 'assigned_asc'
+    | 'assigned_desc';
 }
 
 export interface EscalationsPrioritizedParams {

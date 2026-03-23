@@ -76,7 +76,7 @@ export class AlertEventsRepository {
 
   async list(
     organizationId: string,
-    filters: {
+    opts: {
       brandId?: string;
       locationId?: string;
       zoneId?: string;
@@ -88,10 +88,24 @@ export class AlertEventsRepository {
       assignedToUserId?: string | null;
       from?: string;
       to?: string;
+      pagination: { page: number; limit: number };
+      sort: string;
     },
-    pagination: { page: number; limit: number },
-    sort: { triggeredAt?: 'asc' | 'desc'; createdAt?: 'desc' },
   ) {
+    const { pagination, sort } = opts;
+    const filters = {
+      brandId: opts.brandId,
+      locationId: opts.locationId,
+      zoneId: opts.zoneId,
+      assetId: opts.assetId,
+      type: opts.type,
+      status: opts.status,
+      severity: opts.severity,
+      sourceType: opts.sourceType,
+      assignedToUserId: opts.assignedToUserId,
+      from: opts.from,
+      to: opts.to,
+    };
     const where: Prisma.AlertEventWhereInput = { organizationId };
     if (filters.brandId != null) where.brandId = filters.brandId;
     if (filters.locationId != null) where.locationId = filters.locationId;
@@ -113,7 +127,6 @@ export class AlertEventsRepository {
       if (filters.from) (where.triggeredAt as Prisma.DateTimeFilter).gte = new Date(filters.from);
       if (filters.to) {
         const toDate = new Date(filters.to);
-        // Date-only YYYY-MM-DD: treat as through end of day UTC (use lt next day)
         if (filters.to.length <= 10) {
           toDate.setUTCDate(toDate.getUTCDate() + 1);
           (where.triggeredAt as Prisma.DateTimeFilter).lt = toDate;
@@ -123,12 +136,33 @@ export class AlertEventsRepository {
       }
     }
 
-    const orderBy = sort.triggeredAt
-      ? { triggeredAt: sort.triggeredAt }
-      : { createdAt: 'desc' as const };
+    const usePrismaSort =
+      sort === 'triggered_at_asc' ||
+      sort === 'triggered_at_desc' ||
+      sort === 'created_at_desc' ||
+      ![
+        'status_asc',
+        'status_desc',
+        'severity_asc',
+        'severity_desc',
+        'assigned_asc',
+        'assigned_desc',
+      ].includes(sort);
 
-    const [rawItems, total] = await Promise.all([
-      this.prisma.alertEvent.findMany({
+    let rawItems: Awaited<
+      ReturnType<Prisma.AlertEventDelegate['findMany']>
+    > extends (infer U)[]
+      ? (U & { assignedToUser: { id: string; name: string } | null })[]
+      : never;
+
+    if (usePrismaSort) {
+      const orderBy =
+        sort === 'triggered_at_asc'
+          ? { triggeredAt: 'asc' as const }
+          : sort === 'triggered_at_desc'
+            ? { triggeredAt: 'desc' as const }
+            : { createdAt: 'desc' as const };
+      rawItems = await this.prisma.alertEvent.findMany({
         where,
         skip: (pagination.page - 1) * pagination.limit,
         take: pagination.limit,
@@ -138,12 +172,140 @@ export class AlertEventsRepository {
             select: { id: true, name: true },
           },
         },
-      }),
-      this.prisma.alertEvent.count({ where }),
-    ]);
+      });
+    } else {
+      const ids = await this.listOrderedIds(organizationId, filters, pagination, sort);
+      if (ids.length === 0) {
+        rawItems = [];
+      } else {
+        const byId = await this.prisma.alertEvent.findMany({
+          where: { id: { in: ids }, organizationId },
+          include: {
+            assignedToUser: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+        const orderMap = new Map(ids.map((id, i) => [id, i]));
+        rawItems = byId.slice().sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
+      }
+    }
 
+    const total = await this.prisma.alertEvent.count({ where });
     const items = await this.enrichSourceForAlerts(rawItems);
     return { items, total };
+  }
+
+  /**
+   * Returns alert IDs in custom sort order (status, severity, assigned).
+   * Used when Prisma orderBy cannot express the required semantics.
+   */
+  private async listOrderedIds(
+    organizationId: string,
+    filters: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      assetId?: string;
+      type?: string;
+      status?: string;
+      severity?: string;
+      sourceType?: string;
+      assignedToUserId?: string | null;
+      from?: string;
+      to?: string;
+    },
+    pagination: { page: number; limit: number },
+    sort: string,
+  ): Promise<string[]> {
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`ae.organization_id = (${organizationId})::uuid`,
+    ];
+    if (filters.brandId != null) {
+      conditions.push(Prisma.sql`ae.brand_id = (${filters.brandId})::uuid`);
+    }
+    if (filters.locationId != null) {
+      conditions.push(Prisma.sql`ae.location_id = (${filters.locationId})::uuid`);
+    }
+    if (filters.zoneId != null) {
+      conditions.push(Prisma.sql`ae.zone_id = (${filters.zoneId})::uuid`);
+    }
+    if (filters.assetId != null) {
+      conditions.push(Prisma.sql`ae.asset_id = (${filters.assetId})::uuid`);
+    }
+    if (filters.type != null) {
+      conditions.push(Prisma.sql`ae.type = ${filters.type}`);
+    }
+    if (filters.status != null) {
+      conditions.push(Prisma.sql`ae.status = ${filters.status}`);
+    }
+    if (filters.severity != null) {
+      conditions.push(Prisma.sql`ae.severity = ${filters.severity}`);
+    }
+    if (filters.sourceType != null) {
+      conditions.push(Prisma.sql`ae.source_type = ${filters.sourceType}`);
+    }
+    if (filters.assignedToUserId !== undefined) {
+      if (filters.assignedToUserId === null) {
+        conditions.push(Prisma.sql`ae.assigned_to_user_id IS NULL`);
+      } else {
+        conditions.push(Prisma.sql`ae.assigned_to_user_id = (${filters.assignedToUserId})::uuid`);
+      }
+    }
+    if (filters.from) {
+      conditions.push(Prisma.sql`ae.triggered_at >= (${filters.from})::timestamptz`);
+    }
+    if (filters.to) {
+      const toDate = new Date(filters.to);
+      if (filters.to.length <= 10) {
+        toDate.setUTCDate(toDate.getUTCDate() + 1);
+      }
+      conditions.push(Prisma.sql`ae.triggered_at < (${toDate.toISOString()})::timestamptz`);
+    }
+    const whereClause = Prisma.join(conditions, ' AND ');
+    const offset = (pagination.page - 1) * pagination.limit;
+
+    const statusRank =
+      "CASE ae.status WHEN 'OPEN' THEN 1 WHEN 'ACKNOWLEDGED' THEN 2 WHEN 'RESOLVED' THEN 3 ELSE 4 END";
+    const severityRank =
+      "CASE UPPER(COALESCE(ae.severity,'')) WHEN 'CRITICAL' THEN 4 WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 1 ELSE 0 END";
+    const assigneeName = "COALESCE(u.name, '')";
+    const assigneeNullsLast = 'CASE WHEN ae.assigned_to_user_id IS NULL THEN 1 ELSE 0 END';
+
+    let orderBy: Prisma.Sql;
+    switch (sort) {
+      case 'status_asc':
+        orderBy = Prisma.sql`ORDER BY ${Prisma.raw(statusRank)} ASC, ae.triggered_at DESC`;
+        break;
+      case 'status_desc':
+        orderBy = Prisma.sql`ORDER BY ${Prisma.raw(statusRank)} DESC, ae.triggered_at DESC`;
+        break;
+      case 'severity_asc':
+        orderBy = Prisma.sql`ORDER BY ${Prisma.raw(severityRank)} ASC, ae.triggered_at DESC`;
+        break;
+      case 'severity_desc':
+        orderBy = Prisma.sql`ORDER BY ${Prisma.raw(severityRank)} DESC, ae.triggered_at DESC`;
+        break;
+      case 'assigned_asc':
+        orderBy = Prisma.sql`ORDER BY ${Prisma.raw(assigneeNullsLast)} ASC, ${Prisma.raw(assigneeName)} ASC, ae.triggered_at DESC`;
+        break;
+      case 'assigned_desc':
+        orderBy = Prisma.sql`ORDER BY ${Prisma.raw(assigneeNullsLast)} ASC, ${Prisma.raw(assigneeName)} DESC, ae.triggered_at DESC`;
+        break;
+      default:
+        orderBy = Prisma.sql`ORDER BY ae.triggered_at DESC`;
+    }
+
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`
+        SELECT ae.id FROM alert_events ae
+        LEFT JOIN users u ON ae.assigned_to_user_id = u.id
+        WHERE ${whereClause}
+        ${orderBy}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `,
+    );
+    return rows.map((r) => r.id);
   }
 
   /**
@@ -384,6 +546,104 @@ export class AlertEventsRepository {
   }
 
   /**
+   * Build ORDER BY clause for escalations.
+   * When sort is undefined, uses urgency-based ordering (breach flags, severity, created_at).
+   * When sort is provided, uses explicit field ordering with same semantics as alerts list.
+   */
+  private buildEscalationsOrderBy(
+    sort:
+      | 'created_at_asc'
+      | 'created_at_desc'
+      | 'status_asc'
+      | 'status_desc'
+      | 'severity_asc'
+      | 'severity_desc'
+      | 'assigned_asc'
+      | 'assigned_desc'
+      | undefined,
+  ): Prisma.Sql {
+    if (!sort) {
+      return Prisma.sql`ORDER BY
+        res_breached DESC,
+        ack_breached DESC,
+        CASE severity
+          WHEN 'CRITICAL' THEN 4
+          WHEN 'HIGH' THEN 3
+          WHEN 'MEDIUM' THEN 2
+          WHEN 'LOW' THEN 1
+          ELSE 0
+        END DESC,
+        created_at ASC`;
+    }
+    switch (sort) {
+      case 'created_at_asc':
+        return Prisma.sql`ORDER BY created_at ASC`;
+      case 'created_at_desc':
+        return Prisma.sql`ORDER BY created_at DESC`;
+      case 'status_asc':
+        return Prisma.sql`ORDER BY
+          CASE status
+            WHEN 'OPEN' THEN 1
+            WHEN 'ACKNOWLEDGED' THEN 2
+            WHEN 'RESOLVED' THEN 3
+            ELSE 4
+          END ASC,
+          created_at ASC`;
+      case 'status_desc':
+        return Prisma.sql`ORDER BY
+          CASE status
+            WHEN 'OPEN' THEN 1
+            WHEN 'ACKNOWLEDGED' THEN 2
+            WHEN 'RESOLVED' THEN 3
+            ELSE 4
+          END DESC,
+          created_at ASC`;
+      case 'severity_asc':
+        return Prisma.sql`ORDER BY
+          CASE severity
+            WHEN 'CRITICAL' THEN 4
+            WHEN 'HIGH' THEN 3
+            WHEN 'MEDIUM' THEN 2
+            WHEN 'LOW' THEN 1
+            ELSE 0
+          END ASC,
+          created_at ASC`;
+      case 'severity_desc':
+        return Prisma.sql`ORDER BY
+          CASE severity
+            WHEN 'CRITICAL' THEN 4
+            WHEN 'HIGH' THEN 3
+            WHEN 'MEDIUM' THEN 2
+            WHEN 'LOW' THEN 1
+            ELSE 0
+          END DESC,
+          created_at ASC`;
+      case 'assigned_asc':
+        return Prisma.sql`ORDER BY
+          CASE WHEN assigned_user_id IS NULL THEN 1 ELSE 0 END ASC,
+          COALESCE(assigned_user_name, '') ASC,
+          created_at ASC`;
+      case 'assigned_desc':
+        return Prisma.sql`ORDER BY
+          CASE WHEN assigned_user_id IS NULL THEN 1 ELSE 0 END ASC,
+          COALESCE(assigned_user_name, '') DESC,
+          created_at ASC`;
+      default:
+        return Prisma.sql`ORDER BY
+          res_breached DESC,
+          ack_breached DESC,
+          CASE severity
+            WHEN 'CRITICAL' THEN 4
+            WHEN 'HIGH' THEN 3
+            WHEN 'MEDIUM' THEN 2
+            WHEN 'LOW' THEN 1
+            ELSE 0
+          END DESC,
+          created_at ASC`;
+    }
+  }
+
+  /**
    * List alerts with SLA escalation data (deadlines, breach flags).
    * Uses application-provided now for deterministic breach computation.
    */
@@ -400,6 +660,15 @@ export class AlertEventsRepository {
     },
     pagination: { page: number; limit: number },
     now: Date,
+    sort?:
+      | 'created_at_asc'
+      | 'created_at_desc'
+      | 'status_asc'
+      | 'status_desc'
+      | 'severity_asc'
+      | 'severity_desc'
+      | 'assigned_asc'
+      | 'assigned_desc',
   ): Promise<{
     items: Array<{
       alertEventId: string;
@@ -523,17 +792,7 @@ export class AlertEventsRepository {
       )
       SELECT * FROM base
       WHERE 1=1 ${breachCondition}
-      ORDER BY
-        res_breached DESC,
-        ack_breached DESC,
-        CASE severity
-          WHEN 'CRITICAL' THEN 4
-          WHEN 'HIGH' THEN 3
-          WHEN 'MEDIUM' THEN 2
-          WHEN 'LOW' THEN 1
-          ELSE 0
-        END DESC,
-        created_at ASC
+      ${this.buildEscalationsOrderBy(sort)}
       LIMIT ${pagination.limit} OFFSET ${offset}
     `);
 

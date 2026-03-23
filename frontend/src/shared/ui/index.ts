@@ -8,6 +8,7 @@ export { Skeleton } from './Skeleton';
 export { Modal } from './Modal';
 export { DataTable } from './DataTable/DataTable';
 export { DataTablePagination } from './DataTable/DataTablePagination';
+export { SortableColumnHeader } from './DataTable/SortableColumnHeader';
 export type { DataTableColumn } from './DataTable/types';
 export { ActionModal } from './ActionModal/ActionModal';
 export { ConfirmActionModal } from './ActionModal/ConfirmActionModal';
