@@ -13,55 +13,64 @@ export interface RoleMetadata {
 export const ROLE_METADATA: Record<string, RoleMetadata> = {
   super_admin: {
     displayName: 'Super Admin',
-    description: 'Full platform access across all organizations. For system administrators.',
+    description:
+      'Manage the platform across all organizations. Create and edit orgs, assign system administrators, and configure global settings.',
     scopeLabel: 'Platform',
     intendedUserType: 'System administrator',
   },
   org_admin: {
     displayName: 'Org Admin',
-    description: 'Full control over the organization: users, roles, templates, schedules, and alerts.',
+    description:
+      'Manage users, roles, templates, schedules, and alerts. Invite team members, assign roles, and configure organization-wide workflow policies.',
     scopeLabel: 'Organization',
     intendedUserType: 'Organization administrator',
   },
   area_manager: {
     displayName: 'Area Manager',
-    description: 'Manages multiple locations: templates, schedules, SLA policies, and user visibility.',
+    description:
+      'Manage multiple locations: create templates, configure schedules, set SLA policies, and control which users see which locations.',
     scopeLabel: 'Organization',
     intendedUserType: 'Multi-location manager',
   },
   restaurant_manager: {
     displayName: 'Restaurant Manager',
-    description: 'Runs the restaurant: schedules, checklist execution, alerts, and temperature compliance.',
+    description:
+      'Run daily operations: generate checklist runs, execute checklists, resolve alerts, and ensure temperature compliance.',
     scopeLabel: 'Organization',
     intendedUserType: 'Restaurant manager',
   },
   kitchen_supervisor: {
     displayName: 'Kitchen Supervisor',
-    description: 'Oversees kitchen operations: checklists, alerts, and temperature monitoring.',
+    description:
+      'Oversee kitchen operations: complete checklists, acknowledge and assign alerts, and monitor temperature readings.',
     scopeLabel: 'Organization',
     intendedUserType: 'Kitchen supervisor',
   },
   shift_lead: {
     displayName: 'Shift Lead',
-    description: 'Leads the shift: executes checklists, triages alerts, and assigns work.',
+    description:
+      'Lead the shift: execute checklists, triage and assign alerts, and ensure runs are completed on time.',
     scopeLabel: 'Organization',
     intendedUserType: 'Shift lead',
   },
   operator: {
     displayName: 'Operator',
-    description: 'Day-to-day execution: completes checklists and views alerts.',
+    description:
+      'Complete daily tasks: run checklists, submit results, and view assigned alerts.',
     scopeLabel: 'Organization',
     intendedUserType: 'Frontline operator',
   },
   auditor: {
     displayName: 'Auditor',
-    description: 'Read-only access for compliance reviews and audits.',
+    description:
+      'Review compliance: view checklists, runs, alerts, and reports for audits without making changes.',
     scopeLabel: 'Organization',
     intendedUserType: 'Auditor / Compliance reviewer',
   },
   viewer: {
     displayName: 'Viewer',
-    description: 'Read-only access to checklists, runs, alerts, and compliance data.',
+    description:
+      'Observe operations: view checklists, runs, alerts, and compliance data in read-only mode.',
     scopeLabel: 'Organization',
     intendedUserType: 'Viewer / Observer',
   },

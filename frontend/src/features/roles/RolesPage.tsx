@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Check, Pencil, UserPlus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { listRoles } from '@/features/users/api';
+import { listRoles, listUsers } from '@/features/users/api';
 import { queryKeys } from '@/features/users/query-keys';
 import type { Role } from '@/features/users/api';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -42,122 +43,215 @@ function sortRoles(roles: Role[]): Role[] {
   });
 }
 
-function RoleRow({ role }: { role: Role }) {
-  const [expanded, setExpanded] = useState(false);
+function isSystemRole(scopeLabel: string): boolean {
+  return scopeLabel === 'Platform';
+}
+
+function RoleDetailsPanel({
+  role,
+  userCount,
+}: {
+  role: Role;
+  userCount: number | undefined;
+}) {
   const metadata = getRoleMetadata(role.key);
   const grouped = groupPermissionsByCategory(role.permissions);
-  const capabilityCategories = Object.keys(grouped).filter((c) => c !== 'Other');
+  const systemRole = isSystemRole(metadata.scopeLabel);
+  const isHighAccess = role.key === 'super_admin';
 
   return (
-    <>
-      <tr
-        className="cursor-pointer border-b border-border transition-colors hover:bg-muted/30"
-        onClick={() => setExpanded((e) => !e)}
-      >
-        <td className="w-10 py-3 pl-4">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded((e) => !e);
-            }}
-            className="text-muted-foreground hover:text-foreground"
-            aria-expanded={expanded}
-          >
-            {expanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
-        </td>
-        <td className="py-3">
-          <span className="font-medium text-foreground">
-            {metadata.displayName}
-          </span>
-        </td>
-        <td className="py-3">
-          <Badge variant="outline" className="text-xs">
-            {metadata.scopeLabel}
-          </Badge>
-        </td>
-        <td className="py-3 text-sm text-muted-foreground">
-          {metadata.intendedUserType}
-        </td>
-        <td className="py-3">
-          <div className="flex flex-wrap gap-1">
-            {capabilityCategories.map((cat) => (
-              <Badge key={cat} variant="default" className="text-xs">
-                {PERMISSION_GROUPS[cat]?.label ?? cat}
-              </Badge>
-            ))}
-          </div>
-        </td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={5} className="bg-muted/10 p-0">
-            <div className="border-t border-border px-4 py-4">
-              <p className="mb-3 text-sm text-muted-foreground">
-                {metadata.description}
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {CATEGORY_ORDER.filter((cat) => grouped[cat]?.length).map(
-                  (cat) => (
-                    <div key={cat}>
-                      <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {PERMISSION_GROUPS[cat]?.label ?? cat}
-                      </h4>
-                      <ul className="space-y-1">
-                        {grouped[cat].map((p) => (
-                          <li
-                            key={p}
-                            className="text-sm text-foreground"
-                          >
-                            {getPermissionLabel(p)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )
-                )}
-                {grouped['Other']?.length ? (
-                  <div>
-                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Other
-                    </h4>
-                    <ul className="space-y-1">
-                      {grouped['Other'].map((p) => (
-                        <li key={p} className="text-sm text-foreground">
-                          {p}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
+    <div className="flex flex-col">
+      <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground">
+                {metadata.displayName}
+              </h2>
+              {isHighAccess && (
+                <Badge variant="warning" className="text-xs">
+                  High access
+                </Badge>
+              )}
             </div>
-          </td>
-        </tr>
-      )}
-    </>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <span>{metadata.scopeLabel}</span>
+              <span aria-hidden>·</span>
+              <span>{metadata.intendedUserType}</span>
+              {userCount !== undefined && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>
+                    {userCount} {userCount === 1 ? 'user' : 'users'}
+                  </span>
+                </>
+              )}
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {metadata.description}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={systemRole}
+              className="gap-1.5"
+              title={systemRole ? 'System roles cannot be edited' : undefined}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit Role
+            </Button>
+            <Link
+              to="/settings/users"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Assign Users
+            </Link>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        <h3 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Capabilities
+        </h3>
+        <div className="space-y-6">
+          {CATEGORY_ORDER.filter((cat) => grouped[cat]?.length).map((cat) => (
+            <div key={cat}>
+              <h4 className="mb-2 text-sm font-medium text-foreground">
+                {PERMISSION_GROUPS[cat]?.label ?? cat}
+              </h4>
+              <ul className="space-y-1.5">
+                {grouped[cat].map((perm) => (
+                  <li
+                    key={perm}
+                    className="flex items-start gap-2 text-sm text-foreground"
+                  >
+                    <span
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600"
+                      aria-hidden
+                    >
+                      <Check className="h-3 w-3" strokeWidth={2.5} />
+                    </span>
+                    <span>{getPermissionLabel(perm)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          {grouped['Other']?.length ? (
+            <div>
+              <h4 className="mb-2 text-sm font-medium text-foreground">
+                Other
+              </h4>
+              <ul className="space-y-1.5">
+                {grouped['Other'].map((perm) => (
+                  <li
+                    key={perm}
+                    className="flex items-start gap-2 text-sm text-foreground"
+                  >
+                    <span
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600"
+                      aria-hidden
+                    >
+                      <Check className="h-3 w-3" strokeWidth={2.5} />
+                    </span>
+                    <span>{perm}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
+function RoleListSkeleton() {
+  return (
+    <div className="space-y-1 p-2">
+      {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <Skeleton key={i} className="h-11 w-full" />
+      ))}
+    </div>
+  );
+}
+
+function RoleDetailsSkeleton() {
+  return (
+    <div className="flex flex-col">
+      <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-4">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="mt-2 h-4 w-64" />
+        <Skeleton className="mt-3 h-4 w-full" />
+        <Skeleton className="mt-1 h-4 w-3/4" />
+      </div>
+      <div className="space-y-6 px-6 py-4">
+        <Skeleton className="h-4 w-24" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useRoleUserCounts(roles: Role[] | undefined): Record<string, number> {
+  const { data: usersData } = useQuery({
+    queryKey: queryKeys.users.list({ page: 1, limit: 500 }),
+    queryFn: () => listUsers({ page: 1, limit: 500 }),
+    enabled: !!roles?.length,
+  });
+
+  return useMemo(() => {
+    if (!roles?.length || !usersData?.items) return {};
+    const counts: Record<string, number> = {};
+    for (const role of roles) {
+      counts[role.id] = 0;
+    }
+    for (const user of usersData.items) {
+      for (const r of user.roles ?? []) {
+        const role = roles.find((ro) => ro.id === r.id);
+        if (role) {
+          counts[role.id] = (counts[role.id] ?? 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }, [roles, usersData?.items]);
+}
+
 export function RolesPage() {
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const { data: roles, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.roles.all,
     queryFn: listRoles,
   });
 
+  const sortedRoles = roles ? sortRoles(roles) : [];
+  const roleUserCounts = useRoleUserCounts(sortedRoles);
+  const selected =
+    sortedRoles.find((r) => r.id === selectedRoleId) ?? sortedRoles[0] ?? null;
+
   if (isError) {
     return (
       <div className="space-y-6">
-        <Breadcrumbs items={[{ label: 'Settings', href: '/settings' }, { label: 'Roles' }]} />
-        <PageHeader title="Roles" description="Organization roles and their permissions" />
+        <Breadcrumbs
+          items={[{ label: 'Settings', href: '/settings' }, { label: 'Roles' }]}
+        />
+        <PageHeader
+          title="Roles"
+          description="Organization roles and their permissions"
+        />
         <ErrorState
           title="Failed to load roles"
-          description={error instanceof Error ? error.message : 'Something went wrong'}
+          description={
+            error instanceof Error ? error.message : 'Something went wrong'
+          }
           action={
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
               Try again
@@ -168,88 +262,66 @@ export function RolesPage() {
     );
   }
 
-  if (isLoading || !roles) {
-    return (
-      <div className="space-y-6">
-        <Breadcrumbs items={[{ label: 'Settings', href: '/settings' }, { label: 'Roles' }]} />
-        <PageHeader title="Roles" description="Organization roles and their permissions" />
-        <div className="overflow-hidden rounded-md border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="w-10 px-4 py-3 text-left" />
-                <th className="px-4 py-3 text-left font-medium">Role</th>
-                <th className="px-4 py-3 text-left font-medium">Scope</th>
-                <th className="px-4 py-3 text-left font-medium">Intended for</th>
-                <th className="px-4 py-3 text-left font-medium">Capabilities</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <tr key={i} className="border-b border-border">
-                  <td className="px-4 py-3">
-                    <Skeleton className="h-4 w-4" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Skeleton className="h-4 w-24" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Skeleton className="h-4 w-20" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Skeleton className="h-4 w-32" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Skeleton className="h-4 w-40" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  const sortedRoles = sortRoles(roles);
-
   return (
-    <div className="space-y-6">
-      <Breadcrumbs items={[{ label: 'Settings', href: '/settings' }, { label: 'Roles' }]} />
+    <div className="space-y-4">
+      <Breadcrumbs
+        items={[{ label: 'Settings', href: '/settings' }, { label: 'Roles' }]}
+      />
       <PageHeader
         title="Roles"
         description="Organization roles and their capabilities"
       />
-      {sortedRoles.length === 0 ? (
-        <p className="text-muted-foreground py-12 text-center text-sm">
+      {sortedRoles.length === 0 && !isLoading ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
           No roles configured for this organization.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="w-10 px-4 py-3 text-left" aria-label="Expand" />
-                <th className="px-4 py-3 text-left font-medium text-foreground">
-                  Role
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">
-                  Scope
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">
-                  Intended for
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-foreground">
-                  Capabilities
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRoles.map((role) => (
-                <RoleRow key={role.id} role={role} />
-              ))}
-            </tbody>
-          </table>
+        <div className="flex min-h-[480px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <aside className="w-64 shrink-0 border-r border-slate-200 bg-slate-50/30">
+            {isLoading ? (
+              <RoleListSkeleton />
+            ) : (
+              <nav className="p-2" aria-label="Role list">
+                {sortedRoles.map((role) => {
+                  const metadata = getRoleMetadata(role.key);
+                  const isSelected = selected?.id === role.id;
+                  const count = roleUserCounts[role.id];
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setSelectedRoleId(role.id)}
+                      className={`flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                        isSelected
+                          ? 'bg-primary/10 font-medium text-primary'
+                          : 'text-foreground hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="text-sm">{metadata.displayName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {metadata.scopeLabel}
+                        {count !== undefined && ` · ${count} users`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+          </aside>
+          <main className="min-w-0 flex-1">
+            {isLoading ? (
+              <RoleDetailsSkeleton />
+            ) : selected ? (
+              <RoleDetailsPanel
+                role={selected}
+                userCount={roleUserCounts[selected.id]}
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center py-12 text-sm text-muted-foreground">
+                Select a role to view details
+              </div>
+            )}
+          </main>
         </div>
       )}
     </div>

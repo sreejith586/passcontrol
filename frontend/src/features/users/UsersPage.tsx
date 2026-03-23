@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MoreVertical, UserPlus, Power, PowerOff, Mail } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { listUsers, updateUserStatus, reinviteUser } from './api';
 import { queryKeys } from './query-keys';
 import type { UserForAssignment } from './api';
@@ -15,6 +17,7 @@ import { ConfirmActionModal } from '@/shared/ui/ActionModal/ConfirmActionModal';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { Badge } from '@/shared/ui/Badge';
 import { toast } from '@/shared/feedback/useToast';
+import { ROLE_METADATA } from '@/features/roles/role-metadata';
 
 function parseParams(searchParams: URLSearchParams) {
   const page = searchParams.get('page');
@@ -23,6 +26,23 @@ function parseParams(searchParams: URLSearchParams) {
     page: page ? parseInt(page, 10) : 1,
     limit: limit ? parseInt(limit, 10) : 25,
   };
+}
+
+function getPrimaryRoleLabel(roles: UserForAssignment['roles']): string {
+  if (!roles?.length) return '—';
+  const superAdmin = roles.find((r) => r.key === 'super_admin');
+  const primary = superAdmin ?? roles[0];
+  return ROLE_METADATA[primary.key]?.displayName ?? primary.name;
+}
+
+function getStatusBadge(row: UserForAssignment) {
+  if (row.hasPassword === false) {
+    return <Badge variant="warning">Pending setup</Badge>;
+  }
+  if (row.isActive !== false) {
+    return <Badge variant="success">Active</Badge>;
+  }
+  return <Badge variant="destructive">Inactive</Badge>;
 }
 
 export function UsersPage() {
@@ -80,124 +100,140 @@ export function UsersPage() {
     setSearchParams(next);
   }
 
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const activeCount = items.filter((r) => r.isActive !== false).length;
+  const inactiveCount = items.filter((r) => r.isActive === false).length;
+  const pendingCount = items.filter((r) => r.hasPassword === false).length;
+
   const columns = [
     {
-      key: 'name',
-      header: 'Name',
-      render: (row: UserForAssignment) => row.name,
-    },
-    {
-      key: 'email',
-      header: 'Email',
-      render: (row: UserForAssignment) => row.email,
-    },
-    {
-      key: 'roles',
-      header: 'Roles',
-      render: (row: UserForAssignment) =>
-        row.roles?.length ? (
-          <div className="flex flex-wrap gap-1">
-            {row.roles.map((r) => (
-              <Badge key={r.id} variant="outline" className="text-xs">
-                {r.name}
+      key: 'user',
+      header: 'User',
+      render: (row: UserForAssignment) => (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{row.name}</span>
+            {row.isCurrentUser && (
+              <Badge variant="outline" className="text-xs">
+                You
               </Badge>
-            ))}
+            )}
           </div>
-        ) : (
-          '—'
-        ),
+          <span className="text-xs text-muted-foreground">{row.email}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      render: (row: UserForAssignment) => (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="text-sm">{getPrimaryRoleLabel(row.roles)}</span>
+          {row.roles?.some((r) => r.key === 'super_admin') && (
+            <Badge variant="info" className="text-xs">
+              Super Admin
+            </Badge>
+          )}
+        </div>
+      ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (row: UserForAssignment) =>
-        row.isActive !== false ? (
-          <Badge variant="success">Active</Badge>
-        ) : (
-          <Badge variant="destructive">Inactive</Badge>
-        ),
+      render: (row: UserForAssignment) => getStatusBadge(row),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
       render: (row: UserForAssignment) => (
         <PermissionGate permission="user.manage">
-          <div className="flex flex-wrap items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditUser(row);
-              }}
-            >
-              Edit roles
-            </Button>
-            {(row.canReinvite || row.reinviteBlockedReason === 'must_deactivate') && (
-              <PermissionGate permission="user.invite">
-                <span
-                  title={
-                    row.reinviteBlockedReason === 'must_deactivate'
-                      ? 'User must be deactivated before re-inviting'
-                      : undefined
-                  }
-                  className="inline-flex"
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={
-                      reinviteMutation.isPending || !row.canReinvite
-                    }
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (row.canReinvite) reinviteMutation.mutate(row.id);
-                    }}
-                  >
-                    Re-invite
-                  </Button>
-                </span>
-              </PermissionGate>
-            )}
-            {row.isActive !== false ? (
-              <span
-                title={
-                  row.isCurrentUser
-                    ? 'You cannot deactivate your own account'
-                    : row.isLastSuperAdmin
-                      ? 'Assign another SuperAdmin before deactivating this user'
-                      : undefined
-                }
-                className="inline-flex"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={row.isCurrentUser || row.isLastSuperAdmin}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!row.isCurrentUser && !row.isLastSuperAdmin) {
-                      setStatusUser({ user: row, targetActive: false });
-                    }
-                  }}
-                >
-                  Deactivate
-                </Button>
-              </span>
-            ) : (
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatusUser({ user: row, targetActive: true });
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" aria-label="Actions" />
+              </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content
+              align="end"
+              className="z-50 min-w-[11rem] overflow-hidden rounded-md border border-border bg-background p-1 shadow-md"
+            >
+              <DropdownMenu.Item
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-muted"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setEditUser(row);
                 }}
               >
-                Activate
-              </Button>
-            )}
-          </div>
+                <UserPlus className="h-4 w-4" />
+                Edit roles
+              </DropdownMenu.Item>
+              {row.isActive !== false ? (
+                <span
+                  title={
+                    row.isCurrentUser
+                      ? 'You cannot deactivate your own account'
+                      : row.isLastSuperAdmin
+                        ? 'Assign another SuperAdmin before deactivating this user'
+                        : undefined
+                  }
+                >
+                  <DropdownMenu.Item
+                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none focus:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                    disabled={row.isCurrentUser || row.isLastSuperAdmin}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      if (!row.isCurrentUser && !row.isLastSuperAdmin) {
+                        setStatusUser({ user: row, targetActive: false });
+                      }
+                    }}
+                  >
+                    <PowerOff className="h-4 w-4" />
+                    Deactivate
+                  </DropdownMenu.Item>
+                </span>
+              ) : (
+                <DropdownMenu.Item
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-muted"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setStatusUser({ user: row, targetActive: true });
+                  }}
+                >
+                  <Power className="h-4 w-4" />
+                  Activate
+                </DropdownMenu.Item>
+              )}
+              {(row.canReinvite || row.reinviteBlockedReason === 'must_deactivate') && (
+                <PermissionGate permission="user.invite">
+                  <span
+                    title={
+                      row.reinviteBlockedReason === 'must_deactivate'
+                        ? 'User must be deactivated before re-inviting'
+                        : undefined
+                    }
+                  >
+                    <DropdownMenu.Item
+                      className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                      disabled={reinviteMutation.isPending || !row.canReinvite}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        if (row.canReinvite) reinviteMutation.mutate(row.id);
+                      }}
+                    >
+                      <Mail className="h-4 w-4" />
+                      Re-invite
+                    </DropdownMenu.Item>
+                  </span>
+                </PermissionGate>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
         </PermissionGate>
       ),
     },
@@ -235,9 +271,35 @@ export function UsersPage() {
           </PermissionGate>
         }
       />
+      {total > 0 && (
+        <div className="flex flex-wrap items-center gap-6 rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Total users</span>
+            <span className="text-lg font-semibold text-foreground">{total}</span>
+          </div>
+          <div className="h-4 w-px bg-slate-200" aria-hidden />
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Active</span>
+            <span className="text-lg font-semibold text-emerald-700">{activeCount}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Inactive</span>
+            <span className="text-lg font-semibold text-destructive">{inactiveCount}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Pending setup</span>
+            <span className="text-lg font-semibold text-amber-700">{pendingCount}</span>
+          </div>
+          {data && data.total > data.limit && (
+            <span className="text-xs text-muted-foreground">
+              (Active, Inactive, Pending reflect current page)
+            </span>
+          )}
+        </div>
+      )}
       <DataTable
         columns={columns}
-        data={data?.items ?? []}
+        data={items}
         loading={isLoading}
         emptyMessage="No users"
         emptyDescription="Add users to give them access to this organization."
