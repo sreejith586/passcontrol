@@ -13,6 +13,9 @@ import { AlertListPage } from '@/features/alerts/AlertListPage';
 import { AlertDetailPage } from '@/features/alerts/AlertDetailPage';
 import { EscalationsPage } from '@/features/escalations/EscalationsPage';
 import { OrganizationSettingsPage } from '@/features/organization-settings/OrganizationSettingsPage';
+import { ProfilePage } from '@/features/profile/ProfilePage';
+import { SecurityPage } from '@/features/security/SecurityPage';
+import { NotificationPreferencesPage } from '@/features/notifications/NotificationPreferencesPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ChecklistRunsListPage } from '@/features/checklist-runs/ChecklistRunsListPage';
 import { ChecklistRunDetailPage } from '@/features/checklist-runs/ChecklistRunDetailPage';
@@ -212,6 +215,22 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/settings/organization" replace /> },
           {
+            path: 'profile',
+            element: (
+              <RoutePermissionGuard>
+                <ProfilePage />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'security',
+            element: (
+              <RoutePermissionGuard>
+                <SecurityPage />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
             path: 'organization',
             element: (
               <RoutePermissionGuard>
@@ -240,6 +259,14 @@ const router = createBrowserRouter([
             element: (
               <RoutePermissionGuard>
                 <RolesPage />
+              </RoutePermissionGuard>
+            ),
+          },
+          {
+            path: 'notifications',
+            element: (
+              <RoutePermissionGuard>
+                <NotificationPreferencesPage />
               </RoutePermissionGuard>
             ),
           },

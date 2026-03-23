@@ -1,5 +1,28 @@
-import { get, patch } from '@/core/api/client';
-import type { NotificationsListResponse } from './types';
+import { get, patch, put } from '@/core/api/client';
+import type { NotificationsListResponse, NotificationType } from './types';
+
+export type { NotificationType };
+
+export interface NotificationPreferenceItem {
+  notificationType: NotificationType;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+  whatsAppEnabled: boolean;
+}
+
+export interface NotificationPreferencesResponse {
+  items: NotificationPreferenceItem[];
+}
+
+export async function getNotificationPreferences(): Promise<NotificationPreferencesResponse> {
+  return get<NotificationPreferencesResponse>('/notifications/preferences');
+}
+
+export async function putNotificationPreferences(
+  items: NotificationPreferenceItem[]
+): Promise<NotificationPreferencesResponse> {
+  return put<NotificationPreferencesResponse>('/notifications/preferences', { items });
+}
 
 export async function getUnreadCount(): Promise<{ count: number }> {
   return get<{ count: number }>('/notifications/unread-count');

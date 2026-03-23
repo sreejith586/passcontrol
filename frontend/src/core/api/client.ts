@@ -103,6 +103,14 @@ export async function patch<T>(url: string, data?: unknown): Promise<T> {
 }
 
 /**
+ * PUT with unwrap.
+ */
+export async function put<T>(url: string, data?: unknown): Promise<T> {
+  const res = await apiClient.put(url, data);
+  return unwrapResponse<T>(res.data);
+}
+
+/**
  * DELETE with unwrap.
  */
 export async function del<T>(url: string): Promise<T> {

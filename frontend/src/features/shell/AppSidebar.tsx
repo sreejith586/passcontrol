@@ -99,9 +99,11 @@ const navGroups: NavGroup[] = [
     icon: Settings,
     permission: ['alert.workflow-policy.view', 'user.view'] as const,
     children: [
-      { to: '/settings/organization', label: 'Organization Settings', permission: 'alert.workflow-policy.view' as const },
+      { to: '/settings/organization', label: 'Organization', permission: 'alert.workflow-policy.view' as const },
       { to: '/settings/users', label: 'Users', permission: 'user.view' as const },
       { to: '/settings/roles', label: 'Roles', permission: 'user.view' as const },
+      { to: '/settings/organization', label: 'Regional', permission: 'alert.workflow-policy.view' as const },
+      { to: '/settings/organization', label: 'Alert Workflow', permission: 'alert.workflow-policy.view' as const },
     ],
   },
 ];

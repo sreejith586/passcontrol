@@ -56,6 +56,7 @@ export class UsersController {
   }
 
   @Get('me')
+  @RequireAnyPermission('user.view', 'alert.workflow-policy.view')
   @ApiOperation({ summary: 'Get my profile', description: 'Returns the current user profile for the organization' })
   async getMe(@CurrentTenantContext() ctx: TenantContext) {
     const data = await this.service.getMe(ctx);
@@ -63,6 +64,7 @@ export class UsersController {
   }
 
   @Patch('me')
+  @RequireAnyPermission('user.view', 'alert.workflow-policy.view')
   @ApiOperation({ summary: 'Update my profile', description: 'Updates name, phoneNumber, jobTitle for the current user' })
   @ApiBody({ type: UpdateProfileDto })
   async updateProfile(

@@ -35,3 +35,18 @@ export async function setPassword(
       : {}),
   });
 }
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+}
+
+export async function changePassword(
+  dto: ChangePasswordDto
+): Promise<ChangePasswordResponse> {
+  return post<ChangePasswordResponse>('/auth/change-password', dto);
+}

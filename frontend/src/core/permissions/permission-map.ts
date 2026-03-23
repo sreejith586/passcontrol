@@ -13,9 +13,12 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   '/zones': ['zone.view', 'zone.manage'],
   '/alerts': 'alert.view',
   '/escalations': 'alert.view',
+  '/settings/profile': ['alert.workflow-policy.view', 'user.view'],
+  '/settings/security': ['alert.workflow-policy.view', 'user.view'],
   '/settings/organization': 'alert.workflow-policy.view',
   '/settings/users': 'user.view',
   '/settings/roles': 'user.view',
+  '/settings/notifications': 'alert.view',
   '/reports': 'reports.view',
 };
 
@@ -51,9 +54,11 @@ const FALLBACK_ROUTE_ORDER: (keyof typeof ROUTE_PERMISSIONS)[] = [
   '/checklist-runs',
   '/alerts',
   '/escalations',
+  '/settings/profile',
   '/settings/organization',
   '/settings/users',
   '/settings/roles',
+  '/settings/notifications',
   '/reports',
 ];
 
