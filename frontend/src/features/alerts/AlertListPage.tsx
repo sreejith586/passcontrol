@@ -114,7 +114,7 @@ export function AlertListPage() {
     } else {
       next.set(key, String(value));
     }
-    next.set('page', '1');
+    if (key !== 'page') next.set('page', '1');
     setSearchParams(next);
   }
 

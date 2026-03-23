@@ -120,7 +120,6 @@ const itemStatusColumns: ReportColumnDef<ChecklistItemStatusPreviewRow>[] = [
   { key: 'template', label: 'Template', defaultVisible: true, render: (r) => r.templateNameSnapshot },
   { key: 'section', label: 'Section', defaultVisible: true, render: (r) => r.sectionTitle || '—' },
   { key: 'label', label: 'Item Label', defaultVisible: true, render: (r) => r.labelSnapshot },
-  { key: 'itemType', label: 'Item Type', defaultVisible: false, render: (r) => r.itemTypeSnapshot },
   { key: 'result', label: 'Result', defaultVisible: true, render: (r) => r.result ?? '—' },
   { key: 'severity', label: 'Severity', defaultVisible: true, render: (r) => <SeverityBadge severity={r.severitySnapshot} /> },
   { key: 'comment', label: 'Comment', defaultVisible: true, render: (r) => r.comment ?? '—' },
