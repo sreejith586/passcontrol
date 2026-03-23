@@ -19,14 +19,17 @@ enum ChecklistItemSeverity {
 
 // ---- Identity & RBAC ----
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  email        String    @unique
-  name         String
-  passwordHash String?   @map("password_hash")
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  id                  String    @id @default(uuid()) @db.Uuid
+  email               String    @unique
+  name                String
+  passwordHash        String?   @map("password_hash")
+  phoneNumber         String?   @map("phone_number")
+  jobTitle            String?   @map("job_title")
+  passwordUpdatedAt   DateTime? @map("password_updated_at") @db.Timestamptz
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz
 
   roleAssignments       UserRoleAssignment[]
   auditLogs             AuditLog[]           @relation("AuditActor")
@@ -35,8 +38,11 @@ model User {
   assignedChecklistRuns ChecklistRun[]        @relation("ChecklistRunAssignedToUser")
   performedChecklistRuns ChecklistRun[]        @relation("ChecklistRunPerformedByUser")
   passwordSetupTokens   PasswordSetupToken[]
-  scheduleWatchers      ChecklistScheduleWatcher[]
-  notifications         Notification[]
+  passwordResetTokens   PasswordResetToken[]
+  scheduleWatchers              ChecklistScheduleWatcher[]
+  notifications                 Notification[]
+  userNotificationPreferences   UserNotificationPreference[]
+  notificationDeliveries        NotificationDelivery[]
 
   @@map("users")
 }
@@ -54,6 +60,22 @@ model PasswordSetupToken {
   @@index([tokenHash])
   @@index([userId])
   @@map("password_setup_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  usedAt    DateTime? @map("used_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model Organization {
@@ -92,6 +114,8 @@ model Organization {
   Asset                        Asset[]
   notifications                Notification[]
   checklistScheduleWatchers    ChecklistScheduleWatcher[]
+  userNotificationPreferences UserNotificationPreference[]
+  notificationDeliveries       NotificationDelivery[]
 
   @@map("organizations")
 }
@@ -712,12 +736,69 @@ model Notification {
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz
   readAt         DateTime?              @map("read_at") @db.Timestamptz
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization          @relation(fields: [organizationId], references: [id])
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries   NotificationDelivery[]
 
   @@index([organizationId, userId, createdAt])
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+enum DeliveryChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model NotificationDelivery {
+  id                String          @id @default(uuid()) @db.Uuid
+  notificationId    String          @map("notification_id") @db.Uuid
+  organizationId    String          @map("organization_id") @db.Uuid
+  userId            String          @map("user_id") @db.Uuid
+  channel           DeliveryChannel
+  status            DeliveryStatus
+  recipient         String
+  providerMessageId String?         @map("provider_message_id")
+  errorMessage      String?         @map("error_message")
+  sentAt            DateTime?       @map("sent_at") @db.Timestamptz
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([userId])
+  @@index([channel])
+  @@map("notification_deliveries")
+}
+
+model UserNotificationPreference {
+  id               String           @id @default(uuid()) @db.Uuid
+  organizationId   String           @map("organization_id") @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  notificationType NotificationType @map("notification_type")
+  inAppEnabled     Boolean          @default(true) @map("in_app_enabled")
+  emailEnabled     Boolean          @default(true) @map("email_enabled")
+  whatsAppEnabled  Boolean          @default(false) @map("whats_app_enabled")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, notificationType])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("user_notification_preferences")
 }
 
 // ---- Audit ----
