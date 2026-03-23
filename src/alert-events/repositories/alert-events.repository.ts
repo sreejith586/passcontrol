@@ -423,6 +423,9 @@ export class AlertEventsRepository {
         acknowledgeBreached: boolean;
         resolveBreached: boolean;
       };
+      assignedToUser: { id: string; name: string } | null;
+      checklistName: string | null;
+      itemLabel: string | null;
     }>;
     total: number;
   }> {
@@ -480,6 +483,10 @@ export class AlertEventsRepository {
         resolve_by: Date;
         ack_breached: boolean;
         res_breached: boolean;
+        assigned_user_id: string | null;
+        assigned_user_name: string | null;
+        checklist_name: string | null;
+        item_label: string | null;
       }>
     >(Prisma.sql`
       WITH base AS (
@@ -500,8 +507,18 @@ export class AlertEventsRepository {
           ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval AS acknowledge_by,
           ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval AS resolve_by,
           (ae.acknowledged_at IS NULL AND ae.created_at + (ae.acknowledge_within_minutes || ' minutes')::interval < ${now}) AS ack_breached,
-          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached
+          (ae.resolved_at IS NULL AND ae.created_at + (ae.resolve_within_minutes || ' minutes')::interval < ${now}) AS res_breached,
+          u.id AS assigned_user_id,
+          u.name AS assigned_user_name,
+          cr.template_name_snapshot AS checklist_name,
+          cri.label_snapshot AS item_label
         FROM alert_events ae
+        LEFT JOIN users u ON ae.assigned_to_user_id = u.id
+        LEFT JOIN checklist_run_item_snapshots cri ON ae.source_type = 'CHECKLIST_RUN_ITEM'
+          AND ae.source_id::uuid = cri.id
+          AND cri.organization_id = ae.organization_id
+        LEFT JOIN checklist_runs cr ON cri.checklist_run_id = cr.id
+          AND cr.organization_id = ae.organization_id
         WHERE ${whereClause}
       )
       SELECT * FROM base
@@ -559,6 +576,12 @@ export class AlertEventsRepository {
         acknowledgeBreached: r.ack_breached,
         resolveBreached: r.res_breached,
       },
+      assignedToUser:
+        r.assigned_user_id && r.assigned_user_name
+          ? { id: r.assigned_user_id, name: r.assigned_user_name }
+          : null,
+      checklistName: r.checklist_name ?? null,
+      itemLabel: r.item_label ?? null,
     }));
 
     return { items, total };

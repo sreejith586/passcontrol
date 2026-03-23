@@ -1,13 +1,20 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Eye, UserPlus } from 'lucide-react';
 import { listEscalations } from './api';
 import { queryKeys } from './query-keys';
+import { formatAge } from './format-age';
 import type { EscalationsListParams, EscalationItem } from './types';
 import { DataTable, DataTablePagination } from '@/shared/ui';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { ErrorState } from '@/shared/layout/ErrorState';
-import { FilterBar, FilterSelect, FilterCheckbox } from '@/shared/layout/FilterBar';
+import {
+  FilterBar,
+  FilterSelect,
+  FilterCheckbox,
+  FilterInput,
+} from '@/shared/layout/FilterBar';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { formatDateTime } from '@/lib/date';
@@ -16,6 +23,7 @@ import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
 import { StatusBadge } from '@/features/alerts/components/StatusBadge';
 import { listUsers } from '@/features/users/api';
 import { queryKeys as usersQueryKeys } from '@/features/users/query-keys';
+import { cn } from '@/lib/cn';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All' },
@@ -41,7 +49,6 @@ function parseParams(searchParams: URLSearchParams): EscalationsListParams {
   const assignedToMe = searchParams.get('assignedToMe') === 'true';
   const assignedUserId = searchParams.get('assignedUserId') || undefined;
 
-  // Precedence: unassignedOnly > assignedToMe > assignedUserId
   let effectiveUnassignedOnly: boolean | undefined;
   let effectiveAssignedToMe: boolean | undefined;
   let effectiveAssignedUserId: string | undefined;
@@ -68,11 +75,29 @@ function parseParams(searchParams: URLSearchParams): EscalationsListParams {
   };
 }
 
+function matchesSearch(row: EscalationItem, search: string): boolean {
+  if (!search.trim()) return true;
+  const q = search.trim().toLowerCase();
+  const checklistName = (row.checklistName ?? '').toLowerCase();
+  const itemLabel = (row.itemLabel ?? '').toLowerCase();
+  const assignedName = (row.assignedToUser?.name ?? '').toLowerCase();
+  const sourceLabel = getSourceTypeLabel(row.sourceType).toLowerCase();
+  const sourceId = (row.sourceId ?? '').toLowerCase();
+  return (
+    checklistName.includes(q) ||
+    itemLabel.includes(q) ||
+    assignedName.includes(q) ||
+    sourceLabel.includes(q) ||
+    sourceId.includes(q)
+  );
+}
+
 export function EscalationsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const params = parseParams(searchParams);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.escalations.list(params),
@@ -84,6 +109,29 @@ export function EscalationsPage() {
     queryFn: () => listUsers({ page: 1, limit: 100 }),
     enabled: advancedFiltersOpen,
   });
+
+  const items = data?.items ?? [];
+  const filteredItems = useMemo(
+    () => items.filter((row) => matchesSearch(row, searchQuery)),
+    [items, searchQuery]
+  );
+
+  const summary = useMemo(() => {
+    const open = items.filter((r) => r.status === 'OPEN' || r.status === 'ACKNOWLEDGED');
+    const criticalOpen = open.filter((r) => r.severity === 'CRITICAL');
+    const slaBreached = items.filter(
+      (r) => r.sla.acknowledgeBreached || r.sla.resolveBreached
+    );
+    const unassigned = items.filter(
+      (r) => !r.assignedToUser?.id && !r.assignedToUser?.name
+    );
+    return {
+      openCount: open.length,
+      criticalOpenCount: criticalOpen.length,
+      slaBreachedCount: slaBreached.length,
+      unassignedCount: unassigned.length,
+    };
+  }, [items]);
 
   function setParam(key: string, value: string | number | boolean) {
     const next = new URLSearchParams(searchParams);
@@ -111,6 +159,21 @@ export function EscalationsPage() {
     setSearchParams(next);
   }
 
+  const getRowClassName = (row: EscalationItem) => {
+    const hasResolveBreach = row.sla.resolveBreached;
+    const base = 'border-l-4';
+    if (hasResolveBreach) {
+      return cn(base, 'border-l-red-500/70 bg-red-50/20');
+    }
+    if (row.severity === 'CRITICAL') {
+      return cn(base, 'border-l-red-600/50');
+    }
+    if (row.severity === 'HIGH') {
+      return cn(base, 'border-l-amber-500/50');
+    }
+    return cn(base, 'border-l-slate-200');
+  };
+
   const columns = [
     {
       key: 'status',
@@ -125,10 +188,10 @@ export function EscalationsPage() {
       render: (row: EscalationItem) => <SeverityBadge severity={row.severity} />,
     },
     {
-      key: 'breach',
+      key: 'sla',
       header: 'SLA',
       render: (row: EscalationItem) => (
-        <span className="flex gap-1">
+        <span className="flex flex-wrap gap-1">
           {row.sla.acknowledgeBreached && (
             <Badge variant="destructive" className="text-xs">
               Ack breached
@@ -140,30 +203,111 @@ export function EscalationsPage() {
             </Badge>
           )}
           {!row.sla.acknowledgeBreached && !row.sla.resolveBreached && (
-            <span className="text-muted-foreground text-xs">—</span>
+            <span className="text-xs text-muted-foreground">—</span>
           )}
         </span>
       ),
     },
     {
-      key: 'sourceType',
-      header: 'Source',
-      render: (row: EscalationItem) => getSourceTypeLabel(row.sourceType),
+      key: 'checklistItem',
+      header: 'Checklist / Item',
+      render: (row: EscalationItem) => {
+        const checklist = row.checklistName?.trim();
+        const item = row.itemLabel?.trim();
+        if (checklist || item) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              {checklist && (
+                <span className="font-semibold text-foreground">{checklist}</span>
+              )}
+              {item && (
+                <span className="text-xs text-muted-foreground">{item}</span>
+              )}
+            </div>
+          );
+        }
+        return (
+          <span className="text-foreground">
+            {getSourceTypeLabel(row.sourceType)}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'assignedTo',
+      header: 'Assigned To',
+      render: (row: EscalationItem) => {
+        const name = row.assignedToUser?.name;
+        if (name) {
+          return <span className="text-foreground">{name}</span>;
+        }
+        return (
+          <span className="text-amber-600 text-sm font-medium">Unassigned</span>
+        );
+      },
+    },
+    {
+      key: 'age',
+      header: 'Age',
+      render: (row: EscalationItem) => (
+        <span className="tabular-nums text-muted-foreground">
+          {formatAge(row.createdAt)}
+        </span>
+      ),
     },
     {
       key: 'createdAt',
       header: 'Created',
-      render: (row: EscalationItem) => formatDateTime(row.createdAt),
+      render: (row: EscalationItem) => (
+        <span className="text-muted-foreground text-xs">
+          {formatDateTime(row.createdAt)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (row: EscalationItem) => (
+        <div
+          className="flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => navigate(`/alerts/${row.alertEventId}`)}
+          >
+            <Eye className="mr-1 h-3.5 w-3.5" />
+            View
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => navigate(`/alerts/${row.alertEventId}`)}
+            title="Assign on alert detail page"
+          >
+            <UserPlus className="mr-1 h-3.5 w-3.5" />
+            Assign
+          </Button>
+        </div>
+      ),
     },
   ];
 
   if (isError) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Escalations" description="Active alerts with SLA breach status" />
+        <PageHeader
+          title="Escalations"
+          description="Active alerts with SLA breach status"
+        />
         <ErrorState
           title="Failed to load escalations"
-          description={error instanceof Error ? error.message : 'Something went wrong'}
+          description={
+            error instanceof Error ? error.message : 'Something went wrong'
+          }
           action={
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
               Try again
@@ -180,14 +324,66 @@ export function EscalationsPage() {
         title="Escalations"
         description="Active alerts with SLA breach status"
       />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Open Escalations
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+            {summary.openCount}
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Critical Open
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-red-600">
+            {summary.criticalOpenCount}
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            SLA Breached
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-amber-600">
+            {summary.slaBreachedCount}
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Unassigned
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+            {summary.unassignedCount}
+          </p>
+        </div>
+      </div>
+
       <div className="space-y-3">
-        <FilterBar>
-          <FilterSelect
-            value={params.status ?? ''}
-            onChange={(v) => setParam('status', v)}
-            options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            aria-label="Filter by status"
-          />
+        <FilterBar className="flex-wrap items-end gap-4">
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Status
+            </span>
+            <FilterSelect
+              value={params.status ?? ''}
+              onChange={(v) => setParam('status', v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              aria-label="Filter by status"
+            />
+          </div>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Severity
+            </span>
+            <FilterSelect
+              value={params.severity ?? ''}
+              onChange={(v) => setParam('severity', v)}
+              options={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              aria-label="Filter by severity"
+            />
+          </div>
           <FilterCheckbox
             checked={params.assignedToMe ?? false}
             onChange={(v) => setAssignmentFilter('assignedToMe', v)}
@@ -203,23 +399,31 @@ export function EscalationsPage() {
             onChange={(v) => setParam('onlyBreached', v)}
             label="Breached only"
           />
-          <button
-            type="button"
-            onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
-            className="text-sm text-primary hover:underline"
-          >
-            {advancedFiltersOpen ? 'Fewer filters' : 'More filters'}
-          </button>
+          <div className="ml-auto">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Search
+            </span>
+            <FilterInput
+              type="text"
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Checklist, item, assignee…"
+              aria-label="Search escalations"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
+              className="text-sm text-primary hover:underline"
+            >
+              {advancedFiltersOpen ? 'Fewer filters' : 'More filters'}
+            </button>
+          </div>
         </FilterBar>
 
         {advancedFiltersOpen && (
           <FilterBar>
-            <FilterSelect
-              value={params.severity ?? ''}
-              onChange={(v) => setParam('severity', v)}
-              options={SEVERITY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-              aria-label="Filter by severity"
-            />
             <FilterSelect
               value={params.assignedUserId ?? ''}
               onChange={(v) => setAssignmentFilter('assignedUserId', v)}
@@ -235,14 +439,16 @@ export function EscalationsPage() {
           </FilterBar>
         )}
       </div>
+
       <DataTable
         columns={columns}
-        data={data?.items ?? []}
+        data={filteredItems}
         loading={isLoading}
         emptyMessage="No escalations found"
         emptyDescription="Active alerts with SLA status will appear here."
         getRowId={(row) => row.alertEventId}
         onRowClick={(row) => navigate(`/alerts/${row.alertEventId}`)}
+        getRowClassName={getRowClassName}
       />
       {data && data.total > 0 && (
         <DataTablePagination

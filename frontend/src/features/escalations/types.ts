@@ -16,6 +16,12 @@ export interface EscalationItem {
     acknowledgeBreached: boolean;
     resolveBreached: boolean;
   };
+  /** Checklist template/run name when enriched by backend (e.g. from source context). */
+  checklistName?: string | null;
+  /** Item label when enriched by backend (e.g. from run item snapshot). */
+  itemLabel?: string | null;
+  /** Assigned user when enriched by backend. */
+  assignedToUser?: { id: string; name: string } | null;
 }
 
 export interface EscalationsListParams {

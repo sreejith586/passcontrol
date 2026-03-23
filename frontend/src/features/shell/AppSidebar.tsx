@@ -194,7 +194,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
         {navGroups.map((group) => {
           const isActive = isChildActive(pathname, group);
-          const isExpanded = expandedGroups.has(group.id) || isActive;
+          const isExpanded = expandedGroups.has(group.id);
 
           return (
             <PermissionGate key={group.id} permission={group.permission}>
