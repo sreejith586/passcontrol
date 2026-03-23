@@ -5,6 +5,9 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ValidateSetupTokenDto } from './dto/validate-setup-token.dto';
 import { SetPasswordDto } from './dto/set-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { ApiResponse } from '../infra/responses/api-response';
 
@@ -36,6 +39,32 @@ export class AuthController {
       dto.token,
       dto.password,
       dto.passwordConfirm,
+    );
+    return ApiResponse.ok(result);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.auth.forgotPassword(dto.email);
+    return ApiResponse.ok({ success: true });
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const result = await this.auth.resetPassword(dto.token, dto.newPassword);
+    return ApiResponse.ok(result);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Req() req: Request & { user: { userId: string; organizationId: string } },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    const result = await this.auth.changePassword(
+      req.user.userId,
+      dto.currentPassword,
+      dto.newPassword,
     );
     return ApiResponse.ok(result);
   }

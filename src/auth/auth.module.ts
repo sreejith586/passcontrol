@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PasswordSetupTokenRepository } from './repositories/password-setup-token.repository';
+import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 
 // Dev-only fallback to keep local bootstrapping working until env vars are set.
 const DEV_ONLY_ACCESS_SECRET = 'dev-access-secret-change-me';
@@ -22,7 +23,7 @@ const DEV_ONLY_ACCESS_SECRET = 'dev-access-secret-change-me';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PasswordSetupTokenRepository],
+  providers: [AuthService, JwtStrategy, PasswordSetupTokenRepository, PasswordResetTokenRepository],
   exports: [AuthService, PasswordSetupTokenRepository],
 })
 export class AuthModule {}

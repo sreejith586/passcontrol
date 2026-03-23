@@ -3,11 +3,13 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../infra/prisma/prisma.service';
 import { AuditLogsService } from '../audit/services/audit-logs.service';
 import { PasswordSetupTokenRepository } from './repositories/password-setup-token.repository';
+import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 import { LoginDto } from './dto/login.dto';
 
 interface JwtPayload {
@@ -27,11 +29,14 @@ export type ValidateSetupTokenResult =
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly audit: AuditLogsService,
     private readonly passwordSetupTokenRepo: PasswordSetupTokenRepository,
+    private readonly passwordResetTokenRepo: PasswordResetTokenRepository,
   ) {}
 
   async hashPassword(password: string) {
@@ -228,6 +233,81 @@ export class AuthService {
     });
 
     return { passwordSet: true };
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim(), isActive: true, deletedAt: null },
+    });
+    if (!user) {
+      return;
+    }
+    const plainToken = await this.passwordResetTokenRepo.create(user.id);
+    const resetUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:3000'}/reset-password?token=${plainToken}`;
+    this.logger.log(`[FORGOT_PASSWORD] Would send email to ${user.email} with reset link: ${resetUrl}`);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ success: true }> {
+    const tokenHash = this.passwordResetTokenRepo.hashToken(token);
+    const record = await this.passwordResetTokenRepo.findByTokenHash(tokenHash);
+
+    if (!record) {
+      throw new BadRequestException('Invalid or expired reset link');
+    }
+    if (record.usedAt) {
+      throw new BadRequestException('Reset link has already been used');
+    }
+    if (record.expiresAt < new Date()) {
+      throw new BadRequestException('Reset link has expired');
+    }
+    if (!record.user.isActive) {
+      throw new BadRequestException('Account is inactive');
+    }
+
+    const passwordHash = await this.hashPassword(newPassword);
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash, passwordUpdatedAt: now },
+    });
+    await this.passwordResetTokenRepo.markUsed(record.id);
+    await this.passwordResetTokenRepo.invalidateUnusedByUserId(record.userId);
+
+    await this.audit.recordAuthEvent('PASSWORD_RESET_SUCCESS', { userId: record.userId });
+
+    return { success: true };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ success: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user?.passwordHash) {
+      throw new BadRequestException('Cannot change password for account without password');
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      await this.audit.recordAuthEvent('PASSWORD_CHANGE_FAILED', {
+        userId,
+        reason: 'invalid_current',
+      });
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const passwordHash = await this.hashPassword(newPassword);
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, passwordUpdatedAt: now },
+    });
+
+    await this.audit.recordAuthEvent('PASSWORD_CHANGE_SUCCESS', { userId });
+
+    return { success: true };
   }
 
   async me(userId: string, organizationId: string) {
