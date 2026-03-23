@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react';
 import { useAuth } from '@/core/auth/auth-context';
 import { Button } from '@/shared/ui/Button';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 export function AppHeader() {
   const { user, logout } = useAuth();
@@ -12,7 +13,9 @@ export function AppHeader() {
       <Link to="/alerts" className="text-lg font-semibold text-foreground">
         PassControl
       </Link>
-      <DropdownMenu.Root>
+      <div className="flex items-center gap-1">
+        <NotificationBell />
+        <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <Button variant="ghost" size="sm" className="gap-2">
             <span className="max-w-[160px] truncate">
@@ -32,7 +35,8 @@ export function AppHeader() {
               Log out
             </DropdownMenu.Item>
           </DropdownMenu.Content>
-      </DropdownMenu.Root>
+        </DropdownMenu.Root>
+      </div>
     </header>
   );
 }

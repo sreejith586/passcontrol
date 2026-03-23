@@ -45,6 +45,7 @@ import {
 import {
   createAlertResolvedEvent,
 } from '../../common/domain-events/events/alert-resolved.event';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class AlertEventsService {
@@ -56,6 +57,7 @@ export class AlertEventsService {
     private readonly commentsRepo: AlertEventCommentsRepository,
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
   ) {}
@@ -637,6 +639,18 @@ export class AlertEventsService {
     await this.audit.recordWrite('ALERT_ASSIGN', ctx, id, {
       before: existing,
       after: updated,
+    });
+    await this.notifications.createNotification(ctx.organizationId, {
+      type: 'ESCALATION_ASSIGNED',
+      userIds: [dto.assignedToUserId],
+      sourceType: 'ALERT_EVENT',
+      sourceId: id,
+      payload: {
+        alertEventId: id,
+        severity: updated?.severity ?? undefined,
+        message: `Escalation assigned to you`,
+      },
+      dedupeKey: `ESCALATION_ASSIGNED:${id}:${dto.assignedToUserId}`,
     });
     return this.toAssignmentResponse(updated!);
   }

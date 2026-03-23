@@ -20,6 +20,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { UsersModule } from './users/users.module';
 import { RegionalSettingsModule } from './regional-settings/regional-settings.module';
 import { ReportsModule } from './reports/reports.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -45,6 +46,7 @@ import { HealthController } from './health.controller';
     UsersModule,
     RegionalSettingsModule,
     ReportsModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
 })

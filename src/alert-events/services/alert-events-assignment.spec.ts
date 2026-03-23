@@ -7,6 +7,7 @@ import { AlertEventActivitiesService } from '../../alert-event-activities/servic
 import { AlertEventCommentsRepository } from '../../alert-event-comments/repositories/alert-event-comments.repository';
 import { UsersService } from '../../users/services/users.service';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { DOMAIN_EVENT_PUBLISHER } from '../../common/domain-events/contracts/domain-event-publisher.interface';
 
@@ -74,6 +75,7 @@ describe('AlertEventsService (assignment)', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: AlertEventCommentsRepository, useValue: { create: jest.fn() } },
         { provide: AuditLogsService, useValue: mockAudit },
+        { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
       ],
@@ -98,6 +100,7 @@ describe('AlertEventsService (assignment)', () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: AlertEventCommentsRepository, useValue: { create: jest.fn() } },
           { provide: AuditLogsService, useValue: audit },
+          { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
           { provide: PrismaService, useValue: { $transaction: jest.fn((fn) => fn({})) } },
           { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
         ],

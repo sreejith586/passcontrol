@@ -6,6 +6,7 @@ import { DomainEventsModule } from '../common/domain-events/domain-events.module
 import { AlertEventActivitiesModule } from '../alert-event-activities/alert-event-activities.module';
 import { AlertEventCommentsModule } from '../alert-event-comments/alert-event-comments.module';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AlertEventsController } from './controllers/alert-events.controller';
 import { AlertEventsService } from './services/alert-events.service';
 import { AlertEventsRepository } from './repositories/alert-events.repository';
@@ -21,6 +22,7 @@ import { AlertSlaResolverService } from './services/alert-sla-resolver.service';
     forwardRef(() => AlertEventActivitiesModule),
     forwardRef(() => AlertEventCommentsModule),
     UsersModule,
+    NotificationsModule,
   ],
   controllers: [AlertEventsController],
   providers: [

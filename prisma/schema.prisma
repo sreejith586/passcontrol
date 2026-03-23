@@ -35,6 +35,8 @@ model User {
   assignedChecklistRuns ChecklistRun[]        @relation("ChecklistRunAssignedToUser")
   performedChecklistRuns ChecklistRun[]        @relation("ChecklistRunPerformedByUser")
   passwordSetupTokens   PasswordSetupToken[]
+  scheduleWatchers      ChecklistScheduleWatcher[]
+  notifications         Notification[]
 
   @@map("users")
 }
@@ -88,6 +90,8 @@ model Organization {
   checklistRunItemSnapshots    ChecklistRunItemSnapshot[]
   Zone                         Zone[]
   Asset                        Asset[]
+  notifications                Notification[]
+  checklistScheduleWatchers    ChecklistScheduleWatcher[]
 
   @@map("organizations")
 }
@@ -568,6 +572,7 @@ model ChecklistSchedule {
   organization      Organization      @relation(fields: [organizationId], references: [id])
   checklistTemplate ChecklistTemplate @relation(fields: [checklistTemplateId], references: [id])
   ownerUser         User?              @relation("ScheduleOwner", fields: [ownerUserId], references: [id])
+  watchers          ChecklistScheduleWatcher[]
 
   @@index([organizationId, isActive, nextRunAt])
   @@index([organizationId, brandId, locationId, zoneId, isActive])
@@ -662,6 +667,53 @@ model ChecklistRunItemSnapshot {
   @@index([organizationId, checklistRunId, result], map: "checklist_run_item_snapshots_org_run_result_idx")
   @@index([organizationId, checklistRunId, respondedAt], map: "checklist_run_item_snapshots_org_run_resp_at_idx")
   @@map("checklist_run_item_snapshots")
+}
+
+// ---- Notifications & Schedule Watchers ----
+enum NotificationType {
+  ESCALATION_ASSIGNED
+}
+
+enum NotificationSourceType {
+  CHECKLIST_RUN
+  ALERT_EVENT
+}
+
+model ChecklistScheduleWatcher {
+  id                   String   @id @default(uuid()) @db.Uuid
+  organizationId       String   @map("organization_id") @db.Uuid
+  checklistScheduleId  String   @map("checklist_schedule_id") @db.Uuid
+  userId               String   @map("user_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization       Organization      @relation(fields: [organizationId], references: [id])
+  checklistSchedule  ChecklistSchedule  @relation(fields: [checklistScheduleId], references: [id], onDelete: Cascade)
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([checklistScheduleId, userId])
+  @@index([userId])
+  @@index([checklistScheduleId])
+  @@map("checklist_schedule_watchers")
+}
+
+model Notification {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organizationId String                 @map("organization_id") @db.Uuid
+  userId         String                 @map("user_id") @db.Uuid
+  type           NotificationType
+  sourceType     NotificationSourceType @map("source_type")
+  sourceId       String                 @map("source_id") @db.Uuid
+  payloadJson    Json                   @map("payload_json")
+  dedupeKey      String?                @unique @map("dedupe_key")
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  readAt         DateTime?              @map("read_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
 }
 
 // ---- Audit ----
