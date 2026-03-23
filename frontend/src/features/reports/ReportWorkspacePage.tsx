@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download } from 'lucide-react';
+import { Breadcrumbs } from '@/shared/layout/Breadcrumbs';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { useAuth } from '@/core/auth/auth-context';
 import { Button } from '@/shared/ui/Button';
@@ -148,6 +149,12 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs
+        items={[
+          { label: 'Reports', href: '/reports' },
+          { label: config.title },
+        ]}
+      />
       <PageHeader
         title={config.title}
         description={config.subtitle}
