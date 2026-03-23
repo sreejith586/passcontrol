@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType, NotificationSourceType } from '@prisma/client';
 import { NotificationsRepository } from '../repositories/notifications.repository';
+import { NotificationDeliveryService } from './notification-delivery.service';
 import type { TenantContext } from '../../access/decorators/current-tenant.decorator';
 
 export interface CreateNotificationInput {
@@ -14,16 +15,28 @@ export interface CreateNotificationInput {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly repo: NotificationsRepository) {}
+  constructor(
+    private readonly repo: NotificationsRepository,
+    private readonly deliveryService: NotificationDeliveryService,
+  ) {}
 
   /**
    * Create notifications for the given users. Skips inserts if dedupeKey
    * already exists. Caller must pass organizationId for tenant scoping.
+   * After creating, triggers delivery (email, etc.) based on user preferences.
    */
   async createNotification(
     organizationId: string,
     input: CreateNotificationInput,
   ): Promise<void> {
+    const created: Array<{
+      id: string;
+      userId: string;
+      organizationId: string;
+      type: NotificationType;
+      payload: Record<string, unknown>;
+    }> = [];
+
     for (const userId of input.userIds) {
       const dedupeKey = input.dedupeKey ?? null;
       if (dedupeKey) {
@@ -31,7 +44,7 @@ export class NotificationsService {
         if (existing) continue;
       }
 
-      await this.repo.create({
+      const notification = await this.repo.create({
         organizationId,
         userId,
         type: input.type,
@@ -40,6 +53,18 @@ export class NotificationsService {
         payloadJson: input.payload,
         dedupeKey,
       });
+
+      created.push({
+        id: notification.id,
+        userId: notification.userId,
+        organizationId: notification.organizationId,
+        type: notification.type,
+        payload: notification.payloadJson as Record<string, unknown>,
+      });
+    }
+
+    if (created.length > 0) {
+      await this.deliveryService.deliver(created);
     }
   }
 

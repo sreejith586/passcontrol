@@ -1,21 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsService } from './notifications.service';
 import { NotificationsRepository } from '../repositories/notifications.repository';
+import { NotificationDeliveryService } from './notification-delivery.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
   let repo: jest.Mocked<NotificationsRepository>;
+  let delivery: jest.Mocked<Pick<NotificationDeliveryService, 'deliver'>>;
 
   beforeEach(async () => {
     const mockRepo = {
-      create: jest.fn().mockResolvedValue({ id: 'n1' }),
+      create: jest.fn().mockResolvedValue({
+        id: 'n1',
+        userId: 'user-1',
+        organizationId: 'org-1',
+        type: 'ESCALATION_ASSIGNED',
+        payloadJson: { message: 'Assigned' },
+      }),
       findByDedupeKey: jest.fn().mockResolvedValue(null),
     };
+
+    delivery = { deliver: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: NotificationsRepository, useValue: mockRepo },
+        { provide: NotificationDeliveryService, useValue: delivery },
       ],
     }).compile();
 
@@ -35,6 +46,8 @@ describe('NotificationsService', () => {
 
     expect(repo.findByDedupeKey).toHaveBeenCalledWith('ESCALATION_ASSIGNED:alert-1:user-1');
     expect(repo.create).toHaveBeenCalledTimes(1);
+    expect(delivery.deliver).toHaveBeenCalledTimes(1);
+    expect(delivery.deliver).toHaveBeenCalledWith([expect.objectContaining({ id: 'n1', userId: 'user-1' })]);
   });
 
   it('skips creation when dedupeKey already exists', async () => {
@@ -65,5 +78,6 @@ describe('NotificationsService', () => {
 
     expect(repo.findByDedupeKey).not.toHaveBeenCalled();
     expect(repo.create).not.toHaveBeenCalled();
+    expect(delivery.deliver).not.toHaveBeenCalled();
   });
 });
