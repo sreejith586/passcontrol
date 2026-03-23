@@ -13,30 +13,13 @@ import {
 } from './api';
 import { queryKeys } from './query-keys';
 import type { Notification } from './types';
+import {
+  getNotificationDisplayText,
+  getNotificationDetailText,
+  getNotificationTargetUrl,
+} from './notification-display';
 
 const POLL_INTERVAL_MS = 45_000;
-
-function getDisplayText(n: Notification): string {
-  const msg = n.payload?.message;
-  if (typeof msg === 'string') return msg;
-  switch (n.type) {
-    case 'ESCALATION_ASSIGNED':
-      return 'Escalation assigned to you';
-    case 'ESCALATION_CREATED':
-      return 'New escalation created';
-    case 'ESCALATION_RESOLVED':
-      return 'Escalation resolved';
-    default:
-      return 'New notification';
-  }
-}
-
-function getTargetUrl(n: Notification): string | null {
-  if (n.sourceType === 'ALERT_EVENT') {
-    return `/alerts/${n.sourceId}`;
-  }
-  return null;
-}
 
 export function NotificationBell() {
   const navigate = useNavigate();
@@ -83,7 +66,7 @@ export function NotificationBell() {
     if (!n.readAt) {
       markReadMutation.mutate(n.id);
     }
-    const url = getTargetUrl(n);
+    const url = getNotificationTargetUrl(n);
     if (url) navigate(url);
   };
 
@@ -142,12 +125,19 @@ export function NotificationBell() {
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1">
-                    <span className={n.readAt ? 'font-normal' : 'font-medium'}>
-                      {getDisplayText(n)}
-                    </span>
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      {formatRelative(n.createdAt)}
-                    </span>
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className={n.readAt ? 'font-normal' : 'font-medium'}>
+                        {getNotificationDisplayText(n)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatRelative(n.createdAt)}
+                      </span>
+                    </div>
+                    {getNotificationDetailText(n) && (
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {getNotificationDetailText(n)}
+                      </span>
+                    )}
                   </span>
                 </button>
               ))
