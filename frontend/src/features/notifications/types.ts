@@ -1,4 +1,9 @@
-export type NotificationType = 'ESCALATION_ASSIGNED';
+export type NotificationType =
+  | 'ESCALATION_ASSIGNED'
+  | 'ESCALATION_CREATED'
+  | 'ESCALATION_RESOLVED'
+  | 'CHECKLIST_DUE_SOON'
+  | 'CHECKLIST_OVERDUE';
 export type NotificationSourceType = 'CHECKLIST_RUN' | 'ALERT_EVENT';
 
 export interface Notification {

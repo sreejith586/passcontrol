@@ -82,6 +82,7 @@ export function ChecklistScheduleEditorPage() {
   const [locationId, setLocationId] = useState('');
   const [zoneId, setZoneId] = useState('');
   const [ownerUserId, setOwnerUserId] = useState('');
+  const [watcherUserIds, setWatcherUserIds] = useState<string[]>([]);
 
   const scheduleQuery = useQuery({
     queryKey: queryKeys.detail(id!),
@@ -119,6 +120,9 @@ export function ChecklistScheduleEditorPage() {
       setLocationId(s.locationId ?? '');
       setZoneId(s.zoneId ?? '');
       setOwnerUserId(s.ownerUserId ?? '');
+      setWatcherUserIds(
+        (s.watchers ?? []).map((w) => w.userId),
+      );
     }
   }, [scheduleQuery.data]);
 
@@ -238,17 +242,25 @@ export function ChecklistScheduleEditorPage() {
     const startsAtIso = startsAtDate?.toISOString();
     const endsAtIso = endsAtDate?.toISOString();
 
-    const scopeForCreate: { brandId?: string; locationId?: string; zoneId?: string; ownerUserId?: string } = {};
+    const scopeForCreate: {
+      brandId?: string;
+      locationId?: string;
+      zoneId?: string;
+      ownerUserId?: string;
+      watcherUserIds?: string[];
+    } = {};
     if (brandId) scopeForCreate.brandId = brandId;
     if (locationId) scopeForCreate.locationId = locationId;
     if (zoneId) scopeForCreate.zoneId = zoneId;
     if (ownerUserId) scopeForCreate.ownerUserId = ownerUserId;
+    if (watcherUserIds.length > 0) scopeForCreate.watcherUserIds = watcherUserIds;
 
     const scopeForUpdate = {
       brandId: brandId || null,
       locationId: locationId || null,
       zoneId: zoneId || null,
       ownerUserId: ownerUserId || null,
+      watcherUserIds,
     };
 
     if (isNew) {
@@ -459,6 +471,48 @@ export function ChecklistScheduleEditorPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <h3 className="mb-1.5 text-sm font-medium text-foreground">
+            Watchers (optional)
+          </h3>
+          <p className="mb-2 text-xs text-slate-500">
+            Watchers receive important notifications about this scheduled checklist
+            but are not responsible for completing it.
+          </p>
+          <div className="max-h-40 overflow-y-auto rounded-md border border-border">
+            <ul className="divide-y divide-border">
+              {(usersQuery.data?.items ?? []).map((u) => {
+                const checked = watcherUserIds.includes(u.id);
+                return (
+                  <li key={u.id}>
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setWatcherUserIds((prev) =>
+                            checked
+                              ? prev.filter((id) => id !== u.id)
+                              : [...prev, u.id],
+                          );
+                        }}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                      <span className="text-sm font-medium">{u.name}</span>
+                      <span className="text-xs text-slate-500">{u.email}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          {watcherUserIds.length > 0 && (
+            <p className="mt-1 text-xs text-slate-500">
+              {watcherUserIds.length} watcher{watcherUserIds.length !== 1 ? 's' : ''} selected
+            </p>
+          )}
         </div>
 
         <div>

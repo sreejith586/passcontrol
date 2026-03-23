@@ -8,6 +8,11 @@ export interface ChecklistScheduleTemplate {
   status: string;
 }
 
+export interface ScheduleWatcher {
+  userId: string;
+  user: { id: string; name: string };
+}
+
 export interface ChecklistSchedule {
   id: string;
   organizationId: string;
@@ -25,6 +30,7 @@ export interface ChecklistSchedule {
   zoneId: string | null;
   ownerUserId: string | null;
   ownerUser?: { id: string; name: string } | null;
+  watchers?: ScheduleWatcher[];
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +56,7 @@ export interface UpdateSchedulePayload {
   locationId?: string | null;
   zoneId?: string | null;
   ownerUserId?: string | null;
+  watcherUserIds?: string[];
   startsAt?: string;
   endsAt?: string;
 }

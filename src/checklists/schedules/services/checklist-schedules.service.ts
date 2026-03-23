@@ -73,6 +73,19 @@ export class ChecklistSchedulesService {
       }
     }
 
+    const watcherUserIds = [...new Set(dto.watcherUserIds ?? [])].filter(Boolean);
+    for (const userId of watcherUserIds) {
+      const belongsToOrg = await this.usersService.belongsToOrganization(
+        userId,
+        ctx.organizationId,
+      );
+      if (!belongsToOrg) {
+        throw new BadRequestException(
+          `Watcher user ${userId} not found or does not belong to this organization`,
+        );
+      }
+    }
+
     const created = await this.repo.create(ctx.organizationId, {
       checklistTemplateId: dto.checklistTemplateId,
       name: dto.name,
@@ -81,8 +94,10 @@ export class ChecklistSchedulesService {
       brandId: dto.brandId ?? null,
       locationId: dto.locationId ?? null,
       zoneId: dto.zoneId ?? null,
+      ownerUserId: dto.ownerUserId ?? null,
       startsAt,
       endsAt,
+      watcherUserIds,
     });
 
     const nextRunAt = this.recurrence.computeNextRunAt(
@@ -191,6 +206,24 @@ export class ChecklistSchedulesService {
       }
     }
 
+    const watcherUserIds =
+      dto.watcherUserIds !== undefined
+        ? [...new Set(dto.watcherUserIds)].filter(Boolean)
+        : undefined;
+    if (watcherUserIds !== undefined) {
+      for (const userId of watcherUserIds) {
+        const belongsToOrg = await this.usersService.belongsToOrganization(
+          userId,
+          ctx.organizationId,
+        );
+        if (!belongsToOrg) {
+          throw new BadRequestException(
+            `Watcher user ${userId} not found or does not belong to this organization`,
+          );
+        }
+      }
+    }
+
     const updated = await this.repo.update(ctx.organizationId, id, {
       name: dto.name,
       timezone: dto.timezone,
@@ -201,6 +234,7 @@ export class ChecklistSchedulesService {
       ownerUserId: dto.ownerUserId,
       startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
       endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+      watcherUserIds,
     });
 
     const recurrenceFieldsChanged =

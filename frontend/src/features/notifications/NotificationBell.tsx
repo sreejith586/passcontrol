@@ -19,7 +19,16 @@ const POLL_INTERVAL_MS = 45_000;
 function getDisplayText(n: Notification): string {
   const msg = n.payload?.message;
   if (typeof msg === 'string') return msg;
-  return n.type === 'ESCALATION_ASSIGNED' ? 'Escalation assigned to you' : 'New notification';
+  switch (n.type) {
+    case 'ESCALATION_ASSIGNED':
+      return 'Escalation assigned to you';
+    case 'ESCALATION_CREATED':
+      return 'New escalation created';
+    case 'ESCALATION_RESOLVED':
+      return 'Escalation resolved';
+    default:
+      return 'New notification';
+  }
 }
 
 function getTargetUrl(n: Notification): string | null {

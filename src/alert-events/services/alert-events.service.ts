@@ -46,6 +46,7 @@ import {
   createAlertResolvedEvent,
 } from '../../common/domain-events/events/alert-resolved.event';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { ChecklistSchedulesRepository } from '../../checklists/schedules/repositories/checklist-schedules.repository';
 
 @Injectable()
 export class AlertEventsService {
@@ -58,6 +59,7 @@ export class AlertEventsService {
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly scheduleWatchersRepo: ChecklistSchedulesRepository,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: DomainEventPublisher,
   ) {}
@@ -105,6 +107,33 @@ export class AlertEventsService {
       await this.activities.logCreated(payload.organizationId, alert.id, tx);
       return alert;
     });
+    // ESCALATION_CREATED: notify schedule watchers when alert comes from checklist run.
+    let escCreatedRecipients: string[] = [];
+    if (payload.sourceType === 'CHECKLIST_RUN_ITEM') {
+      const runId = payload.payload?.runId as string | undefined;
+      if (runId) {
+        escCreatedRecipients = await this.scheduleWatchersRepo.getWatcherUserIdsForRun(
+          payload.organizationId,
+          runId,
+        );
+      }
+    }
+    for (const userId of escCreatedRecipients) {
+      await this.notifications.createNotification(payload.organizationId, {
+        type: 'ESCALATION_CREATED',
+        userIds: [userId],
+        sourceType: 'ALERT_EVENT',
+        sourceId: created.id,
+        payload: {
+          alertEventId: created.id,
+          severity: created.severity ?? undefined,
+          message: 'New escalation created',
+          templateNameSnapshot: (payload.payload?.templateNameSnapshot as string) ?? undefined,
+          label: (payload.payload?.label as string) ?? undefined,
+        },
+        dedupeKey: `ESCALATION_CREATED:${created.id}:${userId}`,
+      });
+    }
     return created;
   }
 
@@ -790,6 +819,33 @@ export class AlertEventsService {
         zoneId: updated.zoneId ?? null,
       });
       await this.domainEvents.publish(event);
+      // Notify assignee + schedule watchers (dedupe if user is both).
+      const assigneeId = existing.assignedToUserId;
+      let watcherIds: string[] = [];
+      if (existing.sourceType === 'CHECKLIST_RUN_ITEM') {
+        const runId = (existing.payloadJson as Record<string, unknown>)?.runId as string | undefined;
+        if (runId) {
+          watcherIds = await this.scheduleWatchersRepo.getWatcherUserIdsForRun(
+            ctx.organizationId,
+            runId,
+          );
+        }
+      }
+      const recipientIds = [...new Set([assigneeId, ...watcherIds].filter(Boolean) as string[])];
+      for (const userId of recipientIds) {
+        await this.notifications.createNotification(ctx.organizationId, {
+          type: 'ESCALATION_RESOLVED',
+          userIds: [userId],
+          sourceType: 'ALERT_EVENT',
+          sourceId: id,
+          payload: {
+            alertEventId: id,
+            severity: updated.severity ?? undefined,
+            message: 'Escalation resolved',
+          },
+          dedupeKey: `ESCALATION_RESOLVED:${id}:${userId}`,
+        });
+      }
     }
     await this.audit.recordWrite('ALERT_RESOLVE', ctx, id, {
       before: existing,

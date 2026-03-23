@@ -7,12 +7,15 @@ import { AlertEventCommentsRepository } from '../../alert-event-comments/reposit
 import { UsersService } from '../../users/services/users.service';
 import { AuditLogsService } from '../../audit/services/audit-logs.service';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { ChecklistSchedulesRepository } from '../../checklists/schedules/repositories/checklist-schedules.repository';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { DOMAIN_EVENT_PUBLISHER } from '../../common/domain-events/contracts/domain-event-publisher.interface';
 
 describe('AlertEventsService (activity integration)', () => {
   let service: AlertEventsService;
   let repo: jest.Mocked<AlertEventsRepository>;
+  let scheduleRepo: jest.Mocked<Pick<ChecklistSchedulesRepository, 'getWatcherUserIdsForRun'>>;
+  let createNotification: jest.Mock;
   let activities: {
     logCreated: jest.Mock;
     logAcknowledged: jest.Mock;
@@ -72,6 +75,7 @@ describe('AlertEventsService (activity integration)', () => {
       },
     } as unknown as { $transaction: jest.Mock };
 
+    createNotification = jest.fn();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlertEventsService,
@@ -81,7 +85,11 @@ describe('AlertEventsService (activity integration)', () => {
         { provide: UsersService, useValue: { belongsToOrganization: jest.fn().mockResolvedValue(true) } },
         { provide: AlertEventCommentsRepository, useValue: { create: jest.fn() } },
         { provide: AuditLogsService, useValue: { recordWrite: jest.fn() } },
-        { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
+        { provide: NotificationsService, useValue: { createNotification } },
+        {
+          provide: ChecklistSchedulesRepository,
+          useValue: { getWatcherUserIdsForRun: jest.fn().mockResolvedValue([]) },
+        },
         { provide: PrismaService, useValue: prisma },
         { provide: DOMAIN_EVENT_PUBLISHER, useValue: { publish: jest.fn() } },
       ],
@@ -89,6 +97,7 @@ describe('AlertEventsService (activity integration)', () => {
 
     service = module.get(AlertEventsService);
     repo = module.get(AlertEventsRepository);
+    scheduleRepo = module.get(ChecklistSchedulesRepository);
   });
 
   describe('createFromPayload', () => {
@@ -109,6 +118,69 @@ describe('AlertEventsService (activity integration)', () => {
         'alert-1',
         expect.anything(),
       );
+    });
+
+    it('creates ESCALATION_CREATED notifications for schedule watchers when run has schedule', async () => {
+      scheduleRepo.getWatcherUserIdsForRun.mockResolvedValue([
+        'user-2',
+        'user-3',
+      ]);
+
+      await service.createFromPayload({
+        organizationId: mockOrgId,
+        sourceType: 'CHECKLIST_RUN_ITEM',
+        sourceId: 'item-1',
+        type: 'CHECKLIST_ITEM_FAIL',
+        scope: {},
+        payload: {
+          runId: 'run-1',
+          templateNameSnapshot: 'Daily',
+          label: 'Check temp',
+          severity: 'CRITICAL',
+        },
+      });
+
+      expect(scheduleRepo.getWatcherUserIdsForRun).toHaveBeenCalledWith(
+        mockOrgId,
+        'run-1',
+      );
+      expect(createNotification).toHaveBeenCalledTimes(2);
+      expect(createNotification).toHaveBeenNthCalledWith(
+        1,
+        mockOrgId,
+        expect.objectContaining({
+          type: 'ESCALATION_CREATED',
+          userIds: ['user-2'],
+          sourceType: 'ALERT_EVENT',
+          sourceId: 'alert-1',
+          dedupeKey: 'ESCALATION_CREATED:alert-1:user-2',
+          payload: expect.objectContaining({
+            alertEventId: 'alert-1',
+            message: 'New escalation created',
+          }),
+        }),
+      );
+      expect(createNotification).toHaveBeenNthCalledWith(
+        2,
+        mockOrgId,
+        expect.objectContaining({
+          userIds: ['user-3'],
+          dedupeKey: 'ESCALATION_CREATED:alert-1:user-3',
+        }),
+      );
+    });
+
+    it('does NOT create ESCALATION_CREATED when run has no watchers', async () => {
+      await service.createFromPayload({
+        organizationId: mockOrgId,
+        sourceType: 'CHECKLIST_RUN_ITEM',
+        sourceId: 'item-1',
+        type: 'CHECKLIST_ITEM_FAIL',
+        scope: {},
+        payload: { runId: 'run-1', templateNameSnapshot: 'Daily' },
+      });
+
+      expect(createNotification).not.toHaveBeenCalled();
     });
   });
 
@@ -175,6 +247,117 @@ describe('AlertEventsService (activity integration)', () => {
         'Fixed',
         expect.anything(),
       );
+    });
+
+    it('creates ESCALATION_RESOLVED notification for assignee when alert is assigned', async () => {
+      const existing = {
+        ...mockCreatedAlert,
+        status: 'ACKNOWLEDGED',
+        assignedToUserId: 'user-2',
+        severity: 'CRITICAL',
+      };
+      const updated = {
+        ...existing,
+        status: 'RESOLVED',
+        resolvedAt: new Date(),
+        resolutionNote: 'Fixed',
+        severity: 'CRITICAL',
+      };
+      repo.findById.mockResolvedValue(existing as never);
+      repo.update.mockResolvedValue(updated as never);
+
+      await service.resolve(mockCtx, 'alert-1', 'Fixed');
+
+      expect(createNotification).toHaveBeenCalledTimes(1);
+      expect(createNotification).toHaveBeenCalledWith(
+        mockOrgId,
+        expect.objectContaining({
+          type: 'ESCALATION_RESOLVED',
+          userIds: ['user-2'],
+          sourceType: 'ALERT_EVENT',
+          sourceId: 'alert-1',
+          dedupeKey: 'ESCALATION_RESOLVED:alert-1:user-2',
+          payload: expect.objectContaining({ message: 'Escalation resolved' }),
+        }),
+      );
+    });
+
+    it('does NOT create ESCALATION_RESOLVED when alert has no assignee and no watchers', async () => {
+      const existing = {
+        ...mockCreatedAlert,
+        status: 'ACKNOWLEDGED',
+        assignedToUserId: null,
+        sourceType: 'CHECKLIST_RUN_ITEM',
+        payloadJson: { runId: 'run-1' },
+      };
+      const updated = {
+        ...mockCreatedAlert,
+        status: 'RESOLVED',
+        resolvedAt: new Date(),
+        resolutionNote: 'Fixed',
+      };
+      repo.findById.mockResolvedValue(existing as never);
+      repo.update.mockResolvedValue(updated as never);
+      scheduleRepo.getWatcherUserIdsForRun.mockResolvedValue([]);
+
+      await service.resolve(mockCtx, 'alert-1', 'Fixed');
+
+      expect(createNotification).not.toHaveBeenCalled();
+    });
+
+    it('includes schedule watchers in ESCALATION_RESOLVED when alert is from checklist run', async () => {
+      const existing = {
+        ...mockCreatedAlert,
+        status: 'ACKNOWLEDGED',
+        assignedToUserId: null,
+        sourceType: 'CHECKLIST_RUN_ITEM',
+        payloadJson: { runId: 'run-1' },
+      };
+      const updated = {
+        ...mockCreatedAlert,
+        status: 'RESOLVED',
+        resolvedAt: new Date(),
+        resolutionNote: 'Fixed',
+      };
+      repo.findById.mockResolvedValue(existing as never);
+      repo.update.mockResolvedValue(updated as never);
+      scheduleRepo.getWatcherUserIdsForRun.mockResolvedValue(['user-2', 'user-3']);
+
+      await service.resolve(mockCtx, 'alert-1', 'Fixed');
+
+      expect(createNotification).toHaveBeenCalledTimes(2);
+      expect(createNotification).toHaveBeenNthCalledWith(
+        1,
+        mockOrgId,
+        expect.objectContaining({
+          type: 'ESCALATION_RESOLVED',
+          userIds: ['user-2'],
+          dedupeKey: 'ESCALATION_RESOLVED:alert-1:user-2',
+        }),
+      );
+    });
+
+    it('dedupes assignee and watchers when user is both', async () => {
+      const existing = {
+        ...mockCreatedAlert,
+        status: 'ACKNOWLEDGED',
+        assignedToUserId: 'user-2',
+        sourceType: 'CHECKLIST_RUN_ITEM',
+        payloadJson: { runId: 'run-1' },
+      };
+      const updated = {
+        ...mockCreatedAlert,
+        status: 'RESOLVED',
+        resolvedAt: new Date(),
+        resolutionNote: 'Fixed',
+      };
+      repo.findById.mockResolvedValue(existing as never);
+      repo.update.mockResolvedValue(updated as never);
+      scheduleRepo.getWatcherUserIdsForRun.mockResolvedValue(['user-2', 'user-3']);
+
+      await service.resolve(mockCtx, 'alert-1', 'Fixed');
+
+      expect(createNotification).toHaveBeenCalledTimes(2); // user-2 once, user-3 once
     });
 
     it('mutation and activity logging are atomic (transaction)', async () => {

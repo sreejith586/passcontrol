@@ -15,6 +15,12 @@ const SCHEDULE_INCLUDE = {
   ownerUser: {
     select: { id: true, name: true },
   },
+  watchers: {
+    select: {
+      userId: true,
+      user: { select: { id: true, name: true } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -34,24 +40,40 @@ export class ChecklistSchedulesRepository {
       ownerUserId?: string | null;
       startsAt?: Date | null;
       endsAt?: Date | null;
+      watcherUserIds?: string[];
     },
   ) {
-    return this.prisma.checklistSchedule.create({
-      data: {
-        organizationId,
-        checklistTemplateId: data.checklistTemplateId,
-        name: data.name,
-        timezone: data.timezone,
-        rrule: data.rrule,
-        brandId: data.brandId ?? null,
-        locationId: data.locationId ?? null,
-        zoneId: data.zoneId ?? null,
-        ownerUserId: data.ownerUserId ?? null,
-        startsAt: data.startsAt ?? null,
-        endsAt: data.endsAt ?? null,
-        isActive: true,
-      },
-      include: SCHEDULE_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.checklistSchedule.create({
+        data: {
+          organizationId,
+          checklistTemplateId: data.checklistTemplateId,
+          name: data.name,
+          timezone: data.timezone,
+          rrule: data.rrule,
+          brandId: data.brandId ?? null,
+          locationId: data.locationId ?? null,
+          zoneId: data.zoneId ?? null,
+          ownerUserId: data.ownerUserId ?? null,
+          startsAt: data.startsAt ?? null,
+          endsAt: data.endsAt ?? null,
+          isActive: true,
+        },
+      });
+      const uniqueWatcherIds = [...new Set(data.watcherUserIds ?? [])].filter(Boolean);
+      for (const userId of uniqueWatcherIds) {
+        await tx.checklistScheduleWatcher.create({
+          data: {
+            organizationId,
+            checklistScheduleId: created.id,
+            userId,
+          },
+        });
+      }
+      return tx.checklistSchedule.findUniqueOrThrow({
+        where: { id: created.id },
+        include: SCHEDULE_INCLUDE,
+      });
     });
   }
 
@@ -103,6 +125,7 @@ export class ChecklistSchedulesRepository {
       ownerUserId?: string | null;
       startsAt?: Date | null;
       endsAt?: Date | null;
+      watcherUserIds?: string[];
     },
   ) {
     const updateData: Prisma.ChecklistScheduleUpdateInput = {};
@@ -129,10 +152,30 @@ export class ChecklistSchedulesRepository {
       throw new NotFoundException('Checklist schedule not found');
     }
 
-    return this.prisma.checklistSchedule.update({
-      where: { id },
-      data: updateData,
-      include: SCHEDULE_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      await tx.checklistSchedule.update({
+        where: { id },
+        data: updateData,
+      });
+      if (data.watcherUserIds !== undefined) {
+        await tx.checklistScheduleWatcher.deleteMany({
+          where: { checklistScheduleId: id },
+        });
+        const uniqueIds = [...new Set(data.watcherUserIds)].filter(Boolean);
+        for (const userId of uniqueIds) {
+          await tx.checklistScheduleWatcher.create({
+            data: {
+              organizationId,
+              checklistScheduleId: id,
+              userId,
+            },
+          });
+        }
+      }
+      return tx.checklistSchedule.findUniqueOrThrow({
+        where: { id },
+        include: SCHEDULE_INCLUDE,
+      });
     });
   }
 
@@ -177,6 +220,55 @@ export class ChecklistSchedulesRepository {
       where: { id: scheduleId, organizationId },
       data: { nextGenerationAttemptAt },
     });
+  }
+
+  /**
+   * Returns watcher user IDs for the schedule linked to the given run.
+   * Returns [] if run has no schedule or schedule has no watchers.
+   */
+  async getWatcherUserIdsForRun(
+    organizationId: string,
+    runId: string,
+  ): Promise<string[]> {
+    const run = await this.prisma.checklistRun.findFirst({
+      where: { id: runId, organizationId },
+      select: { checklistScheduleId: true },
+    });
+    if (!run?.checklistScheduleId) return [];
+    const watchers = await this.prisma.checklistScheduleWatcher.findMany({
+      where: {
+        checklistScheduleId: run.checklistScheduleId,
+        organizationId,
+      },
+      select: { userId: true },
+    });
+    return watchers.map((w) => w.userId);
+  }
+
+  /**
+   * Returns a map of scheduleId -> userId[] for batch watcher resolution.
+   * Only includes schedule IDs that have watchers.
+   */
+  async getWatcherUserIdsByScheduleIds(
+    organizationId: string,
+    scheduleIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const unique = [...new Set(scheduleIds)].filter(Boolean);
+    if (unique.length === 0) return new Map();
+    const rows = await this.prisma.checklistScheduleWatcher.findMany({
+      where: {
+        checklistScheduleId: { in: unique },
+        organizationId,
+      },
+      select: { checklistScheduleId: true, userId: true },
+    });
+    const map = new Map<string, string[]>();
+    for (const row of rows) {
+      const existing = map.get(row.checklistScheduleId) ?? [];
+      existing.push(row.userId);
+      map.set(row.checklistScheduleId, existing);
+    }
+    return map;
   }
 
   async updateNextRunAt(

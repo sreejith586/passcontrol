@@ -1,4 +1,4 @@
-import { IsUUID, IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsUUID, IsOptional, IsString, IsDateString, IsArray } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateScheduleDto {
@@ -36,6 +36,15 @@ export class UpdateScheduleDto {
   @IsOptional()
   @IsUUID()
   ownerUserId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'User IDs to receive notifications (replaces existing watchers)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  watcherUserIds?: string[];
 
   @ApiPropertyOptional({ format: 'date-time' })
   @IsOptional()

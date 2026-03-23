@@ -672,6 +672,10 @@ model ChecklistRunItemSnapshot {
 // ---- Notifications & Schedule Watchers ----
 enum NotificationType {
   ESCALATION_ASSIGNED
+  ESCALATION_CREATED
+  ESCALATION_RESOLVED
+  CHECKLIST_DUE_SOON
+  CHECKLIST_OVERDUE
 }
 
 enum NotificationSourceType {

@@ -21,6 +21,10 @@ import { ChecklistScheduleCronService } from './services/checklist-schedule-cron
     ChecklistScheduleRunGeneratorService,
     ChecklistScheduleCronService,
   ],
-  exports: [ChecklistSchedulesService, ChecklistScheduleRunGeneratorService],
+  exports: [
+    ChecklistSchedulesService,
+    ChecklistScheduleRunGeneratorService,
+    ChecklistSchedulesRepository,
+  ],
 })
 export class ChecklistSchedulesModule {}

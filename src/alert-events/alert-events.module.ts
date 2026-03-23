@@ -7,6 +7,7 @@ import { AlertEventActivitiesModule } from '../alert-event-activities/alert-even
 import { AlertEventCommentsModule } from '../alert-event-comments/alert-event-comments.module';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ChecklistSchedulesModule } from '../checklists/schedules/checklist-schedules.module';
 import { AlertEventsController } from './controllers/alert-events.controller';
 import { AlertEventsService } from './services/alert-events.service';
 import { AlertEventsRepository } from './repositories/alert-events.repository';
@@ -23,6 +24,7 @@ import { AlertSlaResolverService } from './services/alert-sla-resolver.service';
     forwardRef(() => AlertEventCommentsModule),
     UsersModule,
     NotificationsModule,
+    ChecklistSchedulesModule,
   ],
   controllers: [AlertEventsController],
   providers: [
