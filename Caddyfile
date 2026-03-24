@@ -2,7 +2,7 @@ passcontrol.io {
 
   encode gzip
 
-  handle_path /api/* {
+  handle /v1/* {
     reverse_proxy backend:3000
   }
 
