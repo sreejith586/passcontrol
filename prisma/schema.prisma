@@ -17,32 +17,48 @@ enum ChecklistItemSeverity {
   CRITICAL
 }
 
+/// Tenant offering: hosted demo vs full standard (billing / limits differ at org level).
+enum OrganizationTenantType {
+  DEMO
+  STANDARD
+}
+
+/// Lifecycle for trial gating and enforcement (distinct from soft-delete).
+enum OrganizationTenantStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
 // ---- Identity & RBAC ----
 model User {
-  id                  String    @id @default(uuid()) @db.Uuid
-  email               String    @unique
-  name                String
-  passwordHash        String?   @map("password_hash")
-  phoneNumber         String?   @map("phone_number")
-  jobTitle            String?   @map("job_title")
-  passwordUpdatedAt   DateTime? @map("password_updated_at") @db.Timestamptz
-  isActive            Boolean   @default(true) @map("is_active")
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique
+  name              String
+  passwordHash      String?   @map("password_hash")
+  phoneNumber       String?   @map("phone_number")
+  jobTitle          String?   @map("job_title")
+  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz
+  passwordUpdatedAt DateTime? @map("password_updated_at") @db.Timestamptz
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
 
-  roleAssignments       UserRoleAssignment[]
-  auditLogs             AuditLog[]           @relation("AuditActor")
-  assignedAlerts        AlertEvent[]         @relation("AssignedTo")
-  ownedSchedules        ChecklistSchedule[]  @relation("ScheduleOwner")
-  assignedChecklistRuns ChecklistRun[]        @relation("ChecklistRunAssignedToUser")
-  performedChecklistRuns ChecklistRun[]        @relation("ChecklistRunPerformedByUser")
-  passwordSetupTokens   PasswordSetupToken[]
-  passwordResetTokens   PasswordResetToken[]
-  scheduleWatchers              ChecklistScheduleWatcher[]
-  notifications                 Notification[]
-  userNotificationPreferences   UserNotificationPreference[]
-  notificationDeliveries        NotificationDelivery[]
+  roleAssignments             UserRoleAssignment[]
+  auditLogs                   AuditLog[]                   @relation("AuditActor")
+  assignedAlerts              AlertEvent[]                 @relation("AssignedTo")
+  ownedSchedules              ChecklistSchedule[]          @relation("ScheduleOwner")
+  assignedChecklistRuns       ChecklistRun[]               @relation("ChecklistRunAssignedToUser")
+  performedChecklistRuns      ChecklistRun[]               @relation("ChecklistRunPerformedByUser")
+  passwordSetupTokens         PasswordSetupToken[]
+  passwordResetTokens         PasswordResetToken[]
+  emailVerificationTokens     EmailVerificationToken[]
+  scheduleWatchers            ChecklistScheduleWatcher[]
+  notifications               Notification[]
+  userNotificationPreferences UserNotificationPreference[]
+  notificationDeliveries      NotificationDelivery[]
 
   @@map("users")
 }
@@ -51,9 +67,9 @@ model PasswordSetupToken {
   id        String    @id @default(uuid()) @db.Uuid
   userId    String    @map("user_id") @db.Uuid
   tokenHash String    @map("token_hash")
-  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
   usedAt    DateTime? @map("used_at") @db.Timestamptz
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -78,18 +94,33 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  usedAt    DateTime? @map("used_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
 model OrganizationEmailSettings {
-  id                   String    @id @default(uuid()) @db.Uuid
-  organizationId       String    @unique @map("organization_id") @db.Uuid
-  smtpHost             String    @map("smtp_host")
-  smtpPort             Int       @map("smtp_port")
-  smtpUser             String?   @map("smtp_user")
+  id                    String   @id @default(uuid()) @db.Uuid
+  organizationId        String   @unique @map("organization_id") @db.Uuid
+  smtpHost              String   @map("smtp_host")
+  smtpPort              Int      @map("smtp_port")
+  smtpUser              String?  @map("smtp_user")
   smtpPasswordEncrypted String?  @map("smtp_password_encrypted")
-  smtpCaCertPem        String?   @map("smtp_ca_cert_pem")
-  fromEmail            String    @map("from_email")
-  fromName             String?   @map("from_name")
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  smtpCaCertPem         String?  @map("smtp_ca_cert_pem")
+  fromEmail             String   @map("from_email")
+  fromName              String?  @map("from_name")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -97,15 +128,26 @@ model OrganizationEmailSettings {
 }
 
 model Organization {
-  id                           String    @id @default(uuid()) @db.Uuid
-  name                         String
-  requireResolutionNoteOnResolve Boolean  @default(false) @map("require_resolution_note_on_resolve")
-  requireReopenNoteOnReopen      Boolean  @default(false) @map("require_reopen_note_on_reopen")
-  defaultTimezone               String?  @map("default_timezone")
-  defaultTemperatureUnit        String?  @map("default_temperature_unit")
-  createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt                    DateTime? @map("deleted_at") @db.Timestamptz
+  id                             String                   @id @default(uuid()) @db.Uuid
+  name                           String
+  tenantType                     OrganizationTenantType   @default(STANDARD) @map("tenant_type")
+  tenantStatus                   OrganizationTenantStatus @default(ACTIVE) @map("tenant_status")
+  isSelfOnboarded                Boolean                  @default(false) @map("is_self_onboarded")
+  trialEndsAt                    DateTime?                @map("trial_ends_at") @db.Timestamptz
+  activatedAt                    DateTime?                @map("activated_at") @db.Timestamptz
+  suspendedAt                    DateTime?                @map("suspended_at") @db.Timestamptz
+  signupSource                   String?                  @map("signup_source")
+  maxUsers                       Int?                     @map("max_users")
+  maxLocations                   Int?                     @map("max_locations")
+  maxTemplates                   Int?                     @map("max_templates")
+  maxSchedules                   Int?                     @map("max_schedules")
+  requireResolutionNoteOnResolve Boolean                  @default(false) @map("require_resolution_note_on_resolve")
+  requireReopenNoteOnReopen      Boolean                  @default(false) @map("require_reopen_note_on_reopen")
+  defaultTimezone                String?                  @map("default_timezone")
+  defaultTemperatureUnit         String?                  @map("default_temperature_unit")
+  createdAt                      DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt                      DateTime?                @map("deleted_at") @db.Timestamptz
 
   emailSettings                OrganizationEmailSettings?
   auditLogs                    AuditLog[]                    @relation("AuditOrg")
@@ -133,7 +175,7 @@ model Organization {
   Asset                        Asset[]
   notifications                Notification[]
   checklistScheduleWatchers    ChecklistScheduleWatcher[]
-  userNotificationPreferences UserNotificationPreference[]
+  userNotificationPreferences  UserNotificationPreference[]
   notificationDeliveries       NotificationDelivery[]
 
   @@map("organizations")
@@ -153,14 +195,14 @@ model Brand {
 }
 
 model Location {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
-  brandId        String   @map("brand_id") @db.Uuid
-  name           String
-  timezone       String
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  brandId         String   @map("brand_id") @db.Uuid
+  name            String
+  timezone        String
   temperatureUnit String?  @map("temperature_unit")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id])
   brand        Brand        @relation(fields: [brandId], references: [id])
@@ -376,17 +418,17 @@ enum AlertEventCommentType {
 }
 
 model AlertSlaPolicy {
-  id                      String   @id @default(uuid()) @db.Uuid
-  organizationId          String   @map("organization_id") @db.Uuid
-  brandId                 String?  @map("brand_id") @db.Uuid
-  locationId              String?  @map("location_id") @db.Uuid
-  zoneId                  String?  @map("zone_id") @db.Uuid
-  severity                String
-  acknowledgeWithinMinutes Int     @map("acknowledge_within_minutes")
-  resolveWithinMinutes    Int      @map("resolve_within_minutes")
-  isActive                Boolean  @default(true) @map("is_active")
-  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                       String   @id @default(uuid()) @db.Uuid
+  organizationId           String   @map("organization_id") @db.Uuid
+  brandId                  String?  @map("brand_id") @db.Uuid
+  locationId               String?  @map("location_id") @db.Uuid
+  zoneId                   String?  @map("zone_id") @db.Uuid
+  severity                 String
+  acknowledgeWithinMinutes Int      @map("acknowledge_within_minutes")
+  resolveWithinMinutes     Int      @map("resolve_within_minutes")
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id])
 
@@ -397,33 +439,33 @@ model AlertSlaPolicy {
 }
 
 model AlertEvent {
-  id                       String    @id @default(uuid()) @db.Uuid
-  organizationId           String    @map("organization_id") @db.Uuid
-  brandId                  String?   @map("brand_id") @db.Uuid
-  locationId               String?   @map("location_id") @db.Uuid
-  zoneId                   String?   @map("zone_id") @db.Uuid
-  assetId                  String?   @map("asset_id") @db.Uuid
-  sourceType               String    @map("source_type")
-  sourceId                 String    @map("source_id")
+  id                       String      @id @default(uuid()) @db.Uuid
+  organizationId           String      @map("organization_id") @db.Uuid
+  brandId                  String?     @map("brand_id") @db.Uuid
+  locationId               String?     @map("location_id") @db.Uuid
+  zoneId                   String?     @map("zone_id") @db.Uuid
+  assetId                  String?     @map("asset_id") @db.Uuid
+  sourceType               String      @map("source_type")
+  sourceId                 String      @map("source_id")
   type                     String
   status                   AlertStatus @default(OPEN)
   severity                 String?
-  acknowledgeWithinMinutes Int       @default(60) @map("acknowledge_within_minutes")
-  resolveWithinMinutes     Int       @default(240) @map("resolve_within_minutes")
-  payloadJson              Json?     @map("payload_json")
-  triggeredAt              DateTime  @default(now()) @map("triggered_at") @db.Timestamptz
-  acknowledgedAt           DateTime? @map("acknowledged_at") @db.Timestamptz
-  acknowledgedByUserId     String?   @map("acknowledged_by_user_id") @db.Uuid
-  resolvedAt               DateTime? @map("resolved_at") @db.Timestamptz
-  resolvedByUserId         String?   @map("resolved_by_user_id") @db.Uuid
-  resolutionNote           String?   @map("resolution_note")
-  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  assignedToUserId         String?   @map("assigned_to_user_id") @db.Uuid
-  assignedAt               DateTime? @map("assigned_at") @db.Timestamptz
-  assignedByUserId         String?   @map("assigned_by_user_id") @db.Uuid
+  acknowledgeWithinMinutes Int         @default(60) @map("acknowledge_within_minutes")
+  resolveWithinMinutes     Int         @default(240) @map("resolve_within_minutes")
+  payloadJson              Json?       @map("payload_json")
+  triggeredAt              DateTime    @default(now()) @map("triggered_at") @db.Timestamptz
+  acknowledgedAt           DateTime?   @map("acknowledged_at") @db.Timestamptz
+  acknowledgedByUserId     String?     @map("acknowledged_by_user_id") @db.Uuid
+  resolvedAt               DateTime?   @map("resolved_at") @db.Timestamptz
+  resolvedByUserId         String?     @map("resolved_by_user_id") @db.Uuid
+  resolutionNote           String?     @map("resolution_note")
+  createdAt                DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  assignedToUserId         String?     @map("assigned_to_user_id") @db.Uuid
+  assignedAt               DateTime?   @map("assigned_at") @db.Timestamptz
+  assignedByUserId         String?     @map("assigned_by_user_id") @db.Uuid
 
-  organization   Organization        @relation(fields: [organizationId], references: [id])
-  assignedToUser User?               @relation("AssignedTo", fields: [assignedToUserId], references: [id])
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  assignedToUser User?                @relation("AssignedTo", fields: [assignedToUserId], references: [id])
   activities     AlertEventActivity[]
   comments       AlertEventComment[]
 
@@ -564,22 +606,22 @@ model ChecklistTemplateSection {
 }
 
 model ChecklistTemplateItem {
-  id                         String   @id @default(uuid()) @db.Uuid
-  organizationId             String   @map("organization_id") @db.Uuid
-  checklistTemplateId        String   @map("checklist_template_id") @db.Uuid
-  checklistTemplateSectionId String   @map("checklist_template_section_id") @db.Uuid
-  itemType                   String   @map("item_type")
+  id                         String                @id @default(uuid()) @db.Uuid
+  organizationId             String                @map("organization_id") @db.Uuid
+  checklistTemplateId        String                @map("checklist_template_id") @db.Uuid
+  checklistTemplateSectionId String                @map("checklist_template_section_id") @db.Uuid
+  itemType                   String                @map("item_type")
   label                      String
-  helpText                   String?  @map("help_text")
-  isRequired                 Boolean  @default(true) @map("is_required")
-  requiresEvidenceOnFail     Boolean  @default(false) @map("requires_evidence_on_fail")
-  requiresCommentOnFail     Boolean  @default(false) @map("requires_comment_on_fail")
+  helpText                   String?               @map("help_text")
+  isRequired                 Boolean               @default(true) @map("is_required")
+  requiresEvidenceOnFail     Boolean               @default(false) @map("requires_evidence_on_fail")
+  requiresCommentOnFail      Boolean               @default(false) @map("requires_comment_on_fail")
   severity                   ChecklistItemSeverity @default(MEDIUM)
-  failureCreatesIncident     Boolean  @default(false) @map("failure_creates_incident")
-  configJson                 Json?    @map("config_json")
-  sortOrder                  Int      @map("sort_order")
-  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  failureCreatesIncident     Boolean               @default(false) @map("failure_creates_incident")
+  configJson                 Json?                 @map("config_json")
+  sortOrder                  Int                   @map("sort_order")
+  createdAt                  DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                  DateTime              @updatedAt @map("updated_at") @db.Timestamptz
 
   organization             Organization             @relation(fields: [organizationId], references: [id])
   checklistTemplate        ChecklistTemplate        @relation(fields: [checklistTemplateId], references: [id])
@@ -591,30 +633,30 @@ model ChecklistTemplateItem {
 }
 
 model ChecklistSchedule {
-  id                        String    @id @default(uuid()) @db.Uuid
-  organizationId            String    @map("organization_id") @db.Uuid
-  checklistTemplateId       String    @map("checklist_template_id") @db.Uuid
-  name                      String
-  brandId                   String?   @map("brand_id") @db.Uuid
-  locationId                String?   @map("location_id") @db.Uuid
-  zoneId                    String?   @map("zone_id") @db.Uuid
-  ownerUserId               String?   @map("owner_user_id") @db.Uuid
-  timezone                  String
-  rrule                     String
-  nextRunAt                 DateTime? @map("next_run_at") @db.Timestamptz
-  startsAt                  DateTime? @map("starts_at") @db.Timestamptz
-  endsAt                    DateTime? @map("ends_at") @db.Timestamptz
-  isActive                  Boolean   @default(true) @map("is_active")
-  lastGenerationAttemptAt   DateTime? @map("last_generation_attempt_at") @db.Timestamptz
-  lastGenerationStatus      String?   @map("last_generation_status")
-  lastGenerationError       String?   @map("last_generation_error")
-  nextGenerationAttemptAt   DateTime? @map("next_generation_attempt_at") @db.Timestamptz
-  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                      String    @id @default(uuid()) @db.Uuid
+  organizationId          String    @map("organization_id") @db.Uuid
+  checklistTemplateId     String    @map("checklist_template_id") @db.Uuid
+  name                    String
+  brandId                 String?   @map("brand_id") @db.Uuid
+  locationId              String?   @map("location_id") @db.Uuid
+  zoneId                  String?   @map("zone_id") @db.Uuid
+  ownerUserId             String?   @map("owner_user_id") @db.Uuid
+  timezone                String
+  rrule                   String
+  nextRunAt               DateTime? @map("next_run_at") @db.Timestamptz
+  startsAt                DateTime? @map("starts_at") @db.Timestamptz
+  endsAt                  DateTime? @map("ends_at") @db.Timestamptz
+  isActive                Boolean   @default(true) @map("is_active")
+  lastGenerationAttemptAt DateTime? @map("last_generation_attempt_at") @db.Timestamptz
+  lastGenerationStatus    String?   @map("last_generation_status")
+  lastGenerationError     String?   @map("last_generation_error")
+  nextGenerationAttemptAt DateTime? @map("next_generation_attempt_at") @db.Timestamptz
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization      Organization      @relation(fields: [organizationId], references: [id])
-  checklistTemplate ChecklistTemplate @relation(fields: [checklistTemplateId], references: [id])
-  ownerUser         User?              @relation("ScheduleOwner", fields: [ownerUserId], references: [id])
+  organization      Organization               @relation(fields: [organizationId], references: [id])
+  checklistTemplate ChecklistTemplate          @relation(fields: [checklistTemplateId], references: [id])
+  ownerUser         User?                      @relation("ScheduleOwner", fields: [ownerUserId], references: [id])
   watchers          ChecklistScheduleWatcher[]
 
   @@index([organizationId, isActive, nextRunAt])
@@ -678,28 +720,28 @@ model ChecklistRunSectionSnapshot {
 }
 
 model ChecklistRunItemSnapshot {
-  id                             String    @id @default(uuid()) @db.Uuid
-  organizationId                 String    @map("organization_id") @db.Uuid
-  checklistRunId                 String    @map("checklist_run_id") @db.Uuid
-  checklistRunSectionSnapshotId  String    @map("checklist_run_section_snapshot_id") @db.Uuid
-  checklistTemplateItemId        String?   @map("checklist_template_item_id") @db.Uuid
-  itemTypeSnapshot               String    @map("item_type_snapshot")
-  labelSnapshot                  String    @map("label_snapshot")
-  helpTextSnapshot               String?   @map("help_text_snapshot")
-  isRequiredSnapshot             Boolean   @map("is_required_snapshot")
-  requiresEvidenceOnFailSnapshot Boolean   @map("requires_evidence_on_fail_snapshot")
-  requiresCommentOnFailSnapshot  Boolean   @map("requires_comment_on_fail_snapshot")
+  id                             String                @id @default(uuid()) @db.Uuid
+  organizationId                 String                @map("organization_id") @db.Uuid
+  checklistRunId                 String                @map("checklist_run_id") @db.Uuid
+  checklistRunSectionSnapshotId  String                @map("checklist_run_section_snapshot_id") @db.Uuid
+  checklistTemplateItemId        String?               @map("checklist_template_item_id") @db.Uuid
+  itemTypeSnapshot               String                @map("item_type_snapshot")
+  labelSnapshot                  String                @map("label_snapshot")
+  helpTextSnapshot               String?               @map("help_text_snapshot")
+  isRequiredSnapshot             Boolean               @map("is_required_snapshot")
+  requiresEvidenceOnFailSnapshot Boolean               @map("requires_evidence_on_fail_snapshot")
+  requiresCommentOnFailSnapshot  Boolean               @map("requires_comment_on_fail_snapshot")
   severitySnapshot               ChecklistItemSeverity @map("severity_snapshot")
-  failureCreatesIncidentSnapshot Boolean   @map("failure_creates_incident_snapshot")
-  configSnapshotJson             Json?     @map("config_snapshot_json")
-  sortOrder                      Int       @map("sort_order")
+  failureCreatesIncidentSnapshot Boolean               @map("failure_creates_incident_snapshot")
+  configSnapshotJson             Json?                 @map("config_snapshot_json")
+  sortOrder                      Int                   @map("sort_order")
   result                         String?
-  valueJson                      Json?     @map("value_json")
+  valueJson                      Json?                 @map("value_json")
   comment                        String?
-  respondedAt                    DateTime? @map("responded_at") @db.Timestamptz
-  respondedByUserId              String?   @map("responded_by_user_id") @db.Uuid
-  createdAt                      DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  respondedAt                    DateTime?             @map("responded_at") @db.Timestamptz
+  respondedByUserId              String?               @map("responded_by_user_id") @db.Uuid
+  createdAt                      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                      DateTime              @updatedAt @map("updated_at") @db.Timestamptz
 
   organization                Organization                @relation(fields: [organizationId], references: [id])
   checklistRun                ChecklistRun                @relation(fields: [checklistRunId], references: [id])
@@ -727,15 +769,15 @@ enum NotificationSourceType {
 }
 
 model ChecklistScheduleWatcher {
-  id                   String   @id @default(uuid()) @db.Uuid
-  organizationId       String   @map("organization_id") @db.Uuid
-  checklistScheduleId  String   @map("checklist_schedule_id") @db.Uuid
-  userId               String   @map("user_id") @db.Uuid
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                  String   @id @default(uuid()) @db.Uuid
+  organizationId      String   @map("organization_id") @db.Uuid
+  checklistScheduleId String   @map("checklist_schedule_id") @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  organization       Organization      @relation(fields: [organizationId], references: [id])
-  checklistSchedule  ChecklistSchedule  @relation(fields: [checklistScheduleId], references: [id], onDelete: Cascade)
-  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization      @relation(fields: [organizationId], references: [id])
+  checklistSchedule ChecklistSchedule @relation(fields: [checklistScheduleId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([checklistScheduleId, userId])
   @@index([userId])
@@ -755,8 +797,8 @@ model Notification {
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz
   readAt         DateTime?              @map("read_at") @db.Timestamptz
 
-  organization Organization          @relation(fields: [organizationId], references: [id])
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization           @relation(fields: [organizationId], references: [id])
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries   NotificationDelivery[]
 
   @@index([organizationId, userId, createdAt])

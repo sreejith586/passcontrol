@@ -1,6 +1,8 @@
 import {
   Injectable,
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   NotFoundException,
   Logger,
 } from '@nestjs/common';
@@ -38,7 +40,7 @@ export class UsersService {
   }
 
   async invite(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     dto: InviteUserDto,
   ): Promise<{
     id: string;
@@ -48,6 +50,16 @@ export class UsersService {
     roles: Array<{ id: string; name: string; key: string }>;
     setupToken?: string;
   }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: ctx.organizationId },
+      select: { name: true, isSelfOnboarded: true, maxUsers: true },
+    });
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    await this.assertSelfOnboardedInviterMaySendInvites(ctx, org.isSelfOnboarded);
+
     const isAssignable = await this.rolesService.isRoleAssignableInOrg(
       dto.roleId,
       ctx.organizationId,
@@ -60,8 +72,23 @@ export class UsersService {
     let user = await this.repo.findUserByEmail(email);
 
     if (!user) {
+      await this.assertOrgHasCapacityForNewMember(
+        ctx.organizationId,
+        org.maxUsers,
+      );
       const name = email.split('@')[0] || 'Invited User';
       user = await this.repo.createUser({ email, name });
+    } else {
+      const inOrg = await this.repo.belongsToOrganization(
+        user.id,
+        ctx.organizationId,
+      );
+      if (!inOrg) {
+        await this.assertOrgHasCapacityForNewMember(
+          ctx.organizationId,
+          org.maxUsers,
+        );
+      }
     }
 
     const alreadyAssigned = await this.repo.hasRoleInOrg(
@@ -82,11 +109,7 @@ export class UsersService {
       await this.passwordSetupTokenRepo.invalidateUnusedByUserId(user.id);
       const setupToken = await this.passwordSetupTokenRepo.create(user.id);
 
-      const org = await this.prisma.organization.findUnique({
-        where: { id: ctx.organizationId },
-        select: { name: true },
-      });
-      const orgName = org?.name ?? 'PassControl';
+      const orgName = org.name ?? 'PassControl';
       const baseUrl = process.env.APP_BASE_URL ?? 'http://localhost:3000';
       const setupUrl = `${baseUrl.replace(/\/$/, '')}/set-password?token=${encodeURIComponent(setupToken)}`;
 
@@ -313,9 +336,19 @@ export class UsersService {
    * Eligibility (same as list canReinvite): passwordHash === null AND isActive === false.
    */
   async reinvite(
-    ctx: { organizationId: string },
+    ctx: { organizationId: string; userId?: string },
     userId: string,
   ): Promise<{ message: string }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: ctx.organizationId },
+      select: { name: true, isSelfOnboarded: true },
+    });
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    await this.assertSelfOnboardedInviterMaySendInvites(ctx, org.isSelfOnboarded);
+
     const user = await this.repo.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -344,11 +377,7 @@ export class UsersService {
     await this.passwordSetupTokenRepo.invalidateUnusedByUserId(userId);
     const setupToken = await this.passwordSetupTokenRepo.create(userId);
 
-    const org = await this.prisma.organization.findUnique({
-      where: { id: ctx.organizationId },
-      select: { name: true },
-    });
-    const orgName = org?.name ?? 'PassControl';
+    const orgName = org.name ?? 'PassControl';
     const baseUrl = process.env.APP_BASE_URL ?? 'http://localhost:3000';
     const setupUrl = `${baseUrl.replace(/\/$/, '')}/set-password?token=${encodeURIComponent(setupToken)}`;
 
@@ -373,5 +402,53 @@ export class UsersService {
     }
 
     return { message: 'Invitation re-sent' };
+  }
+
+  private async assertSelfOnboardedInviterMaySendInvites(
+    ctx: { organizationId: string; userId?: string },
+    isSelfOnboarded: boolean,
+  ): Promise<void> {
+    if (!isSelfOnboarded) return;
+    if (!ctx.userId) {
+      throw new BadRequestException('User context is required');
+    }
+    if (await this.userHasSuperAdminRoleInOrg(ctx.userId, ctx.organizationId)) {
+      return;
+    }
+    const actor = await this.prisma.user.findUnique({
+      where: { id: ctx.userId },
+      select: { emailVerifiedAt: true },
+    });
+    if (!actor?.emailVerifiedAt) {
+      throw new ForbiddenException(
+        'Please verify your email before inviting team members.',
+      );
+    }
+  }
+
+  private async userHasSuperAdminRoleInOrg(
+    userId: string,
+    organizationId: string,
+  ): Promise<boolean> {
+    const row = await this.prisma.userRoleAssignment.findFirst({
+      where: {
+        userId,
+        organizationId,
+        role: { key: 'super_admin' },
+      },
+    });
+    return !!row;
+  }
+
+  private async assertOrgHasCapacityForNewMember(
+    organizationId: string,
+    maxUsers: number | null,
+  ): Promise<void> {
+    if (maxUsers == null) return;
+    const count =
+      await this.repo.countDistinctMembersInOrganization(organizationId);
+    if (count >= maxUsers) {
+      throw new ConflictException('User limit reached for your plan.');
+    }
   }
 }

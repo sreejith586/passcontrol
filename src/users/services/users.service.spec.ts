@@ -24,6 +24,8 @@ describe('UsersService', () => {
       hasRoleInOrg: jest.fn(),
       assignRole: jest.fn(),
       getUserWithRoles: jest.fn(),
+      belongsToOrganization: jest.fn().mockResolvedValue(true),
+      countDistinctMembersInOrganization: jest.fn().mockResolvedValue(0),
     };
     const mockRolesService = {
       isRoleAssignableInOrg: jest.fn().mockResolvedValue(true),
@@ -34,7 +36,15 @@ describe('UsersService', () => {
     };
     const mockMail = { send: jest.fn().mockResolvedValue({}) };
     const mockPrisma = {
-      organization: { findUnique: jest.fn().mockResolvedValue({ name: 'Test Org' }) },
+      organization: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            name: 'Test Org',
+            isSelfOnboarded: false,
+            maxUsers: null,
+          }),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({

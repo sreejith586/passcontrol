@@ -143,6 +143,24 @@ export class UsersRepository {
     return !!assignment;
   }
 
+  /**
+   * Distinct org members: users with at least one role assignment in the organization.
+   * Soft-deleted users are excluded; isActive is not used (pending setup and deactivated members still hold a seat).
+   */
+  async countDistinctMembersInOrganization(
+    organizationId: string,
+  ): Promise<number> {
+    const rows = await this.prisma.userRoleAssignment.findMany({
+      where: {
+        organizationId,
+        user: { deletedAt: null },
+      },
+      distinct: ['userId'],
+      select: { userId: true },
+    });
+    return rows.length;
+  }
+
   async findUserByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: { email: email.toLowerCase().trim(), deletedAt: null },

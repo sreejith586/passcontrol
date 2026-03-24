@@ -18,6 +18,7 @@ import { ChecklistTemplatesModule } from './checklists/templates/checklist-templ
 import { ChecklistSchedulesModule } from './checklists/schedules/checklist-schedules.module';
 import { ChecklistRunsModule } from './checklists/runs/checklist-runs.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { SelfOnboardingModule } from './self-onboarding/self-onboarding.module';
 import { UsersModule } from './users/users.module';
 import { RegionalSettingsModule } from './regional-settings/regional-settings.module';
 import { ReportsModule } from './reports/reports.module';
@@ -46,6 +47,7 @@ import { HealthController } from './health.controller';
     ChecklistSchedulesModule,
     ChecklistRunsModule,
     OnboardingModule,
+    SelfOnboardingModule,
     UsersModule,
     RegionalSettingsModule,
     ReportsModule,
