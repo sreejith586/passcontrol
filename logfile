@@ -4466,3 +4466,11 @@
 2026-03-24 16:09:28.842 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.052 s, sync=0.002 s, total=1.064 s; sync files=3, longest=0.002 s, average=0.001 s; distance=73 kB, estimate=508 kB; lsn=0/17922038, redo lsn=0/17921FE8
 2026-03-24 16:14:27.847 +04 [70852] LOG:  checkpoint starting: time
 2026-03-24 16:14:29.080 +04 [70852] LOG:  checkpoint complete: wrote 13 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.218 s, sync=0.004 s, total=1.234 s; sync files=6, longest=0.002 s, average=0.001 s; distance=87 kB, estimate=466 kB; lsn=0/17937D88, redo lsn=0/17937D50
+2026-03-24 16:19:27.090 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:19:28.132 +04 [70852] LOG:  checkpoint complete: wrote 11 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.018 s, sync=0.002 s, total=1.043 s; sync files=4, longest=0.002 s, average=0.001 s; distance=71 kB, estimate=427 kB; lsn=0/17949D58, redo lsn=0/17949D20
+2026-03-24 16:24:27.144 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:24:28.071 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.912 s, sync=0.001 s, total=0.929 s; sync files=3, longest=0.001 s, average=0.001 s; distance=78 kB, estimate=392 kB; lsn=0/1795D880, redo lsn=0/1795D848
+2026-03-24 16:29:27.268 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:29:28.184 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.912 s, sync=0.001 s, total=0.916 s; sync files=3, longest=0.001 s, average=0.001 s; distance=74 kB, estimate=360 kB; lsn=0/17970250, redo lsn=0/17970218
+2026-03-24 16:34:27.196 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:34:28.119 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.919 s, sync=0.002 s, total=0.926 s; sync files=3, longest=0.001 s, average=0.001 s; distance=72 kB, estimate=331 kB; lsn=0/17982340, redo lsn=0/17982308

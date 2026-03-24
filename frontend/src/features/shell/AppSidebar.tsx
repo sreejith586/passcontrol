@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   LayoutDashboard,
@@ -157,19 +157,24 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         collapsed ? 'w-16' : 'w-56'
       )}
     >
-      <div
+      <Link
+        to="/dashboard"
+        title={collapsed ? 'Dashboard' : undefined}
+        aria-label="Go to dashboard"
         className={cn(
-          'flex shrink-0 items-center border-b border-slate-700/50',
-          collapsed ? 'justify-center py-4' : 'gap-2 px-4 py-3'
+          'flex shrink-0 items-center border-b border-slate-700/50 transition-colors',
+          'cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-white/25',
+          'hover:bg-slate-800/70',
+          collapsed ? 'mx-1 justify-center py-4' : 'gap-2 px-4 py-3'
         )}
       >
         <ShieldCheck className="h-5 w-5 shrink-0 text-white" aria-hidden />
         {!collapsed && (
-          <span className="truncate text-sm font-semibold text-white tracking-tight">
+          <span className="truncate text-sm font-semibold tracking-tight text-white">
             PassControl
           </span>
         )}
-      </div>
+      </Link>
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {topLevelItems.map(({ to, label, icon: Icon, permission }) => (
           <PermissionGate key={to} permission={permission}>
