@@ -6,12 +6,18 @@ COPY frontend/package*.json ./
 RUN npm install
 
 COPY frontend .
-RUN npm run build
 
-# Serve static
+# Ensure env is set for build
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build || (echo "BUILD FAILED" && exit 1)
+
+# Production stage
 FROM node:20-alpine
 
 WORKDIR /app
+
 RUN npm install -g serve
 
 COPY --from=builder /app/dist ./dist
