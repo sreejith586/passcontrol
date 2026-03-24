@@ -30,6 +30,9 @@ import { UsersPage } from '@/features/users/UsersPage';
 import { RolesPage } from '@/features/roles/RolesPage';
 import { ReportsLandingPage } from '@/features/reports/ReportsLandingPage';
 import { ReportWorkspacePage } from '@/features/reports/ReportWorkspacePage';
+import { DemoSignupPage } from '@/features/self-onboarding/DemoSignupPage';
+import { OrganizationSignupPage } from '@/features/self-onboarding/OrganizationSignupPage';
+import { VerifyEmailPage } from '@/features/self-onboarding/VerifyEmailPage';
 
 function NotFoundPage() {
   return (
@@ -276,6 +279,21 @@ const router = createBrowserRouter([
   },
   { path: '/login', element: <LoginPage />, errorElement: <RouteErrorFallback /> },
   { path: '/set-password', element: <SetPasswordPage />, errorElement: <RouteErrorFallback /> },
+  {
+    path: '/signup/demo',
+    element: <DemoSignupPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/signup/organization',
+    element: <OrganizationSignupPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/verify-email',
+    element: <VerifyEmailPage />,
+    errorElement: <RouteErrorFallback />,
+  },
   { path: '*', element: <NotFoundPage />, errorElement: <RouteErrorFallback /> },
 ]);
 
