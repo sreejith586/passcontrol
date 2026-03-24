@@ -9,6 +9,7 @@ import { isApiError } from '@/core/api/errors';
 import { PublicAuthCard } from './PublicAuthCard';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { PasswordInput } from '@/shared/ui/PasswordInput';
 
 const schema = z
   .object({
@@ -184,16 +185,14 @@ export function SelfSignupForm({
           error={errors.jobTitle?.message}
           {...register('jobTitle')}
         />
-        <Input
+        <PasswordInput
           label="Password"
-          type="password"
           autoComplete="new-password"
           error={errors.password?.message}
           {...register('password')}
         />
-        <Input
+        <PasswordInput
           label="Confirm password"
-          type="password"
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
           {...register('confirmPassword')}
@@ -205,7 +204,13 @@ export function SelfSignupForm({
           </p>
         )}
 
-        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full"
+          size="lg"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+        >
           {isSubmitting ? 'Creating account…' : submitLabel}
         </Button>
 
