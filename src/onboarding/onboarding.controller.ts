@@ -1,8 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/auth.guard';
 import { RbacGuard } from '../access/rbac/rbac.guard';
-import { RequirePermissions } from '../access/rbac/permissions.decorator';
+import {
+  RequireAnyPermission,
+  RequirePermissions,
+} from '../access/rbac/permissions.decorator';
 import { ApiResponse } from '../infra/responses/api-response';
 import {
   CurrentTenantContext,
@@ -16,6 +19,22 @@ import { OnboardingService } from './onboarding.service';
 @ApiBearerAuth()
 export class OnboardingController {
   constructor(private readonly service: OnboardingService) {}
+
+  @Get('first-run-status')
+  @RequireAnyPermission(
+    'checklist.run.view',
+    'checklist.template.view',
+    'user.view',
+  )
+  @ApiOperation({
+    summary: 'First-run onboarding status',
+    description:
+      'Returns self-onboarded flag, email verification, and counts for dashboard checklist (templates, schedules, members, runs).',
+  })
+  async firstRunStatus(@CurrentTenantContext() ctx: TenantContext) {
+    const data = await this.service.getFirstRunStatus(ctx);
+    return ApiResponse.ok(data);
+  }
 
   @Post('quick-setup')
   @RequirePermissions('checklist.template.create')

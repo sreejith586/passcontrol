@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { ChecklistTemplatesService } from '../checklists/templates/services/checklist-templates.service';
 import { ChecklistSchedulesService } from '../checklists/schedules/services/checklist-schedules.service';
@@ -15,6 +19,70 @@ export class OnboardingService {
     private readonly prisma: PrismaService,
     private readonly regionalSettings: RegionalSettingsResolverService,
   ) {}
+
+  /**
+   * Dashboard first-run checklist: self-onboarded flag, verification, and org counts (no new DB fields).
+   */
+  async getFirstRunStatus(ctx: {
+    organizationId: string;
+    userId?: string;
+  }): Promise<{
+    isSelfOnboarded: boolean;
+    emailVerifiedAt: string | null;
+    templateCount: number;
+    scheduleCount: number;
+    orgMemberCount: number;
+    checklistRunCount: number;
+  }> {
+    if (!ctx.userId) {
+      throw new UnauthorizedException();
+    }
+    const orgId = ctx.organizationId;
+
+    const [
+      org,
+      user,
+      templateCount,
+      scheduleCount,
+      checklistRunCount,
+      memberRows,
+    ] = await Promise.all([
+      this.prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { isSelfOnboarded: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: ctx.userId },
+        select: { emailVerifiedAt: true },
+      }),
+      this.prisma.checklistTemplate.count({
+        where: { organizationId: orgId, isLatest: true },
+      }),
+      this.prisma.checklistSchedule.count({
+        where: { organizationId: orgId },
+      }),
+      this.prisma.checklistRun.count({
+        where: { organizationId: orgId },
+      }),
+      this.prisma.userRoleAssignment.findMany({
+        where: {
+          organizationId: orgId,
+          user: { deletedAt: null },
+        },
+        distinct: ['userId'],
+        select: { userId: true },
+      }),
+    ]);
+
+    return {
+      isSelfOnboarded: org?.isSelfOnboarded ?? false,
+      emailVerifiedAt: user?.emailVerifiedAt?.toISOString() ?? null,
+      templateCount,
+      scheduleCount,
+      orgMemberCount: memberRows.length,
+      checklistRunCount,
+    };
+  }
 
   /**
    * Creates a starter template, schedule, and run for first-value onboarding.

@@ -9,10 +9,18 @@ import {
   getEscalationTrend,
   getTopProblemSources,
 } from './api';
-import { quickSetup } from '@/features/onboarding/api';
+import { getFirstRunStatus, quickSetup } from '@/features/onboarding/api';
+import {
+  OnboardingChecklistCard,
+  isFirstRunFullyComplete,
+} from '@/features/onboarding/components/OnboardingChecklistCard';
+import { onboardingQueryKeys } from '@/features/onboarding/query-keys';
 import { queryKeys } from './query-keys';
+import {
+  usePermission,
+  usePermissions,
+} from '@/core/permissions/use-permission';
 import { PageHeader } from '@/shared/layout/PageHeader';
-import { usePermission } from '@/core/permissions/use-permission';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { toast } from '@/shared/feedback/useToast';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -79,6 +87,22 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const hasChecklistView = usePermission('checklist.run.view');
   const hasAlertView = usePermission('alert.view');
+  const canLoadFirstRunStatus = usePermissions([
+    'checklist.run.view',
+    'checklist.template.view',
+    'user.view',
+  ]);
+
+  const firstRunStatus = useQuery({
+    queryKey: onboardingQueryKeys.firstRunStatus,
+    queryFn: getFirstRunStatus,
+    enabled: canLoadFirstRunStatus,
+  });
+
+  const showSelfServeOnboarding =
+    firstRunStatus.isSuccess &&
+    firstRunStatus.data.isSelfOnboarded &&
+    !isFirstRunFullyComplete(firstRunStatus.data);
 
   const checklistMetrics = useQuery({
     queryKey: queryKeys.dashboard.checklistMetrics(),
@@ -125,6 +149,7 @@ export function DashboardPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['checklist-runs'] });
+      queryClient.invalidateQueries({ queryKey: onboardingQueryKeys.firstRunStatus });
       navigate(`/checklist-runs/${data.runId}`);
       toast.success('Your first checklist run is ready');
     },
@@ -133,10 +158,11 @@ export function DashboardPage() {
     },
   });
 
-  const showOnboarding =
+  const showLegacyQuickSetup =
     hasChecklistView &&
     checklistMetrics.data &&
-    checklistMetrics.data.totalRuns === 0;
+    checklistMetrics.data.totalRuns === 0 &&
+    !showSelfServeOnboarding;
 
   if (!hasChecklistView && !hasAlertView) {
     return (
@@ -182,8 +208,13 @@ export function DashboardPage() {
         description="Operational overview"
       />
 
-      {/* Get Started – onboarding when no runs exist */}
-      {showOnboarding && (
+      {/* Self-onboarded tenants: guided checklist until all steps done */}
+      {showSelfServeOnboarding && firstRunStatus.data && (
+        <OnboardingChecklistCard status={firstRunStatus.data} />
+      )}
+
+      {/* Get Started – quick setup when no runs (non–self-serve path or legacy) */}
+      {showLegacyQuickSetup && (
         <Card variant="soft" className="border-2 border-sky-200 bg-sky-50/50 p-6">
           <h2 className="text-lg font-semibold text-slate-900">
             Get started with PassControl
