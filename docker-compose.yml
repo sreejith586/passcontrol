@@ -18,7 +18,7 @@ services:
       start_period: 10s
 
   backend:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/passcontrol-backend:latest
+    image: ghcr.io/sreejith586/passcontrol-backend:latest
     restart: unless-stopped
     depends_on:
       postgres:
