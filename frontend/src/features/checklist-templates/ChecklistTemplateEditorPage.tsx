@@ -20,6 +20,7 @@ import { Breadcrumbs } from '@/shared/layout/Breadcrumbs';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 import { Textarea } from '@/shared/ui/Textarea';
 import { Badge } from '@/shared/ui/Badge';
 import { toast } from '@/shared/feedback/useToast';
@@ -567,7 +568,7 @@ export function ChecklistTemplateEditorPage() {
                     <label className="mb-1 block text-sm font-medium text-foreground">
                       Type
                     </label>
-                    <select
+                    <NativeSelect
                       value={item.itemType}
                       onChange={(e) =>
                         updateItem(section.id, item.id, {
@@ -575,14 +576,13 @@ export function ChecklistTemplateEditorPage() {
                         })
                       }
                       disabled={!canEdit}
-                      className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                     >
                       {ITEM_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>
                           {t.label}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
                     <label className="flex items-center gap-2 text-sm">

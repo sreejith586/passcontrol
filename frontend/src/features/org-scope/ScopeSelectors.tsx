@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 import { listBrands } from '@/features/brands/api';
 import { listLocations } from '@/features/locations/api';
 import { listZones } from '@/features/zones/api';
@@ -104,12 +105,11 @@ export function ScopeSelectors({
           >
             Brand (optional)
           </label>
-          <select
+          <NativeSelect
             id="scope-brand"
             value={brandId}
             onChange={(e) => handleBrandChange(e.target.value)}
             disabled={disabled}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
           >
             <option value="">None</option>
             {brands.map((b) => (
@@ -117,7 +117,7 @@ export function ScopeSelectors({
                 {b.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         <div>
@@ -127,12 +127,11 @@ export function ScopeSelectors({
           >
             Location (optional)
           </label>
-          <select
+          <NativeSelect
             id="scope-location"
             value={locationId}
             onChange={(e) => handleLocationChange(e.target.value)}
             disabled={locationDisabled}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
           >
             <option value="">None</option>
             {filteredLocations.map((l) => (
@@ -140,7 +139,7 @@ export function ScopeSelectors({
                 {l.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           {brandId && filteredLocations.length === 0 && (
             <p className="mt-1 text-xs text-slate-500">No locations for this brand</p>
           )}
@@ -153,12 +152,11 @@ export function ScopeSelectors({
           >
             Zone (optional)
           </label>
-          <select
+          <NativeSelect
             id="scope-zone"
             value={zoneId}
             onChange={(e) => handleZoneChange(e.target.value)}
             disabled={zoneDisabled}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
           >
             <option value="">None</option>
             {filteredZones.map((z) => (
@@ -166,7 +164,7 @@ export function ScopeSelectors({
                 {z.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           {locationId && filteredZones.length === 0 && (
             <p className="mt-1 text-xs text-slate-500">No zones for this location</p>
           )}

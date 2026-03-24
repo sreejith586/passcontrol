@@ -1,5 +1,11 @@
 export { Button } from './Button';
 export { Input } from './Input';
+export {
+  NativeSelect,
+  nativeSelectArrowStyle,
+  nativeSelectControlClassName,
+} from './NativeSelect';
+export type { NativeSelectProps } from './NativeSelect';
 export { Textarea } from './Textarea';
 export { Badge } from './Badge';
 export { Card, RailCard } from './Card';

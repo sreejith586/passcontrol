@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 import { createZone, updateZone } from '../api';
 import { listLocations } from '@/features/locations/api';
 import { queryKeys as locationQueryKeys } from '@/features/locations/query-keys';
@@ -110,11 +111,10 @@ export function ZoneModal({ open, onClose, zone }: ZoneModalProps) {
               Create a location first from the Locations page.
             </p>
           )}
-          <select
+          <NativeSelect
             id="zone-location"
             value={locationId}
             onChange={(e) => setLocationId(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
             required
           >
             <option value="">Select a location</option>
@@ -123,7 +123,7 @@ export function ZoneModal({ open, onClose, zone }: ZoneModalProps) {
                 {loc.name} {loc.brand?.name ? `(${loc.brand.name})` : ''}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <Input
           label="Name"

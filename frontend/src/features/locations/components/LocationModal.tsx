@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 import { createLocation, updateLocation } from '../api';
 import { listBrands } from '@/features/brands/api';
 import { queryKeys as brandQueryKeys } from '@/features/brands/query-keys';
@@ -129,11 +130,10 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
               Create a brand first from the Brands page.
             </p>
           )}
-          <select
+          <NativeSelect
             id="location-brand"
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
             required
           >
             <option value="">Select a brand</option>
@@ -142,7 +142,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
                 {b.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <Input
           label="Name"
@@ -157,11 +157,10 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
           >
             Timezone
           </label>
-          <select
+          <NativeSelect
             id="location-timezone"
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
             required
           >
             {TIMEZONES.map((tz) => (
@@ -169,7 +168,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
                 {tz}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-1">
           <label
@@ -178,11 +177,10 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
           >
             Temperature unit
           </label>
-          <select
+          <NativeSelect
             id="location-temperature-unit"
             value={temperatureUnit}
             onChange={(e) => setTemperatureUnit(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
           >
             <option value="">Use organization default</option>
             {TEMPERATURE_UNIT_OPTIONS.map((opt) => (
@@ -190,7 +188,7 @@ export function LocationModal({ open, onClose, location }: LocationModalProps) {
                 {opt.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         {error && (
           <p className="text-sm text-destructive" role="alert">

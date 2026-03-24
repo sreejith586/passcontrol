@@ -24,6 +24,7 @@ import { Breadcrumbs } from '@/shared/layout/Breadcrumbs';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 import { toast } from '@/shared/feedback/useToast';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
@@ -358,11 +359,11 @@ export function ChecklistScheduleEditorPage() {
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Template
             </label>
-            <select
+            <NativeSelect
+              sizeVariant="form"
               value={checklistTemplateId}
               onChange={(e) => setChecklistTemplateId(e.target.value)}
               disabled={!isNew}
-              className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
               <option value="">Select template</option>
               {publishedTemplates.map((t) => (
@@ -370,7 +371,7 @@ export function ChecklistScheduleEditorPage() {
                   {t.name} ({t.templateKey})
                 </option>
               ))}
-            </select>
+            </NativeSelect>
             {!isNew && (
               <p className="mt-1 text-xs text-slate-500">
                 Template cannot be changed after creation
@@ -391,31 +392,29 @@ export function ChecklistScheduleEditorPage() {
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Timezone
             </label>
-            <select
+            <NativeSelect
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Recurrence
             </label>
-            <select
+            <NativeSelect
               value={presetId}
               onChange={(e) => {
                 const v = e.target.value;
                 setPresetId(v);
                 if (v !== CUSTOM_FALLBACK_ID) setCustomRrule('');
               }}
-              className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
               <option value="">Select preset</option>
               {RRULE_PRESETS.map((p) => (
@@ -428,7 +427,7 @@ export function ChecklistScheduleEditorPage() {
                   Custom existing schedule
                 </option>
               )}
-            </select>
+            </NativeSelect>
             {presetId === CUSTOM_FALLBACK_ID && customRrule && (
               <p className="mt-1 text-xs text-slate-500">
                 Current: {customRrule}. Select a preset to change.
@@ -458,11 +457,11 @@ export function ChecklistScheduleEditorPage() {
           >
             Owner (optional)
           </label>
-          <select
+          <NativeSelect
             id="schedule-owner"
             value={ownerUserId}
             onChange={(e) => setOwnerUserId(e.target.value)}
-            className="flex h-10 w-full max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="max-w-xs"
           >
             <option value="">None</option>
             {(usersQuery.data?.items ?? []).map((u) => (
@@ -470,7 +469,7 @@ export function ChecklistScheduleEditorPage() {
                 {u.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         <div>

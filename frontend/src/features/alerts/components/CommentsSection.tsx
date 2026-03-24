@@ -13,6 +13,7 @@ import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
 import { EmptyState } from '@/shared/layout/EmptyState';
 import { Card } from '@/shared/ui/Card';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 
 const schema = z.object({
   body: z.string().min(1, 'Comment cannot be empty').max(4000),
@@ -101,10 +102,11 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
         >
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Type:</span>
-            <select
+            <NativeSelect
               value={createType}
               onChange={(e) => setCreateType(e.target.value as CommentCreateType)}
-              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+              fullWidth={false}
+              className="min-w-[10rem]"
               aria-label="Comment type"
             >
               {CREATE_TYPE_OPTIONS.map((o) => (
@@ -112,7 +114,7 @@ export function CommentsSection({ alertId, comments }: CommentsSectionProps) {
                   {o.label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
           <Textarea
             label={createType === 'RESOLUTION_NOTE' ? 'Resolution note' : 'Comment'}

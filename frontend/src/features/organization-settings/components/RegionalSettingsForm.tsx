@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import type { RegionalSettings } from '../types';
 import { Button } from '@/shared/ui/Button';
+import { NativeSelect } from '@/shared/ui/NativeSelect';
 import { usePermission } from '@/core/permissions/use-permission';
 import { TIMEZONES } from '@/lib/timezones';
 import { TEMPERATURE_UNIT_OPTIONS } from '@/lib/temperature-units';
@@ -44,10 +45,9 @@ export function RegionalSettingsForm({
           <p className="mb-2 text-sm text-muted-foreground">
             Used for today runs, dashboard metrics, and quick setup when not overridden.
           </p>
-          <select
+          <NativeSelect
             {...register('defaultTimezone')}
             disabled={!canManage}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
             <option value="">Not set (fallback: UTC)</option>
             {TIMEZONES.map((tz) => (
@@ -55,7 +55,7 @@ export function RegionalSettingsForm({
                 {tz}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div>
           <label className="mb-1.5 block font-medium text-foreground">
@@ -64,10 +64,9 @@ export function RegionalSettingsForm({
           <p className="mb-2 text-sm text-muted-foreground">
             Used for temperature items when item config or location does not specify a unit.
           </p>
-          <select
+          <NativeSelect
             {...register('defaultTemperatureUnit')}
             disabled={!canManage}
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
             <option value="">Not set (use default)</option>
             {TEMPERATURE_UNIT_OPTIONS.map((opt) => (
@@ -75,7 +74,7 @@ export function RegionalSettingsForm({
                 {opt.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
       {canManage && (
