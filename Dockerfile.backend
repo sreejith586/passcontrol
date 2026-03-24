@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install deps
+COPY package*.json ./
+RUN npm install
+
+# Copy backend source
+COPY . .
+
+# Build backend
+RUN npx prisma generate
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["node", "dist/main.js"]
