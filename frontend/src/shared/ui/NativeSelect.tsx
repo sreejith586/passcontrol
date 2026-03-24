@@ -1,6 +1,13 @@
 import { forwardRef } from 'react';
 import type { CSSProperties, SelectHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
+import {
+  FORM_CONTROL_HEIGHT,
+  FORM_CONTROL_SURFACE,
+  FORM_FIELD_DISABLED,
+  FORM_FIELD_FOCUS,
+  FILTER_CONTROL_HEIGHT,
+} from './form-field-tokens';
 
 // Data-URI chevron for nativeSelectArrowStyle (single source; no duplicate SVGs elsewhere).
 const nativeSelectArrowDataUrl =
@@ -16,11 +23,15 @@ export const nativeSelectArrowStyle: CSSProperties = {
 
 // appearance-none + [-webkit-appearance:none]: remove OS chrome so our border, radius, and
 // background chevron render consistently (Safari especially shows a broken mix otherwise).
-const nativeSelectShellClassName =
-  'rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm leading-5 text-foreground appearance-none [-webkit-appearance:none] focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:cursor-not-allowed disabled:opacity-50';
+const nativeSelectShellClassName = cn(
+  'appearance-none [-webkit-appearance:none] px-3 pr-8 text-sm leading-5 text-foreground ring-offset-background',
+  FORM_CONTROL_SURFACE,
+  FORM_FIELD_FOCUS,
+  FORM_FIELD_DISABLED
+);
 
-const nativeSelectSizeFilterClassName = 'h-9 min-h-[2.25rem]';
-const nativeSelectSizeFormClassName = 'h-10 min-h-[2.5rem]';
+const nativeSelectSizeFilterClassName = FILTER_CONTROL_HEIGHT;
+const nativeSelectSizeFormClassName = FORM_CONTROL_HEIGHT;
 
 export const nativeSelectControlClassName = cn(
   nativeSelectShellClassName,

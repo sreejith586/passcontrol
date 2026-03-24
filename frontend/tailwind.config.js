@@ -1,5 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  /** Light workspace only: do not tie `dark:` utilities to OS preference (avoids navy panels + light-theme tokens). */
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {

@@ -4,9 +4,18 @@ import {
   nativeSelectArrowStyle,
   nativeSelectControlClassName,
 } from '@/shared/ui/NativeSelect';
+import {
+  FORM_CONTROL_SURFACE,
+  FORM_FIELD_FOCUS,
+  FILTER_CONTROL_HEIGHT,
+} from '@/shared/ui/form-field-tokens';
 
-const INPUT_CLASS =
-  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400';
+const FILTER_INPUT_CLASS = cn(
+  FILTER_CONTROL_HEIGHT,
+  'w-full min-w-0 px-3 text-sm text-foreground ring-offset-background',
+  FORM_CONTROL_SURFACE,
+  FORM_FIELD_FOCUS
+);
 
 interface FilterBarProps {
   children: React.ReactNode;
@@ -17,7 +26,7 @@ export function FilterBar({ children, className }: FilterBarProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm',
+        'flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 shadow-sm',
         className
       )}
     >
@@ -115,7 +124,7 @@ export function FilterInput({
       }
       placeholder={placeholder}
       aria-label={ariaLabel}
-      className={INPUT_CLASS}
+      className={FILTER_INPUT_CLASS}
     />
   );
 }

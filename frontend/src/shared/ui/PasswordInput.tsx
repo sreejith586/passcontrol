@@ -1,6 +1,13 @@
 import { forwardRef, useId, useState, type InputHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import {
+  FORM_CONTROL_HEIGHT,
+  FORM_CONTROL_SURFACE,
+  FORM_FIELD_DISABLED,
+  FORM_FIELD_FOCUS,
+  FORM_ERROR,
+} from './form-field-tokens';
 
 interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -30,7 +37,11 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             type={visible ? 'text' : 'password'}
             autoComplete={autoComplete}
             className={cn(
-              'flex h-10 w-full rounded-md border border-border bg-background py-2 pl-3 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'flex w-full py-2 pl-3 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground',
+              FORM_CONTROL_SURFACE,
+              FORM_CONTROL_HEIGHT,
+              FORM_FIELD_FOCUS,
+              FORM_FIELD_DISABLED,
               error && 'border-destructive',
               className
             )}
@@ -46,7 +57,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           </button>
         </div>
         {error && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className={FORM_ERROR} role="alert">
             {error}
           </p>
         )}

@@ -37,9 +37,9 @@ export function ActionModal({
           <Button
             variant={variant}
             onClick={handleConfirm}
-            disabled={loading}
+            loading={loading}
           >
-            {loading ? 'Processing...' : confirmLabel}
+            {confirmLabel}
           </Button>
         </div>
       </div>

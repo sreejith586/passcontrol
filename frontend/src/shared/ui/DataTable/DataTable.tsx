@@ -55,10 +55,10 @@ export function DataTable<T>({
 
   if (loading) {
     return (
-      <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="w-full overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80">
+            <tr className="border-b border-border bg-slate-50/80">
               {selectable && (
                 <th className="w-12 px-4 py-3 text-left">
                   <Skeleton className="h-4 w-4" />
@@ -73,7 +73,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {[1, 2, 3, 4, 5].map((i) => (
-              <tr key={i} className="border-b border-slate-100">
+              <tr key={i} className="border-b border-border/60">
                 {selectable && (
                   <td className="px-4 py-3">
                     <Skeleton className="h-4 w-4" />
@@ -104,10 +104,10 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="w-full overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50/80">
+          <tr className="border-b border-border bg-slate-50/80">
             {selectable && (
               <th className="w-12 px-4 py-3 text-left">
                 <input
@@ -138,7 +138,7 @@ export function DataTable<T>({
               <tr
                 key={id}
                 className={cn(
-                  'border-b border-slate-100 transition-colors hover:bg-slate-50/80',
+                  'border-b border-border/60 transition-colors hover:bg-muted/50',
                   onRowClick && 'cursor-pointer',
                   getRowClassName?.(row)
                 )}

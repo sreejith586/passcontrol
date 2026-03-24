@@ -1,5 +1,11 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
+import {
+  FORM_CONTROL_SURFACE,
+  FORM_FIELD_DISABLED,
+  FORM_FIELD_FOCUS,
+  FORM_ERROR,
+} from './form-field-tokens';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -20,14 +26,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            'flex min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+            'flex min-h-[80px] w-full px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground',
+            FORM_CONTROL_SURFACE,
+            FORM_FIELD_FOCUS,
+            FORM_FIELD_DISABLED,
             error && 'border-destructive',
             className
           )}
           {...props}
         />
         {error && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className={FORM_ERROR} role="alert">
             {error}
           </p>
         )}

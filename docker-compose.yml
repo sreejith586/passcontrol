@@ -18,9 +18,7 @@ services:
       start_period: 10s
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
+    image: ghcr.io/YOUR_GITHUB_USERNAME/passcontrol-backend:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -37,9 +35,7 @@ services:
       - "3000"
 
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
+    image: ghcr.io/sreejith586/passcontrol-frontend:latest
     restart: unless-stopped
     depends_on:
       - backend
