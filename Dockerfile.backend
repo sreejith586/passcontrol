@@ -1,17 +1,18 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    openssl \
+    libssl3 \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
-# Install deps
 COPY package*.json ./
 RUN npm install
 
-# Copy backend source
 COPY . .
 
-# Build backend
 RUN npx prisma generate
 RUN npm run build
 
