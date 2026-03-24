@@ -5,7 +5,7 @@ import { UpdateAlertWorkflowDto } from '../dto/update-alert-workflow.dto';
 import { UpdateRegionalSettingsDto } from '../dto/update-regional-settings.dto';
 import { JwtAuthGuard } from '../../auth/guards/auth.guard';
 import { RbacGuard } from '../../access/rbac/rbac.guard';
-import { RequirePermissions } from '../../access/rbac/permissions.decorator';
+import { RequirePermissions, RequireAnyPermission } from '../../access/rbac/permissions.decorator';
 import { ApiResponse } from '../../infra/responses/api-response';
 import {
   CurrentTenantContext,
@@ -18,6 +18,14 @@ import {
 @ApiBearerAuth()
 export class OrganizationSettingsController {
   constructor(private readonly service: OrganizationSettingsService) {}
+
+  @Get('context')
+  @RequireAnyPermission('alert.view', 'user.view', 'checklist.run.view')
+  @ApiOperation({ summary: 'Get organization context for header (name)' })
+  async getContext(@CurrentTenantContext() ctx: TenantContext) {
+    const context = await this.service.getContext(ctx);
+    return ApiResponse.ok(context);
+  }
 
   @Get('alert-workflow')
   @RequirePermissions('alert.workflow-policy.view')

@@ -14,6 +14,11 @@ export class OrganizationSettingsService {
     private readonly regionalResolver: RegionalSettingsResolverService,
   ) {}
 
+  async getContext(ctx: { organizationId: string }) {
+    const name = await this.repo.getOrganizationName(ctx.organizationId);
+    return { name };
+  }
+
   async getAlertWorkflow(ctx: { organizationId: string }) {
     const settings = await this.repo.getAlertWorkflowSettings(ctx.organizationId);
     if (!settings) {

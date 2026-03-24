@@ -5,6 +5,14 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 export class OrganizationSettingsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getOrganizationName(organizationId: string): Promise<string | null> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true },
+    });
+    return org?.name ?? null;
+  }
+
   async getAlertWorkflowSettings(organizationId: string) {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
