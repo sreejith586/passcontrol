@@ -11,6 +11,8 @@ export async function quickSetup(): Promise<QuickSetupResponse> {
 /** GET /v1/onboarding/first-run-status — self-onboarded flag + counts for dashboard checklist. */
 export interface FirstRunStatusResponse {
   isSelfOnboarded: boolean;
+  tenantType: 'DEMO' | 'STANDARD';
+  demoWorkspaceAvailable: boolean;
   emailVerifiedAt: string | null;
   templateCount: number;
   scheduleCount: number;
@@ -20,4 +22,14 @@ export interface FirstRunStatusResponse {
 
 export async function getFirstRunStatus(): Promise<FirstRunStatusResponse> {
   return get<FirstRunStatusResponse>('/onboarding/first-run-status');
+}
+
+export interface DemoWorkspaceSetupResponse {
+  runId: string;
+  alreadyInitialized: boolean;
+  message: string;
+}
+
+export async function demoWorkspaceSetup(): Promise<DemoWorkspaceSetupResponse> {
+  return post<DemoWorkspaceSetupResponse>('/onboarding/demo-setup', {});
 }

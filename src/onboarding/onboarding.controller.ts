@@ -29,7 +29,7 @@ export class OnboardingController {
   @ApiOperation({
     summary: 'First-run onboarding status',
     description:
-      'Returns self-onboarded flag, email verification, and counts for dashboard checklist (templates, schedules, members, runs).',
+      'Returns self-onboarded flag, tenantType, demoWorkspaceAvailable (DEMO + empty workspace), email verification, and counts for dashboard checklist.',
   })
   async firstRunStatus(@CurrentTenantContext() ctx: TenantContext) {
     const data = await this.service.getFirstRunStatus(ctx);
@@ -46,5 +46,17 @@ export class OnboardingController {
   async quickSetup(@CurrentTenantContext() ctx: TenantContext) {
     const result = await this.service.quickSetup(ctx);
     return ApiResponse.ok(result);
+  }
+
+  @Post('demo-setup')
+  @RequirePermissions('checklist.template.create')
+  @ApiOperation({
+    summary: 'Load sample demo workspace',
+    description:
+      'For eligible DEMO self-onboarded orgs with no checklist data yet: creates a minimal brand, location, zone, template, schedule, run, and a sample failed item with alert. Idempotent.',
+  })
+  async demoWorkspaceSetup(@CurrentTenantContext() ctx: TenantContext) {
+    const data = await this.service.demoWorkspaceSetup(ctx);
+    return ApiResponse.ok(data);
   }
 }

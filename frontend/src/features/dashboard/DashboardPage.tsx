@@ -9,7 +9,12 @@ import {
   getEscalationTrend,
   getTopProblemSources,
 } from './api';
-import { getFirstRunStatus, quickSetup } from '@/features/onboarding/api';
+import {
+  getFirstRunStatus,
+  quickSetup,
+  demoWorkspaceSetup,
+} from '@/features/onboarding/api';
+import { DemoWorkspaceCta } from '@/features/onboarding/components/DemoWorkspaceCta';
 import {
   OnboardingChecklistCard,
   isFirstRunFullyComplete,
@@ -87,6 +92,7 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const hasChecklistView = usePermission('checklist.run.view');
   const hasAlertView = usePermission('alert.view');
+  const canCreateTemplate = usePermission('checklist.template.create');
   const canLoadFirstRunStatus = usePermissions([
     'checklist.run.view',
     'checklist.template.view',
@@ -158,6 +164,26 @@ export function DashboardPage() {
     },
   });
 
+  const demoWorkspaceMutation = useMutation({
+    mutationFn: demoWorkspaceSetup,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: onboardingQueryKeys.firstRunStatus });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.checklistMetrics() });
+      queryClient.invalidateQueries({ queryKey: ['checklist-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      if (data.alreadyInitialized) {
+        toast.info(data.message);
+      } else {
+        toast.success(data.message);
+      }
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not load demo workspace',
+      );
+    },
+  });
+
   const showLegacyQuickSetup =
     hasChecklistView &&
     checklistMetrics.data &&
@@ -208,9 +234,17 @@ export function DashboardPage() {
         description="Operational overview"
       />
 
-      {/* Self-onboarded tenants: guided checklist until all steps done */}
+      {/* Self-onboarded tenants: optional demo load + guided checklist until all steps done */}
       {showSelfServeOnboarding && firstRunStatus.data && (
-        <OnboardingChecklistCard status={firstRunStatus.data} />
+        <div className="space-y-4">
+          {firstRunStatus.data.demoWorkspaceAvailable && canCreateTemplate && (
+            <DemoWorkspaceCta
+              loading={demoWorkspaceMutation.isPending}
+              onLoadDemo={() => demoWorkspaceMutation.mutate()}
+            />
+          )}
+          <OnboardingChecklistCard status={firstRunStatus.data} />
+        </div>
       )}
 
       {/* Get Started – quick setup when no runs (non–self-serve path or legacy) */}

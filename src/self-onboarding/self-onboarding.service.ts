@@ -15,6 +15,7 @@ import { MailService } from '../notifications/mail/mail.service';
 import { EmailVerificationTokenRepository } from './repositories/email-verification-token.repository';
 import type { SelfOnboardingSignupDto } from './dto/self-onboarding-signup.dto';
 import type { SelfOnboardingVerifyEmailDto } from './dto/self-onboarding-verify-email.dto';
+import { bootstrapDefaultOrganizationRoles } from '../organization/bootstrap/bootstrap-default-organization-roles';
 
 export interface SelfOnboardingSignupResult {
   message: string;
@@ -123,7 +124,10 @@ export class SelfOnboardingService {
           },
         });
 
-        const orgAdminRole = await this.createOrgAdminRole(tx, organization.id);
+        const { orgAdminRoleId } = await bootstrapDefaultOrganizationRoles(
+          tx,
+          organization.id,
+        );
 
         const user = await tx.user.create({
           data: {
@@ -140,7 +144,7 @@ export class SelfOnboardingService {
           data: {
             userId: user.id,
             organizationId: organization.id,
-            roleId: orgAdminRole.id,
+            roleId: orgAdminRoleId,
           },
         });
 
@@ -194,38 +198,6 @@ export class SelfOnboardingService {
       organizationId,
       requiresEmailVerification: true,
     };
-  }
-
-  /**
-   * Matches established bootstrap: org-scoped Role per tenant (see prisma/seed `ensureOrgScopedRole`
-   * for org_admin), then RolePermission rows for all `permissions` rows — same model as seeded Org Admin.
-   */
-  private async createOrgAdminRole(
-    tx: Prisma.TransactionClient,
-    organizationId: string,
-  ): Promise<{ id: string }> {
-    const role = await tx.role.create({
-      data: {
-        organizationId,
-        key: 'org_admin',
-        name: 'Org Admin',
-        scope: 'ORGANIZATION',
-        isSystem: false,
-      },
-    });
-
-    const permissions = await tx.permission.findMany({ select: { id: true } });
-    if (permissions.length > 0) {
-      await tx.rolePermission.createMany({
-        data: permissions.map((p) => ({
-          roleId: role.id,
-          permissionId: p.id,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    return role;
   }
 
   private buildTenantPolicyFields(signupMode: OrganizationTenantType): {
