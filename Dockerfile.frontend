@@ -8,8 +8,8 @@ RUN npm install
 COPY frontend .
 
 # Ensure env is set for build
-ARG VITE_API_URL=/api
-ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN npm run build || (echo "BUILD FAILED" && exit 1)
 
