@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersRepository } from '../repositories/users.repository';
 import { RolesService } from '../../roles/services/roles.service';
@@ -28,7 +28,7 @@ describe('UsersService', () => {
       countDistinctMembersInOrganization: jest.fn().mockResolvedValue(0),
     };
     const mockRolesService = {
-      isRoleAssignableInOrg: jest.fn().mockResolvedValue(true),
+      assertTenantMayAssignRole: jest.fn().mockResolvedValue(undefined),
     };
     const mockPasswordSetupTokenRepo = {
       invalidateUnusedByUserId: jest.fn().mockResolvedValue(undefined),
@@ -85,7 +85,9 @@ describe('UsersService', () => {
         name: newUser.name,
         email: newUser.email,
         isActive: true,
-        roles: [{ id: roleId, name: 'Viewer', key: 'viewer' }],
+        roles: [
+          { id: roleId, name: 'Viewer', key: 'viewer', scope: 'ORGANIZATION' },
+        ],
       });
 
       const result = await service.invite(ctx, {
@@ -119,7 +121,9 @@ describe('UsersService', () => {
         name: existingUser.name,
         email: existingUser.email,
         isActive: true,
-        roles: [{ id: roleId, name: 'Viewer', key: 'viewer' }],
+        roles: [
+          { id: roleId, name: 'Viewer', key: 'viewer', scope: 'ORGANIZATION' },
+        ],
       });
 
       const result = await service.invite(ctx, {
@@ -150,7 +154,9 @@ describe('UsersService', () => {
         name: userNoPassword.name,
         email: userNoPassword.email,
         isActive: true,
-        roles: [{ id: roleId, name: 'Viewer', key: 'viewer' }],
+        roles: [
+          { id: roleId, name: 'Viewer', key: 'viewer', scope: 'ORGANIZATION' },
+        ],
       });
       passwordSetupTokenRepo.create.mockResolvedValue('new-token-xyz');
 
@@ -169,11 +175,27 @@ describe('UsersService', () => {
     });
 
     it('throws when role is not assignable in org', async () => {
-      rolesService.isRoleAssignableInOrg.mockResolvedValue(false);
+      rolesService.assertTenantMayAssignRole.mockRejectedValue(
+        new BadRequestException('Invalid role for this organization'),
+      );
 
       await expect(
         service.invite(ctx, { email: 'x@example.com', roleId }),
       ).rejects.toThrow(BadRequestException);
+
+      expect(repo.findUserByEmail).not.toHaveBeenCalled();
+    });
+
+    it('throws Forbidden when assigning a platform role', async () => {
+      rolesService.assertTenantMayAssignRole.mockRejectedValue(
+        new ForbiddenException(
+          'Platform roles cannot be assigned from an organization',
+        ),
+      );
+
+      await expect(
+        service.invite(ctx, { email: 'x@example.com', roleId }),
+      ).rejects.toThrow(ForbiddenException);
 
       expect(repo.findUserByEmail).not.toHaveBeenCalled();
     });

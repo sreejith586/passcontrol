@@ -7,6 +7,7 @@ import { addUser, listRoles } from '../api';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
 import { RoleOptionRow } from '@/features/roles/RoleOptionRow';
+import { filterTenantAssignableRoles } from '@/features/roles/tenant-role-visibility';
 
 interface AddUserModalProps {
   open: boolean;
@@ -20,11 +21,12 @@ export function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
   const [setupLink, setSetupLink] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: roles = [], isLoading: loadingRoles } = useQuery({
+  const { data: rolesRaw = [], isLoading: loadingRoles } = useQuery({
     queryKey: queryKeys.roles.all,
     queryFn: listRoles,
     enabled: open,
   });
+  const roles = filterTenantAssignableRoles(rolesRaw);
 
   const mutation = useMutation({
     mutationFn: async ({

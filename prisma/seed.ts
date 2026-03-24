@@ -33,7 +33,8 @@ const DEMO_USER_EMAIL = 'admin@example.com';
 const DEMO_USER_PASSWORD = 'Password123!';
 const SUPER_ADMIN_ROLE_NAME = 'Super Admin';
 const SUPER_ADMIN_ROLE_KEY = 'super_admin';
-const SUPER_ADMIN_ROLE_SCOPE = 'ORGANIZATION';
+/** Platform-internal role; never tenant-assignable (see roles repository / tenant APIs). */
+const SUPER_ADMIN_ROLE_SCOPE = 'PLATFORM';
 
 const ORG_ADMIN_USER_EMAIL = 'org-admin@example.com';
 const ORG_ADMIN_USER_NAME = 'Org Admin';

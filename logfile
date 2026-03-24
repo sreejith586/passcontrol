@@ -4457,3 +4457,12 @@
 2026-03-24 15:49:31.837 +04 [70852] LOG:  checkpoint complete: wrote 44 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.424 s, sync=0.006 s, total=4.444 s; sync files=23, longest=0.002 s, average=0.001 s; distance=193 kB, estimate=710 kB; lsn=0/178A12F0, redo lsn=0/1789DE78
 2026-03-24 15:54:27.844 +04 [70852] LOG:  checkpoint starting: time
 2026-03-24 15:54:37.808 +04 [70852] LOG:  checkpoint complete: wrote 97 buffers (0.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=9.853 s, sync=0.102 s, total=9.964 s; sync files=63, longest=0.097 s, average=0.002 s; distance=305 kB, estimate=670 kB; lsn=0/178EA450, redo lsn=0/178EA418
+2026-03-24 15:59:27.928 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 15:59:28.843 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.912 s, sync=0.001 s, total=0.916 s; sync files=3, longest=0.001 s, average=0.001 s; distance=77 kB, estimate=611 kB; lsn=0/178FDC38, redo lsn=0/178FDC00
+2026-03-24 16:04:27.853 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:04:28.768 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.910 s, sync=0.001 s, total=0.916 s; sync files=3, longest=0.001 s, average=0.001 s; distance=71 kB, estimate=557 kB; lsn=0/1790FB08, redo lsn=0/1790FAD0
+2026-03-24 16:06:42.341 +04 [96540] LOG:  could not receive data from client: Connection reset by peer
+2026-03-24 16:09:27.778 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:09:28.842 +04 [70852] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.052 s, sync=0.002 s, total=1.064 s; sync files=3, longest=0.002 s, average=0.001 s; distance=73 kB, estimate=508 kB; lsn=0/17922038, redo lsn=0/17921FE8
+2026-03-24 16:14:27.847 +04 [70852] LOG:  checkpoint starting: time
+2026-03-24 16:14:29.080 +04 [70852] LOG:  checkpoint complete: wrote 13 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.218 s, sync=0.004 s, total=1.234 s; sync files=6, longest=0.002 s, average=0.001 s; distance=87 kB, estimate=466 kB; lsn=0/17937D88, redo lsn=0/17937D50

@@ -22,7 +22,7 @@ export class RolesController {
   @ApiOperation({
     summary: 'List roles',
     description:
-      'Returns organization-scoped roles with their permissions. Used for user invite and role visibility.',
+      'Returns tenant-assignable organization roles with their permissions (excludes platform-only roles such as Super Admin). Used for user invite and role visibility.',
   })
   async list(@CurrentTenantContext() ctx: TenantContext) {
     const data = await this.service.list(ctx);

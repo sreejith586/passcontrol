@@ -11,6 +11,7 @@ import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { getRoleMetadata } from './role-metadata';
+import { filterTenantAssignableRoles } from './tenant-role-visibility';
 import {
   groupPermissionsByCategory,
   getPermissionLabel,
@@ -20,7 +21,6 @@ import {
 
 /** Sort roles by privilege level for display. */
 const ROLE_DISPLAY_ORDER = [
-  'super_admin',
   'org_admin',
   'area_manager',
   'location_manager',
@@ -214,7 +214,7 @@ export function RolesPage() {
     queryFn: listRoles,
   });
 
-  const sortedRoles = roles ? sortRoles(roles) : [];
+  const sortedRoles = roles ? sortRoles(filterTenantAssignableRoles(roles)) : [];
   const roleUserCounts = useRoleUserCounts(sortedRoles);
   const selected =
     sortedRoles.find((r) => r.id === selectedRoleId) ?? sortedRoles[0] ?? null;

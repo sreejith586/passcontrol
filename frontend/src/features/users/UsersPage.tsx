@@ -137,11 +137,6 @@ export function UsersPage() {
               <span className="text-sm text-foreground">
                 {pr ? pr.meta.displayName : '—'}
               </span>
-              {row.roles?.some((r) => r.key === 'super_admin') && (
-                <Badge variant="info" className="text-xs">
-                  Super Admin
-                </Badge>
-              )}
               {pr && pr.extraRoleCount > 0 && (
                 <span className="text-xs text-muted-foreground">
                   +{pr.extraRoleCount}

@@ -1,14 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { ROLE_SCOPE_PLATFORM } from '../role-scope.constants';
 
 @Injectable()
 export class RolesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findById(roleId: string) {
+    return this.prisma.role.findFirst({
+      where: { id: roleId },
+    });
+  }
+
   /**
-   * Find role by id. Role is assignable in org if:
-   * - organizationId = orgId (org-scoped), or
-   * - organizationId = null (system role).
+   * Find role by id if it may be assigned in an org by tenant admins.
+   * Excludes platform-scoped roles (e.g. super_admin).
    */
   async findAssignableInOrg(
     roleId: string,
@@ -17,24 +23,20 @@ export class RolesRepository {
     return this.prisma.role.findFirst({
       where: {
         id: roleId,
-        OR: [
-          { organizationId },
-          { organizationId: null },
-        ],
+        scope: { not: ROLE_SCOPE_PLATFORM },
+        OR: [{ organizationId }, { organizationId: null }],
       },
     });
   }
 
   /**
-   * List roles assignable in the organization (org-scoped + system roles).
+   * List roles that tenant admins may assign (org-scoped + non-platform system roles).
    */
   async listAssignableInOrg(organizationId: string) {
     return this.prisma.role.findMany({
       where: {
-        OR: [
-          { organizationId },
-          { organizationId: null },
-        ],
+        scope: { not: ROLE_SCOPE_PLATFORM },
+        OR: [{ organizationId }, { organizationId: null }],
       },
       include: {
         permissions: { include: { permission: { select: { key: true } } } },

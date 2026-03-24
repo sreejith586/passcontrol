@@ -22,7 +22,7 @@ export interface ListUsersResult {
     isCurrentUser: boolean;
     /** True when this user is the last active SuperAdmin (cannot deactivate). */
     isLastSuperAdmin: boolean;
-    roles: Array<{ id: string; name: string; key: string }>;
+    roles: Array<{ id: string; name: string; key: string; scope: string }>;
   }>;
   total: number;
 }
@@ -66,7 +66,7 @@ export class UsersRepository {
       select: {
         userId: true,
         user: { select: { id: true, name: true, email: true, isActive: true, passwordHash: true } },
-        role: { select: { id: true, name: true, key: true } },
+        role: { select: { id: true, name: true, key: true, scope: true } },
       },
     });
 
@@ -82,12 +82,20 @@ export class UsersRepository {
         reinviteBlockedReason: 'must_deactivate' | null;
         isCurrentUser: boolean;
         isLastSuperAdmin: boolean;
-        roles: Map<string, { id: string; name: string; key: string }>;
+        roles: Map<
+          string,
+          { id: string; name: string; key: string; scope: string }
+        >;
       }
     >();
     for (const a of assignments) {
       const existing = userMap.get(a.userId);
-      const role = { id: a.role.id, name: a.role.name, key: a.role.key };
+      const role = {
+        id: a.role.id,
+        name: a.role.name,
+        key: a.role.key,
+        scope: a.role.scope,
+      };
       if (existing) {
         existing.roles.set(a.role.id, role);
       } else {
@@ -205,7 +213,10 @@ export class UsersRepository {
   async getUserWithRoles(userId: string, organizationId: string) {
     const assignments = await this.prisma.userRoleAssignment.findMany({
       where: { userId, organizationId },
-      include: { user: true, role: { select: { id: true, name: true, key: true } } },
+      include: {
+        user: true,
+        role: { select: { id: true, name: true, key: true, scope: true } },
+      },
     });
     if (assignments.length === 0) return null;
     const user = assignments[0].user;
@@ -277,7 +288,7 @@ export class UsersRepository {
     email: string;
     phoneNumber: string | null;
     jobTitle: string | null;
-    roles: Array<{ id: string; name: string; key: string }>;
+    roles: Array<{ id: string; name: string; key: string; scope: string }>;
   } | null> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -286,7 +297,7 @@ export class UsersRepository {
     if (!user) return null;
     const assignments = await this.prisma.userRoleAssignment.findMany({
       where: { userId, organizationId },
-      include: { role: { select: { id: true, name: true, key: true } } },
+      include: { role: { select: { id: true, name: true, key: true, scope: true } } },
     });
     if (assignments.length === 0) return null;
     return {
@@ -319,13 +330,13 @@ export class UsersRepository {
     name: string;
     email: string;
     isActive: boolean;
-    roles: Array<{ id: string; name: string; key: string }>;
+    roles: Array<{ id: string; name: string; key: string; scope: string }>;
   } | null> {
     const user = await this.findById(userId);
     if (!user) return null;
     const assignments = await this.prisma.userRoleAssignment.findMany({
       where: { userId, organizationId },
-      include: { role: { select: { id: true, name: true, key: true } } },
+      include: { role: { select: { id: true, name: true, key: true, scope: true } } },
     });
     return {
       id: user.id,

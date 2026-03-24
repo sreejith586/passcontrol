@@ -6,6 +6,7 @@ import { addUserRole, listRoles, removeUserRole } from '../api';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
 import { RoleOptionRow } from '@/features/roles/RoleOptionRow';
+import { filterTenantAssignableRoles } from '@/features/roles/tenant-role-visibility';
 import type { UserForAssignment, UserRole } from '../api';
 
 interface EditRolesModalProps {
@@ -24,11 +25,12 @@ export function EditRolesModal({
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
-  const { data: roles = [], isLoading: loadingRoles } = useQuery({
+  const { data: rolesRaw = [], isLoading: loadingRoles } = useQuery({
     queryKey: queryKeys.roles.all,
     queryFn: listRoles,
     enabled: open,
   });
+  const roles = filterTenantAssignableRoles(rolesRaw);
 
   useEffect(() => {
     if (user?.roles) {

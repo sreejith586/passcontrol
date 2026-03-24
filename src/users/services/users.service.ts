@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { UsersRepository } from '../repositories/users.repository';
 import { RolesService } from '../../roles/services/roles.service';
+import { filterRolesForTenantApi } from '../../roles/role-visibility';
 import { PasswordSetupTokenRepository } from '../../auth/repositories/password-setup-token.repository';
 import { MailService } from '../../notifications/mail/mail.service';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
@@ -36,7 +37,15 @@ export class UsersService {
       ctx.organizationId,
       { page, limit, currentUserId: ctx.userId },
     );
-    return { items, total, page, limit };
+    return {
+      items: items.map((row) => ({
+        ...row,
+        roles: filterRolesForTenantApi(row.roles),
+      })),
+      total,
+      page,
+      limit,
+    };
   }
 
   async invite(
@@ -60,13 +69,10 @@ export class UsersService {
 
     await this.assertSelfOnboardedInviterMaySendInvites(ctx, org.isSelfOnboarded);
 
-    const isAssignable = await this.rolesService.isRoleAssignableInOrg(
+    await this.rolesService.assertTenantMayAssignRole(
       dto.roleId,
       ctx.organizationId,
     );
-    if (!isAssignable) {
-      throw new BadRequestException('Invalid role for this organization');
-    }
 
     const email = dto.email.toLowerCase().trim();
     let user = await this.repo.findUserByEmail(email);
@@ -105,6 +111,11 @@ export class UsersService {
       throw new BadRequestException('Failed to load user after invite');
     }
 
+    const tenantResult = {
+      ...result,
+      roles: filterRolesForTenantApi(result.roles),
+    };
+
     if (user.passwordHash === null) {
       await this.passwordSetupTokenRepo.invalidateUnusedByUserId(user.id);
       const setupToken = await this.passwordSetupTokenRepo.create(user.id);
@@ -133,10 +144,10 @@ export class UsersService {
         // Log but do not fail the invite; setup token is still returned
       }
 
-      return { ...result, setupToken };
+      return { ...tenantResult, setupToken };
     }
 
-    return result;
+    return tenantResult;
   }
 
   async belongsToOrganization(
@@ -157,7 +168,10 @@ export class UsersService {
     if (!profile) {
       throw new NotFoundException('User not found in this organization');
     }
-    return profile;
+    return {
+      ...profile,
+      roles: filterRolesForTenantApi(profile.roles),
+    };
   }
 
   async updateProfile(
@@ -207,13 +221,10 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const isAssignable = await this.rolesService.isRoleAssignableInOrg(
+    await this.rolesService.assertTenantMayAssignRole(
       dto.roleId,
       ctx.organizationId,
     );
-    if (!isAssignable) {
-      throw new BadRequestException('Invalid role for this organization');
-    }
 
     const alreadyAssigned = await this.repo.hasRoleInOrg(
       userId,
@@ -231,7 +242,10 @@ export class UsersService {
     if (!result) {
       throw new BadRequestException('Failed to load user after add role');
     }
-    return result;
+    return {
+      ...result,
+      roles: filterRolesForTenantApi(result.roles),
+    };
   }
 
   async removeRole(
@@ -258,6 +272,8 @@ export class UsersService {
       throw new NotFoundException('User not found in this organization');
     }
 
+    await this.rolesService.assertTenantMayRemoveRoleAssignment(roleId);
+
     await this.repo.removeRoleAssignment(userId, ctx.organizationId, roleId);
 
     const result = await this.repo.getUserWithRolesOrMinimal(
@@ -267,7 +283,10 @@ export class UsersService {
     if (!result) {
       throw new BadRequestException('Failed to load user after remove role');
     }
-    return result;
+    return {
+      ...result,
+      roles: filterRolesForTenantApi(result.roles),
+    };
   }
 
   async updateStatus(
@@ -328,7 +347,10 @@ export class UsersService {
     if (!result) {
       throw new BadRequestException('Failed to load user after status update');
     }
-    return result;
+    return {
+      ...result,
+      roles: filterRolesForTenantApi(result.roles),
+    };
   }
 
   /**

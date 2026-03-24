@@ -34,6 +34,8 @@ export interface Role {
   id: string;
   name: string;
   key: string;
+  /** Present from API; PLATFORM roles are not tenant-assignable. */
+  scope?: string;
   permissions: string[];
 }
 
