@@ -1,14 +1,16 @@
-FROM node:20-bookworm-slim
+FROM node:20-bullseye-slim
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     openssl \
-    libssl3 \
     ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
+
+# Force Prisma CLI to fetch the correct migration/schema engines
+ENV PRISMA_CLI_BINARY_TARGETS=debian-openssl-1.1.x
 RUN npm install
 
 COPY . .
