@@ -17,7 +17,10 @@ import { ConfirmActionModal } from '@/shared/ui/ActionModal/ConfirmActionModal';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { Badge } from '@/shared/ui/Badge';
 import { toast } from '@/shared/feedback/useToast';
-import { ROLE_METADATA } from '@/features/roles/role-metadata';
+import {
+  formatRoleTooltip,
+  getPrimaryRoleMetadata,
+} from '@/features/roles/role-metadata';
 
 function parseParams(searchParams: URLSearchParams) {
   const page = searchParams.get('page');
@@ -26,13 +29,6 @@ function parseParams(searchParams: URLSearchParams) {
     page: page ? parseInt(page, 10) : 1,
     limit: limit ? parseInt(limit, 10) : 25,
   };
-}
-
-function getPrimaryRoleLabel(roles: UserForAssignment['roles']): string {
-  if (!roles?.length) return '—';
-  const superAdmin = roles.find((r) => r.key === 'super_admin');
-  const primary = superAdmin ?? roles[0];
-  return ROLE_METADATA[primary.key]?.displayName ?? primary.name;
 }
 
 function getStatusBadge(row: UserForAssignment) {
@@ -127,16 +123,39 @@ export function UsersPage() {
     {
       key: 'role',
       header: 'Role',
-      render: (row: UserForAssignment) => (
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="text-sm">{getPrimaryRoleLabel(row.roles)}</span>
-          {row.roles?.some((r) => r.key === 'super_admin') && (
-            <Badge variant="info" className="text-xs">
-              Super Admin
-            </Badge>
-          )}
-        </div>
-      ),
+      render: (row: UserForAssignment) => {
+        const pr = getPrimaryRoleMetadata(row.roles);
+        const tooltip = pr
+          ? formatRoleTooltip(pr.meta, pr.extraRoleCount)
+          : undefined;
+        return (
+          <div
+            className="flex max-w-[20rem] flex-col gap-0.5"
+            title={tooltip}
+          >
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-sm text-foreground">
+                {pr ? pr.meta.displayName : '—'}
+              </span>
+              {row.roles?.some((r) => r.key === 'super_admin') && (
+                <Badge variant="info" className="text-xs">
+                  Super Admin
+                </Badge>
+              )}
+              {pr && pr.extraRoleCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  +{pr.extraRoleCount}
+                </span>
+              )}
+            </div>
+            {pr && (
+              <span className="line-clamp-1 text-xs text-muted-foreground">
+                {pr.meta.description}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'status',

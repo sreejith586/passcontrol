@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/Button';
 import { addUserRole, listRoles, removeUserRole } from '../api';
 import { queryKeys } from '../query-keys';
 import { toast } from '@/shared/feedback/useToast';
-import { getRoleMetadata } from '@/features/roles/role-metadata';
+import { RoleOptionRow } from '@/features/roles/RoleOptionRow';
 import type { UserForAssignment, UserRole } from '../api';
 
 interface EditRolesModalProps {
@@ -165,33 +165,23 @@ export function EditRolesModal({
             Select the roles this user should have. Changes are applied when you
             save.
           </p>
-          <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-muted/20 p-2">
+          <div className="max-h-72 overflow-y-auto rounded-md border border-border bg-muted/20 p-2">
             {loadingRoles ? (
               <p className="text-muted-foreground py-4 text-center text-sm">
                 Loading roles…
               </p>
             ) : (
               <ul className="space-y-1">
-                {roles.map((r) => {
-                  const meta = getRoleMetadata(r.key);
-                  return (
-                    <li key={r.id}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
-                        <input
-                          type="checkbox"
-                          checked={selectedRoleIds.has(r.id)}
-                          onChange={() => toggleRole(r.id)}
-                          disabled={mutation.isPending}
-                          className="h-4 w-4 rounded border-border"
-                        />
-                        <span className="font-medium">{meta.displayName}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {meta.intendedUserType}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
+                {roles.map((r) => (
+                  <li key={r.id}>
+                    <RoleOptionRow
+                      roleKey={r.key}
+                      checked={selectedRoleIds.has(r.id)}
+                      onCheckedChange={() => toggleRole(r.id)}
+                      disabled={mutation.isPending}
+                    />
+                  </li>
+                ))}
               </ul>
             )}
           </div>

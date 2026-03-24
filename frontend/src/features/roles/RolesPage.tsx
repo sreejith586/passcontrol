@@ -23,10 +23,13 @@ const ROLE_DISPLAY_ORDER = [
   'super_admin',
   'org_admin',
   'area_manager',
+  'location_manager',
   'restaurant_manager',
   'kitchen_supervisor',
+  'supervisor',
   'shift_lead',
   'operator',
+  'staff',
   'auditor',
   'viewer',
 ];
@@ -81,6 +84,14 @@ function RoleDetailsPanel({
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
           {metadata.description}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {metadata.capabilityHints.map((h, i) => (
+            <span key={`${i}-${h}`}>
+              {i > 0 && <span className="text-border"> · </span>}
+              {h}
+            </span>
+          ))}
         </p>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-4">
