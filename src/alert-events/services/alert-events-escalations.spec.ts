@@ -110,6 +110,11 @@ describe('AlertEventsService (escalations)', () => {
         resolveOverdueMinutes: 90,
       },
       priority: { rankGroup: 'RESOLVE_BREACHED' as const, scoreHint: 90 },
+      checklistName: null as string | null,
+      itemLabel: null as string | null,
+      brandName: null as string | null,
+      locationName: null as string | null,
+      zoneName: null as string | null,
     },
   ];
 
@@ -623,6 +628,11 @@ describe('AlertEventsService (escalations)', () => {
           resolveOverdueMinutes: 90,
         },
         priority: { rankGroup: 'RESOLVE_BREACHED', scoreHint: 90 },
+        checklistName: null,
+        itemLabel: null,
+        brandName: null,
+        locationName: null,
+        zoneName: null,
       });
       expect(repo.listPrioritizedEscalations).toHaveBeenCalledWith(
         mockOrgId,

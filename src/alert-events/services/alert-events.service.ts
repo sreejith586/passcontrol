@@ -352,6 +352,11 @@ export class AlertEventsService {
           resolveOverdueMinutes: item.sla.resolveOverdueMinutes,
         },
         priority: item.priority,
+        checklistName: item.checklistName,
+        itemLabel: item.itemLabel,
+        brandName: item.brandName,
+        locationName: item.locationName,
+        zoneName: item.zoneName,
       })),
     };
   }

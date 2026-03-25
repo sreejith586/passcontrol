@@ -700,6 +700,11 @@ describe('AlertEventsRepository', () => {
       res_overdue_minutes: number;
       rank_group: string;
       score_hint: number;
+      checklist_name: string | null;
+      item_label: string | null;
+      brand_name: string | null;
+      location_name: string | null;
+      zone_name: string | null;
     }> = {}) => ({
       id: 'alert-1',
       severity: 'CRITICAL',
@@ -722,6 +727,11 @@ describe('AlertEventsRepository', () => {
       res_overdue_minutes: 60,
       rank_group: 'RESOLVE_BREACHED',
       score_hint: 60,
+      checklist_name: null,
+      item_label: null,
+      brand_name: null,
+      location_name: null,
+      zone_name: null,
       ...overrides,
     });
 
@@ -853,6 +863,8 @@ describe('AlertEventsRepository', () => {
       expect(result[0].sla.resolveOverdueMinutes).toBe(90);
       expect(result[0].priority.rankGroup).toBe('RESOLVE_BREACHED');
       expect(result[0].priority.scoreHint).toBe(90);
+      expect(result[0].checklistName).toBeNull();
+      expect(result[0].itemLabel).toBeNull();
     });
   });
 

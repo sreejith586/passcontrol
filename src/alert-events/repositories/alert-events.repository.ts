@@ -893,6 +893,11 @@ export class AlertEventsRepository {
         rankGroup: 'RESOLVE_BREACHED' | 'ACKNOWLEDGE_BREACHED' | 'ACTIVE_NOT_BREACHED';
         scoreHint: number;
       };
+      checklistName: string | null;
+      itemLabel: string | null;
+      brandName: string | null;
+      locationName: string | null;
+      zoneName: string | null;
     }>
   > {
     const baseConditions: Prisma.Sql[] = [
@@ -948,6 +953,11 @@ export class AlertEventsRepository {
         res_overdue_minutes: number;
         rank_group: string;
         score_hint: number;
+        checklist_name: string | null;
+        item_label: string | null;
+        brand_name: string | null;
+        location_name: string | null;
+        zone_name: string | null;
       }>
     >(Prisma.sql`
       WITH base AS (
@@ -990,8 +1000,21 @@ export class AlertEventsRepository {
             WHEN UPPER(TRIM(COALESCE(ae.severity, ''))) = 'MEDIUM' THEN 2
             WHEN UPPER(TRIM(COALESCE(ae.severity, ''))) = 'LOW' THEN 1
             ELSE 0
-          END AS severity_rank
+          END AS severity_rank,
+          cr.template_name_snapshot AS checklist_name,
+          cri.label_snapshot AS item_label,
+          b.name AS brand_name,
+          loc.name AS location_name,
+          z.name AS zone_name
         FROM alert_events ae
+        LEFT JOIN checklist_run_item_snapshots cri ON ae.source_type = 'CHECKLIST_RUN_ITEM'
+          AND ae.source_id::uuid = cri.id
+          AND cri.organization_id = ae.organization_id
+        LEFT JOIN checklist_runs cr ON cri.checklist_run_id = cr.id
+          AND cr.organization_id = ae.organization_id
+        LEFT JOIN brands b ON ae.brand_id = b.id AND b.organization_id = ae.organization_id
+        LEFT JOIN locations loc ON ae.location_id = loc.id AND loc.organization_id = ae.organization_id
+        LEFT JOIN zones z ON ae.zone_id = z.id AND z.organization_id = ae.organization_id
         WHERE ${whereClause}
       )
       SELECT
@@ -1014,6 +1037,11 @@ export class AlertEventsRepository {
         res_breached,
         ack_overdue_minutes,
         res_overdue_minutes,
+        checklist_name,
+        item_label,
+        brand_name,
+        location_name,
+        zone_name,
         CASE rank_group_num
           WHEN 1 THEN 'RESOLVE_BREACHED'
           WHEN 2 THEN 'ACKNOWLEDGE_BREACHED'
@@ -1076,6 +1104,11 @@ export class AlertEventsRepository {
           'ACTIVE_NOT_BREACHED',
         scoreHint: r.score_hint,
       },
+      checklistName: r.checklist_name ?? null,
+      itemLabel: r.item_label ?? null,
+      brandName: r.brand_name ?? null,
+      locationName: r.location_name ?? null,
+      zoneName: r.zone_name ?? null,
     }));
   }
 
