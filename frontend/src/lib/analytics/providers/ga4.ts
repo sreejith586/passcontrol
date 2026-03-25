@@ -30,7 +30,9 @@ export function initGA4() {
   window.gtag = gtag;
 
   window.gtag('js', new Date());
-  window.gtag('config', measurementId);
+
+  // ✅ Safe usage here
+  window.gtag('config', measurementId, { debug_mode: true });
 
   initialized = true;
 }
