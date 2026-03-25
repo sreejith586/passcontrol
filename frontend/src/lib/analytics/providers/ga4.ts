@@ -1,7 +1,7 @@
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
-    dataLayer?: unknown[];
+    dataLayer: unknown[];
+    gtag: (...args: unknown[]) => void;
   }
 }
 
@@ -21,15 +21,16 @@ export function initGA4() {
   script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
   document.head.appendChild(script);
 
-  const dataLayer = (window.dataLayer = window.dataLayer ?? []);
-  function gtag(...args: any[]) {
-    dataLayer.push(args);
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag(...args: unknown[]) {
+    window.dataLayer.push(args);
   }
 
   window.gtag = gtag;
 
-  gtag('js', new Date());
-  gtag('config', measurementId);
+  window.gtag('js', new Date());
+  window.gtag('config', measurementId);
 
   initialized = true;
 }
@@ -41,7 +42,7 @@ export function trackPageView(path: string) {
   });
 }
 
-export function trackEvent(event: string, params?: Record<string, any>) {
+export function trackEvent(event: string, params?: Record<string, unknown>) {
   if (!window.gtag) return;
   window.gtag('event', event, params);
 }
