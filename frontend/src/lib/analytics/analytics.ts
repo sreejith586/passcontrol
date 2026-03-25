@@ -16,8 +16,15 @@ function withUTM(properties?: EventProperties): EventProperties {
 export function initAnalytics() {
   if (initialized) return;
 
-  initPosthog();
+  console.info('[Analytics] initAnalytics() starting');
+
   initGA4();
+
+  try {
+    initPosthog();
+  } catch (err) {
+    console.error('[Analytics] PostHog init failed (GA4 still active):', err);
+  }
 
   initialized = true;
 }
