@@ -1,8 +1,12 @@
+import { useEffect } from 'react';
 import {
   createBrowserRouter,
   Navigate,
+  Outlet,
   RouterProvider,
+  useLocation,
 } from 'react-router-dom';
+import { analytics } from '@/lib/analytics/analytics';
 import { AuthGuard } from '@/core/auth/auth-guard';
 import { RoutePermissionGuard } from '@/core/permissions/RoutePermissionGuard';
 import { RouteErrorFallback } from '@/app/RouteErrorFallback';
@@ -45,7 +49,19 @@ function NotFoundPage() {
   );
 }
 
+/** Fires analytics on every client-side navigation (all route branches). */
+function AnalyticsPageTrackerLayout() {
+  const location = useLocation();
+  useEffect(() => {
+    analytics.page(`${window.location.pathname}${window.location.search}`);
+  }, [location.pathname, location.search]);
+  return <Outlet />;
+}
+
 const router = createBrowserRouter([
+  {
+    element: <AnalyticsPageTrackerLayout />,
+    children: [
   {
     path: '/',
     element: (
@@ -295,6 +311,8 @@ const router = createBrowserRouter([
     errorElement: <RouteErrorFallback />,
   },
   { path: '*', element: <NotFoundPage />, errorElement: <RouteErrorFallback /> },
+    ],
+  },
 ]);
 
 export function AppRouter() {

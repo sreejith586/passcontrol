@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { selfOnboardingSignup } from '../api';
 import type { SelfSignupMode } from '../types';
 import { isApiError } from '@/core/api/errors';
+import { analytics } from '@/lib/analytics/analytics';
 import { PublicAuthCard } from './PublicAuthCard';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
@@ -97,6 +98,7 @@ export function SelfSignupForm({
 
   async function onSubmit(values: SelfSignupFormValues) {
     setApiError(null);
+    analytics.capture('signup_started', { signup_mode: signupMode });
     try {
       await selfOnboardingSignup({
         fullName: values.fullName.trim(),
@@ -106,6 +108,10 @@ export function SelfSignupForm({
         jobTitle: values.jobTitle?.trim() || undefined,
         password: values.password,
         signupMode,
+      });
+      analytics.capture('signup_completed', {
+        signup_mode: signupMode,
+        method: 'self_signup',
       });
       setSuccess(true);
     } catch (err) {

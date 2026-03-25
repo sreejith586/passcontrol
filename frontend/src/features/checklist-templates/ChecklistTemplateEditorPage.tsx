@@ -6,6 +6,7 @@ import {
   createTemplate,
   updateTemplate,
   publishTemplate,
+  listTemplates,
 } from './api';
 import type {
   ChecklistTemplate,
@@ -28,6 +29,7 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/layout/ErrorState';
 import { PermissionGate } from '@/core/permissions/PermissionGate';
 import { ScopeSelectors } from '@/features/org-scope/ScopeSelectors';
+import { analytics } from '@/lib/analytics/analytics';
 
 const ITEM_TYPES = [
   { value: 'BOOLEAN', label: 'Yes/No (Pass/Fail)' },
@@ -240,8 +242,15 @@ export function ChecklistTemplateEditorPage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateTemplatePayload) => createTemplate(payload),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.all });
+      const templates = await queryClient.fetchQuery({
+        queryKey: queryKeys.list(),
+        queryFn: () => listTemplates({ page: 1, limit: 100 }),
+      });
+      if (templates.length === 1) {
+        analytics.capture('first_checklist_created', { template_id: data.id });
+      }
       toast.success('Template created');
       navigate(`/checklist-templates/${data.id}`);
     },

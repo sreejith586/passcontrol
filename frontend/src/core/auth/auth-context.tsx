@@ -16,6 +16,7 @@ import {
 } from './token-storage';
 import { get } from '@/core/api/client';
 import { setTokenGetter, setOnUnauthorized } from '@/core/api/client';
+import { analytics } from '@/lib/analytics/analytics';
 
 interface AuthState {
   user: AuthUser | null;
@@ -62,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       permissions: me.permissions ?? [],
       isLoading: false,
       isAuthenticated: true,
+    });
+    analytics.identify(me.user.id, {
+      email: me.user.email ?? undefined,
+      organizationId: me.organizationId,
     });
   }, []);
 

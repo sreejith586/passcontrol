@@ -17,6 +17,7 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "lucide-react": "^0.323.0",
+    "posthog-js": "^1.239.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@hookform/resolvers": "^3.3.4",

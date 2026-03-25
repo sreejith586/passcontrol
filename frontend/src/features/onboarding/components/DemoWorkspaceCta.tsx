@@ -1,3 +1,4 @@
+import { analytics } from '@/lib/analytics/analytics';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 
@@ -34,7 +35,10 @@ export function DemoWorkspaceCta({
             className="w-full whitespace-nowrap sm:w-auto"
             disabled={disabled || loading}
             aria-busy={loading}
-            onClick={onLoadDemo}
+            onClick={() => {
+              analytics.capture('cta_demo_signup_clicked');
+              onLoadDemo();
+            }}
           >
             {loading ? 'Loading…' : 'Load demo workspace'}
           </Button>

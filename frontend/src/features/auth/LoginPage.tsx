@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/core/auth/auth-context';
+import { analytics } from '@/lib/analytics/analytics';
 import { login } from './api';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
@@ -51,6 +52,7 @@ export function LoginPage() {
         accessToken: res.accessToken,
         user: res.user,
       });
+      analytics.capture('login_completed', { method: 'password' });
       navigate(from, { replace: true, state: { from: undefined } });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
