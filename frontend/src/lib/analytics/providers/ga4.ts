@@ -1,6 +1,7 @@
 declare global {
   interface Window {
-    dataLayer: IArguments[];
+    /** gtag command queue; each entry is a command + arguments array. */
+    dataLayer: unknown[];
     gtag: (...args: unknown[]) => void;
   }
 }
@@ -16,21 +17,21 @@ export function initGA4() {
 
   if (initialized) return;
 
+  window.dataLayer = window.dataLayer || [];
+
+  const queueCmd = (...args: unknown[]) => {
+    window.dataLayer.push(args);
+  };
+
+  window.gtag = queueCmd as (...args: unknown[]) => void;
+
+  queueCmd('js', new Date());
+  queueCmd('config', measurementId, { send_page_view: false });
+
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
   document.head.appendChild(script);
-
-  window.dataLayer = window.dataLayer || [];
-
-  function gtag() {
-    window.dataLayer.push(arguments);
-  }
-
-  window.gtag = gtag as (...args: unknown[]) => void;
-
-  window.gtag('js', new Date());
-  window.gtag('config', measurementId);
 
   initialized = true;
 }
