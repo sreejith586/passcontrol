@@ -109,7 +109,6 @@ export function trackPageView(path: string) {
     page_path: pagePath,
     page_location: `${window.location.origin}${pagePath}`,
     page_title: typeof document !== 'undefined' ? document.title : undefined,
-    send_page_view: true,
   };
   gaDebug('trackPageView -> gtag(config)', { measurementId: gaMeasurementId, ...payload });
 
