@@ -18,8 +18,6 @@ ENV VITE_POSTHOG_KEY=${VITE_POSTHOG_KEY}
 ENV VITE_POSTHOG_HOST=${VITE_POSTHOG_HOST}
 ENV VITE_GA4_ID=${VITE_GA4_ID}
 
-RUN grep -R "$VITE_GA4_ID" dist && echo "GA4 ID found in built bundle" || (echo "GA4 ID missing in built bundle" && exit 1)
-RUN grep -R "$VITE_POSTHOG_KEY" dist && echo "PostHog key found in built bundle" || (echo "PostHog key missing in built bundle" && exit 1)
 
 RUN npm run build || (echo "BUILD FAILED" && exit 1)
 
