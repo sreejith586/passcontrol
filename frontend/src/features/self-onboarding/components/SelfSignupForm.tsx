@@ -125,11 +125,20 @@ export function SelfSignupForm({
         <div className="text-center">
           <h1 className="text-xl font-semibold text-foreground">Check your email</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            We sent a verification link to your inbox. Please verify your email before
-            inviting team members or signing in.
+            We sent a verification link to your inbox.
+            {signupMode === 'DEMO' ? (
+              <> For this demo, you can proceed to sign in without verifying your email.</>
+            ) : (
+              <>
+                {' '}
+                Please verify your email before inviting team members or signing in.
+              </>
+            )}
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
-            After you verify, you can sign in and finish setting up your workspace.
+            {signupMode === 'DEMO'
+              ? 'Use sign in below to continue with your demo workspace.'
+              : 'After you verify, you can sign in and finish setting up your workspace.'}
           </p>
           <div className="mt-8 flex justify-center">
             <Button
