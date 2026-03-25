@@ -31,11 +31,11 @@ import { toast } from '@/shared/feedback/useToast';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { EmptyState } from '@/shared/layout/EmptyState';
 import { cn } from '@/lib/cn';
-import { SeverityBadge } from '@/features/alerts/components/SeverityBadge';
-import { StatusBadge } from '@/features/alerts/components/StatusBadge';
-import { getSourceTypeLabel, formatAlertSourceDisplay } from '@/lib/labels';
+import { formatAlertSourceDisplay } from '@/lib/labels';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { EscalationTrendCard } from './components/EscalationTrendCard';
+import { ActionRequiredNowCard } from './components/ActionRequiredNowCard';
 
 const SLA_DAYS = 30;
 
@@ -546,69 +546,7 @@ export function DashboardPage() {
                   onRetry={() => escalationTrend.refetch()}
                 />
               ) : escalationTrend.data ? (
-                <Card variant="soft" className="space-y-4 p-5">
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">
-                      Alerts triggered (last 7 days)
-                    </h3>
-                    <p className="mt-0.5 text-sm text-slate-500">
-                      Breached = currently past deadline
-                    </p>
-                  </div>
-                  {escalationTrend.data.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {escalationTrend.data.map((point) => {
-                        const maxTotal = Math.max(
-                          ...escalationTrend.data!.map((p) => p.totalAlerts),
-                          1
-                        );
-                        const widthPct = (point.totalAlerts / maxTotal) * 100;
-                        return (
-                          <div key={point.date} className="flex items-center gap-3">
-                            <span className="w-20 shrink-0 text-xs text-slate-500">
-                              {format(new Date(point.date), 'MMM d')}
-                            </span>
-                            <div className="flex flex-1 items-center h-6 rounded bg-slate-100 overflow-hidden">
-                              <div
-                                className="flex h-full min-w-[2px] overflow-hidden"
-                                style={{ width: `${Math.max(widthPct, 2)}%` }}
-                              >
-                                <div
-                                  className="h-full bg-slate-300"
-                                  style={{
-                                    width: `${100 - (point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0)}%`,
-                                  }}
-                                />
-                                {point.breachedAlerts > 0 && (
-                                  <div
-                                    className="h-full flex-1 bg-destructive/70"
-                                    style={{
-                                      width: `${point.totalAlerts > 0 ? (point.breachedAlerts / point.totalAlerts) * 100 : 0}%`,
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                            <div className="w-28 shrink-0 text-right text-xs tabular-nums">
-                              <span className="font-medium text-slate-700">
-                                {point.totalAlerts} alert{point.totalAlerts !== 1 ? 's' : ''}
-                              </span>
-                              {point.breachedAlerts > 0 && (
-                                <span className="ml-1 text-destructive font-medium">
-                                  · {point.breachedAlerts} breached
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      No alerts in this period
-                    </p>
-                  )}
-                </Card>
+                <EscalationTrendCard points={escalationTrend.data} />
               ) : null}
             </div>
 
@@ -616,12 +554,14 @@ export function DashboardPage() {
             <div className="space-y-6">
               {prioritized.isLoading ? (
                 <Card variant="soft" className="p-5">
-                  <Skeleton className="h-5 w-32 mb-4" />
+                  <Skeleton className="mb-4 h-5 w-44" />
                   <Skeleton className="h-48 rounded-lg" />
                 </Card>
               ) : prioritized.isError ? (
                 <Card variant="soft" className="p-5">
-                  <h3 className="text-base font-semibold text-slate-900 mb-3">Top priorities</h3>
+                  <h3 className="mb-3 text-base font-semibold text-slate-900">
+                    Action required now
+                  </h3>
                   <SectionError
                     message={
                       prioritized.error instanceof Error
@@ -632,61 +572,7 @@ export function DashboardPage() {
                   />
                 </Card>
               ) : prioritized.data ? (
-                <Card variant="soft" className="space-y-4 p-5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-slate-900">
-                      Top priorities
-                    </h3>
-                    <Link
-                      to="/escalations"
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      View all →
-                    </Link>
-                  </div>
-                  {prioritized.data.items.length > 0 ? (
-                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                      <ul className="divide-y divide-slate-100">
-                        {prioritized.data.items.slice(0, 10).map((item) => (
-                          <li key={item.alertEventId}>
-                            <Link
-                              to={`/alerts/${item.alertEventId}`}
-                              className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50 transition-colors"
-                            >
-                              <span className="flex shrink-0 items-center gap-2 truncate text-sm">
-                                <SeverityBadge severity={item.severity} />
-                                <StatusBadge
-                                  status={item.status as 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED'}
-                                />
-                                <span className="truncate text-slate-700">{getSourceTypeLabel(item.sourceType)}</span>
-                              </span>
-                              <span className="flex shrink-0 gap-1 text-xs">
-                                {item.sla.acknowledgeBreached && (
-                                  <span className="text-destructive font-medium">Ack</span>
-                                )}
-                                {item.sla.resolveBreached && (
-                                  <span className="text-destructive font-medium">Res</span>
-                                )}
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <EmptyState
-                      title="No urgent escalations"
-                      description="All active alerts are within SLA."
-                      action={
-                        <Link to="/escalations">
-                          <Button variant="secondary" size="sm">
-                            View escalations
-                          </Button>
-                        </Link>
-                      }
-                    />
-                  )}
-                </Card>
+                <ActionRequiredNowCard items={prioritized.data.items} />
               ) : null}
 
               {topProblemSources.isLoading ? (

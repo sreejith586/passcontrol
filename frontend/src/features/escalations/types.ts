@@ -15,11 +15,23 @@ export interface EscalationItem {
     resolveBy: string;
     acknowledgeBreached: boolean;
     resolveBreached: boolean;
+    /** Present on prioritized escalations API. */
+    acknowledgeOverdueMinutes?: number;
+    resolveOverdueMinutes?: number;
   };
   /** Checklist template/run name when enriched by backend (e.g. from source context). */
   checklistName?: string | null;
   /** Item label when enriched by backend (e.g. from run item snapshot). */
   itemLabel?: string | null;
+  /** Brand / location / zone display names when enriched (e.g. prioritized API). */
+  brandName?: string | null;
+  locationName?: string | null;
+  zoneName?: string | null;
+  /** Present on prioritized escalations API. */
+  priority?: {
+    rankGroup: 'RESOLVE_BREACHED' | 'ACKNOWLEDGE_BREACHED' | 'ACTIVE_NOT_BREACHED';
+    scoreHint: number;
+  };
   /** Assigned user when enriched by backend. */
   assignedToUser?: { id: string; name: string } | null;
 }
