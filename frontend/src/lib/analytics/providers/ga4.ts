@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    dataLayer: unknown[];
+    dataLayer: IArguments[];
     gtag: (...args: unknown[]) => void;
   }
 }
@@ -23,16 +23,14 @@ export function initGA4() {
 
   window.dataLayer = window.dataLayer || [];
 
-  function gtag(...args: unknown[]) {
-    window.dataLayer.push(args);
+  function gtag() {
+    window.dataLayer.push(arguments);
   }
 
-  window.gtag = gtag;
+  window.gtag = gtag as (...args: unknown[]) => void;
 
   window.gtag('js', new Date());
-
-  // ✅ Safe usage here
-  window.gtag('config', measurementId, { debug_mode: true });
+  window.gtag('config', measurementId);
 
   initialized = true;
 }
