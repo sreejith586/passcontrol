@@ -28,10 +28,19 @@ jobs:
       - name: Build backend image
         run: |
           docker build -f Dockerfile.backend -t ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-backend:latest .
-
+      - name: Verify frontend analytics build vars
+        run: |
+          [ -n "${{ vars.VITE_API_BASE_URL }}" ] && echo "VITE_API_BASE_URL set" || (echo "VITE_API_BASE_URL unset" && exit 1)
+          [ -n "${{ vars.VITE_POSTHOG_HOST }}" ] && echo "VITE_POSTHOG_HOST set" || (echo "VITE_POSTHOG_HOST unset" && exit 1)
+          [ -n "${{ secrets.VITE_POSTHOG_KEY }}" ] && echo "VITE_POSTHOG_KEY set" || (echo "VITE_POSTHOG_KEY unset" && exit 1)
+          [ -n "${{ secrets.VITE_GA4_ID }}" ] && echo "VITE_GA4_ID set" || (echo "VITE_GA4_ID unset" && exit 1)
       - name: Build frontend image
         run: |
-          docker build -f Dockerfile.frontend -t ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-frontend:latest .
+          docker build -f Dockerfile.frontend \
+          --build-arg VITE_POSTHOG_KEY=${{ secrets.VITE_POSTHOG_KEY }} \
+          --build-arg VITE_POSTHOG_HOST=${{ vars.VITE_POSTHOG_HOST }} \
+          --build-arg VITE_GA4_ID=${{ secrets.VITE_GA4_ID }} \
+          -t ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-frontend:latest .
 
       - name: Push backend image
         run: docker push ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-backend:latest
