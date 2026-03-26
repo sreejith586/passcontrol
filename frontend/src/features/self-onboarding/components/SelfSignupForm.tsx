@@ -40,8 +40,10 @@ export interface SelfSignupFormProps {
   title: string;
   subtitle: string;
   submitLabel: string;
-  /** When true, render without full-page PublicAuthCard (for two-column demo page). */
+  /** When true, render without full-page PublicAuthCard (e.g. demo entry page). */
   embedded?: boolean;
+  /** When embedded, skip title/subtitle when the parent already shows them. Default true. */
+  embeddedShowHeader?: boolean;
 }
 
 function errorMessageFromApi(err: unknown): string {
@@ -70,6 +72,7 @@ export function SelfSignupForm({
   subtitle,
   submitLabel,
   embedded = false,
+  embeddedShowHeader = true,
 }: SelfSignupFormProps) {
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -161,23 +164,27 @@ export function SelfSignupForm({
     return <PublicAuthCard>{successInner}</PublicAuthCard>;
   }
 
+  const showEmbeddedHeader = embedded && embeddedShowHeader;
+
   const formInner = (
     <>
-      <div className={embedded ? 'mb-6' : 'mb-8 text-center'}>
-        {!embedded && (
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            PassControl
-          </p>
-        )}
-        {embedded ? (
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        ) : (
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-            {title}
-          </h1>
-        )}
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
-      </div>
+      {(!embedded || showEmbeddedHeader) && (
+        <div className={embedded ? 'mb-6' : 'mb-8 text-center'}>
+          {!embedded && (
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              PassControl
+            </p>
+          )}
+          {embedded ? (
+            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          ) : (
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              {title}
+            </h1>
+          )}
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input

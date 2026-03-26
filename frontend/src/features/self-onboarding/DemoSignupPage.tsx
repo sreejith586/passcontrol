@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/core/auth/auth-context';
 import { isApiError } from '@/core/api/errors';
@@ -34,14 +34,19 @@ function InstantDemoCard() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-lg border border-border bg-background p-8 shadow-sm">
-      <h2 className="text-lg font-semibold text-foreground">I just want to see what&apos;s inside</h2>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+    <section
+      className="rounded-lg border border-border bg-background p-6 shadow-sm sm:p-8"
+      aria-labelledby="instant-demo-title"
+    >
+      <h2 id="instant-demo-title" className="text-lg font-semibold text-foreground">
+        I just want to see what&apos;s inside
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Instant access to a preloaded demo workspace. No signup friction.
       </p>
       <Button
         type="button"
-        className="mt-6 w-full"
+        className="mt-5 w-full"
         size="lg"
         loading={loading}
         onClick={onEnter}
@@ -53,11 +58,15 @@ function InstantDemoCard() {
           {error}
         </p>
       ) : null}
-    </div>
+    </section>
   );
 }
 
 export function DemoSignupPage() {
+  const [signupExpanded, setSignupExpanded] = useState(false);
+  const signupPanelId = useId();
+  const signupHeadingId = useId();
+
   useEffect(() => {
     document.title = 'Try PassControl - PassControl';
     return () => {
@@ -66,8 +75,8 @@ export function DemoSignupPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-muted/30 px-4 py-10">
-      <div className="mx-auto max-w-5xl space-y-8">
+    <div className="min-h-screen bg-muted/30 px-4 py-8 sm:py-10">
+      <div className="mx-auto max-w-xl space-y-5">
         <header className="text-center">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             PassControl
@@ -75,21 +84,55 @@ export function DemoSignupPage() {
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
             Try PassControl
           </h1>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Choose how you want to explore the product.
           </p>
         </header>
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch lg:gap-8">
+
+        <div className="space-y-5">
           <InstantDemoCard />
-          <div className="flex min-h-0 flex-col rounded-lg border border-border bg-background p-8 shadow-sm">
-            <SelfSignupForm
-              embedded
-              signupMode="DEMO"
-              title="Create my own demo workspace"
-              subtitle="Experience tenant setup, onboarding, and how PassControl works in a multi-tenant environment."
-              submitLabel="Start demo signup"
-            />
-          </div>
+
+          <section
+            className="rounded-lg border border-border bg-background p-6 shadow-sm sm:p-8"
+            aria-labelledby={signupHeadingId}
+          >
+            <h2 id={signupHeadingId} className="text-lg font-semibold text-foreground">
+              Create my own demo workspace
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Experience tenant setup, onboarding, and how PassControl works in a multi-tenant
+              environment.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-5 w-full sm:w-auto"
+              aria-expanded={signupExpanded}
+              aria-controls={signupPanelId}
+              onClick={() => setSignupExpanded((v) => !v)}
+            >
+              {signupExpanded ? 'Hide signup form' : 'Show signup form'}
+            </Button>
+
+            <div
+              id={signupPanelId}
+              role="region"
+              aria-labelledby={signupHeadingId}
+              hidden={!signupExpanded}
+              className={
+                signupExpanded ? 'mt-6 border-t border-border pt-6' : undefined
+              }
+            >
+              <SelfSignupForm
+                embedded
+                embeddedShowHeader={false}
+                signupMode="DEMO"
+                title="Create my own demo workspace"
+                subtitle="Experience tenant setup, onboarding, and how PassControl works in a multi-tenant environment."
+                submitLabel="Start demo signup"
+              />
+            </div>
+          </section>
         </div>
       </div>
     </div>
