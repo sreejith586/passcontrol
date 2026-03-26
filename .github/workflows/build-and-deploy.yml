@@ -21,13 +21,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract lowercase repo owner
-        id: vars
-        run: echo "owner_lc=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-
       - name: Build backend image
         run: |
-          docker build -f Dockerfile.backend -t ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-backend:latest .
+          docker build -f Dockerfile.backend \
+            -t ghcr.io/sreejith586/passcontrol-backend:${{ github.sha }} .
       - name: Verify frontend analytics build vars
         run: |
           [ -n "${{ vars.VITE_DEMO_INSTANT_ACCESS_KEY }}" ] && echo "VITE_DEMO_INSTANT_ACCESS_KEY set" || (echo "VITE_DEMO_INSTANT_ACCESS_KEY unset" && exit 1)
@@ -37,18 +34,19 @@ jobs:
           [ -n "${{ secrets.VITE_GA4_ID }}" ] && echo "VITE_GA4_ID set" || (echo "VITE_GA4_ID unset" && exit 1)
       - name: Build frontend image
         run: |
-          docker build -f Dockerfile.frontend \
+          docker build -f frontend/Dockerfile \
+          --build-arg VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }} \
           --build-arg VITE_DEMO_INSTANT_ACCESS_KEY=${{ secrets.VITE_DEMO_INSTANT_ACCESS_KEY }} \
           --build-arg VITE_POSTHOG_KEY=${{ secrets.VITE_POSTHOG_KEY }} \
           --build-arg VITE_POSTHOG_HOST=${{ vars.VITE_POSTHOG_HOST }} \
           --build-arg VITE_GA4_ID=${{ secrets.VITE_GA4_ID }} \
-          -t ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-frontend:latest .
+          -t ghcr.io/sreejith586/passcontrol-frontend:${{ github.sha }} ./frontend
 
       - name: Push backend image
-        run: docker push ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-backend:latest
+        run: docker push ghcr.io/sreejith586/passcontrol-backend:${{ github.sha }}
 
       - name: Push frontend image
-        run: docker push ghcr.io/${{ steps.vars.outputs.owner_lc }}/passcontrol-frontend:latest
+        run: docker push ghcr.io/sreejith586/passcontrol-frontend:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -63,6 +61,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/passcontrol
+            export IMAGE_TAG=${{ github.sha }}
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
