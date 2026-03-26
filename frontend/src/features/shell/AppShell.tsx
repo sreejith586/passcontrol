@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
+import { MobileNavDrawer } from './MobileNavDrawer';
 
 const SIDEBAR_STORAGE_KEY = 'passcontrol-sidebar-collapsed';
 
@@ -16,6 +17,8 @@ function getStoredCollapsed(): boolean {
 
 export function AppShell() {
   const [collapsed, setCollapsed] = useState(getStoredCollapsed);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
 
   useEffect(() => {
     try {
@@ -27,15 +30,18 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen flex-col bg-slate-100">
-      <AppHeader />
+      <AppHeader onOpenMobileNav={() => setMobileNavOpen(true)} />
       <div className="flex flex-1 overflow-hidden">
-        <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-        <main className="flex-1 overflow-y-auto bg-slate-50/80">
-          <div className="mx-auto max-w-[1400px] px-6 py-6">
+        <div className="hidden shrink-0 lg:flex">
+          <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+        </div>
+        <main className="flex-1 min-w-0 overflow-y-auto bg-slate-50/80">
+          <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-6">
             <Outlet />
           </div>
         </main>
       </div>
+      <MobileNavDrawer open={mobileNavOpen} onClose={closeMobileNav} />
     </div>
   );
 }

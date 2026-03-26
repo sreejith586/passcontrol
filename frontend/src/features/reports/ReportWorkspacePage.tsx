@@ -173,7 +173,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
 
       <Card className="p-4">
         <FilterBar className="flex-wrap items-end gap-4">
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Brand
             </span>
@@ -193,7 +193,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
               ]}
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Location
             </span>
@@ -212,7 +212,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
               ]}
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Zone
             </span>
@@ -228,7 +228,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
             />
           </div>
           {config.showTemplateFilter && (
-            <div>
+            <div className="w-full lg:w-auto">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">
                 Template
               </span>
@@ -251,7 +251,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
             </div>
           )}
           {config.showResultFilter && (
-            <div>
+            <div className="w-full lg:w-auto">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">
                 Result
               </span>
@@ -272,7 +272,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
             </div>
           )}
           {config.showTemplateAndSeverity && (
-            <div>
+            <div className="w-full lg:w-auto">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">
                 Severity
               </span>
@@ -293,7 +293,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
           )}
           {config.showDateRange && (
             <>
-              <div>
+              <div className="w-full lg:w-auto">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">
                   From
                 </span>
@@ -303,7 +303,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
                   onChange={(v) => setDraftFilters((f) => ({ ...f, from: v }))}
                 />
               </div>
-              <div>
+              <div className="w-full lg:w-auto">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">
                   To
                 </span>
@@ -316,7 +316,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
             </>
           )}
           {config.showAssignee && user?.id && (
-            <div>
+            <div className="w-full lg:w-auto">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">
                 Assignee
               </span>
@@ -333,7 +333,7 @@ export function ReportWorkspacePage({ reportType }: ReportWorkspacePageProps) {
               />
             </div>
           )}
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground invisible">
               Actions
             </span>

@@ -434,7 +434,7 @@ export function AlertListPage() {
 
       <Card className="p-4">
         <FilterBar className="flex-wrap items-end gap-4">
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Status
             </span>
@@ -450,7 +450,7 @@ export function AlertListPage() {
               aria-label="Filter by status"
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Severity
             </span>
@@ -466,7 +466,7 @@ export function AlertListPage() {
               aria-label="Filter by severity"
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Source type
             </span>
@@ -482,7 +482,7 @@ export function AlertListPage() {
               aria-label="Filter by source type"
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               Assignee
             </span>
@@ -503,7 +503,7 @@ export function AlertListPage() {
             />
           </div>
           {draftFilters.assigneeMode === 'anyone' && (
-            <div>
+            <div className="w-full lg:w-auto">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">
                 Assigned to
               </span>
@@ -523,7 +523,7 @@ export function AlertListPage() {
               />
             </div>
           )}
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               From date
             </span>
@@ -536,7 +536,7 @@ export function AlertListPage() {
               aria-label="From date"
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
               To date
             </span>
@@ -549,7 +549,7 @@ export function AlertListPage() {
               aria-label="To date"
             />
           </div>
-          <div>
+          <div className="w-full lg:w-auto">
             <span className="mb-1 block text-xs font-medium text-muted-foreground invisible">
               Actions
             </span>

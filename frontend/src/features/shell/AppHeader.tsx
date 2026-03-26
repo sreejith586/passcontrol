@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown, LogOut, User, Shield, Bell, ShieldCheck } from 'lucide-react';
+import { ChevronDown, LogOut, User, Shield, Bell, ShieldCheck, Menu } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/core/auth/auth-context';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -30,7 +30,11 @@ function useOrganizationName(organizationId: string | null): string | null {
   return data?.name ?? null;
 }
 
-export function AppHeader() {
+interface AppHeaderProps {
+  onOpenMobileNav?: () => void;
+}
+
+export function AppHeader({ onOpenMobileNav }: AppHeaderProps) {
   const { user, logout, organizationId } = useAuth();
   const orgName = useOrganizationName(organizationId);
 
@@ -40,6 +44,16 @@ export function AppHeader() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-8 shadow-[0_1px_3px_0_rgba(0,0,0,0.04)]">
       <div className="flex min-w-0 flex-1 items-center gap-4">
+        {onOpenMobileNav && (
+          <button
+            type="button"
+            onClick={onOpenMobileNav}
+            className="flex shrink-0 items-center justify-center rounded-lg p-2 text-foreground transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" aria-hidden />
+          </button>
+        )}
         <Link
           to="/alerts"
           className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-90"
@@ -58,12 +72,12 @@ export function AppHeader() {
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 justify-center" aria-hidden>
+      <div className="hidden min-w-0 flex-1 justify-center lg:flex" aria-hidden>
         {/* Reserved for future search / command area */}
         <div className="h-8 w-64" />
       </div>
 
-      <div className="flex min-w-0 flex-1 justify-end items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
         <NotificationBell />
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
