@@ -1,9 +1,17 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/core/auth/auth-context';
 import { isApiError } from '@/core/api/errors';
 import { demoInstantAccess } from '@/features/auth/api';
-import { analytics } from '@/lib/analytics/analytics';
+import {
+  trackDemoEntryViewed,
+  trackDemoInstantCtaClicked,
+  trackDemoInstantFailed,
+  trackDemoInstantStarted,
+  trackDemoInstantSucceeded,
+  trackDemoSignupCollapseClicked,
+  trackDemoSignupExpandClicked,
+} from './analytics/demo-entry-analytics';
 import { Button } from '@/shared/ui/Button';
 import { SelfSignupForm } from './components/SelfSignupForm';
 
@@ -14,15 +22,17 @@ function InstantDemoCard() {
   const [loading, setLoading] = useState(false);
 
   async function onEnter() {
+    trackDemoInstantCtaClicked();
     setError(null);
     setLoading(true);
+    trackDemoInstantStarted();
     try {
       const res = await demoInstantAccess();
       await login({ accessToken: res.accessToken, user: res.user });
-      analytics.capture('demo_instant_access', { ok: true });
+      trackDemoInstantSucceeded();
       navigate('/dashboard', { replace: true });
     } catch (e) {
-      analytics.capture('demo_instant_access', { ok: false });
+      trackDemoInstantFailed(e);
       if (isApiError(e) && e.status === 403) {
         setError('Instant demo is not available in this environment.');
       } else {
@@ -66,12 +76,21 @@ export function DemoSignupPage() {
   const [signupExpanded, setSignupExpanded] = useState(false);
   const signupPanelId = useId();
   const signupHeadingId = useId();
+  const demoEntryViewRecordedRef = useRef(false);
 
   useEffect(() => {
     document.title = 'Try PassControl - PassControl';
     return () => {
       document.title = 'PassControl';
     };
+  }, []);
+
+  useEffect(() => {
+    if (demoEntryViewRecordedRef.current) return;
+    demoEntryViewRecordedRef.current = true;
+    const source =
+      typeof document !== 'undefined' && document.referrer ? document.referrer : undefined;
+    trackDemoEntryViewed(source);
   }, []);
 
   return (
@@ -109,7 +128,14 @@ export function DemoSignupPage() {
               className="mt-5 w-full sm:w-auto"
               aria-expanded={signupExpanded}
               aria-controls={signupPanelId}
-              onClick={() => setSignupExpanded((v) => !v)}
+              onClick={() =>
+                setSignupExpanded((v) => {
+                  const next = !v;
+                  if (next) trackDemoSignupExpandClicked();
+                  else trackDemoSignupCollapseClicked();
+                  return next;
+                })
+              }
             >
               {signupExpanded ? 'Hide signup form' : 'Show signup form'}
             </Button>
@@ -126,6 +152,7 @@ export function DemoSignupPage() {
               <SelfSignupForm
                 embedded
                 embeddedShowHeader={false}
+                trackAsDemoEntry
                 signupMode="DEMO"
                 title="Create my own demo workspace"
                 subtitle="Experience tenant setup, onboarding, and how PassControl works in a multi-tenant environment."

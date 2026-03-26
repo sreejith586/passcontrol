@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,6 +7,12 @@ import { selfOnboardingSignup } from '../api';
 import type { SelfSignupMode } from '../types';
 import { isApiError } from '@/core/api/errors';
 import { analytics } from '@/lib/analytics/analytics';
+import {
+  trackDemoSignupFailed,
+  trackDemoSignupStarted,
+  trackDemoSignupSubmitted,
+  trackDemoSignupSucceeded,
+} from '../analytics/demo-entry-analytics';
 import { PublicAuthCard } from './PublicAuthCard';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
@@ -44,6 +50,8 @@ export interface SelfSignupFormProps {
   embedded?: boolean;
   /** When embedded, skip title/subtitle when the parent already shows them. Default true. */
   embeddedShowHeader?: boolean;
+  /** Use demo-entry funnel events (Demo signup page only). */
+  trackAsDemoEntry?: boolean;
 }
 
 function errorMessageFromApi(err: unknown): string {
@@ -73,10 +81,18 @@ export function SelfSignupForm({
   submitLabel,
   embedded = false,
   embeddedShowHeader = true,
+  trackAsDemoEntry = false,
 }: SelfSignupFormProps) {
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const demoEntryEngagementRef = useRef(false);
+
+  function onDemoEntryFirstEngagement() {
+    if (!trackAsDemoEntry || demoEntryEngagementRef.current) return;
+    demoEntryEngagementRef.current = true;
+    trackDemoSignupStarted();
+  }
 
   useEffect(() => {
     if (embedded) return;
@@ -105,24 +121,41 @@ export function SelfSignupForm({
 
   async function onSubmit(values: SelfSignupFormValues) {
     setApiError(null);
-    analytics.capture('signup_started', { signup_mode: signupMode });
+    const trimmedPhone = values.phoneNumber?.trim();
+    const trimmedJob = values.jobTitle?.trim();
+    const funnelFields = {
+      has_phone: Boolean(trimmedPhone),
+      has_job_title: Boolean(trimmedJob),
+    };
+    if (trackAsDemoEntry) {
+      trackDemoSignupSubmitted(funnelFields);
+    } else {
+      analytics.capture('signup_started', { signup_mode: signupMode });
+    }
     try {
       await selfOnboardingSignup({
         fullName: values.fullName.trim(),
         email: values.email.trim(),
-        phoneNumber: values.phoneNumber?.trim() || undefined,
+        phoneNumber: trimmedPhone || undefined,
         organizationName: values.organizationName.trim(),
-        jobTitle: values.jobTitle?.trim() || undefined,
+        jobTitle: trimmedJob || undefined,
         password: values.password,
         signupMode,
       });
-      analytics.capture('signup_completed', {
-        signup_mode: signupMode,
-        method: 'self_signup',
-      });
+      if (trackAsDemoEntry) {
+        trackDemoSignupSucceeded(funnelFields);
+      } else {
+        analytics.capture('signup_completed', {
+          signup_mode: signupMode,
+          method: 'self_signup',
+        });
+      }
       setSuccess(true);
     } catch (err) {
       setApiError(errorMessageFromApi(err));
+      if (trackAsDemoEntry) {
+        trackDemoSignupFailed(err);
+      }
     }
   }
 
@@ -186,7 +219,11 @@ export function SelfSignupForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-4"
+        onFocusCapture={trackAsDemoEntry ? onDemoEntryFirstEngagement : undefined}
+      >
         <Input
           label="Full name"
           autoComplete="name"
