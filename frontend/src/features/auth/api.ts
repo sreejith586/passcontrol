@@ -1,8 +1,24 @@
-import { post } from '@/core/api/client';
+import { apiClient, post } from '@/core/api/client';
+import { unwrapResponse } from '@/core/api/response-unwrap';
 import type { LoginRequest, LoginResponse } from './types';
 
 export async function login(dto: LoginRequest): Promise<LoginResponse> {
   return post<LoginResponse>('/auth/login', dto);
+}
+
+/** Same shape as login; gated server-side by DEMO_INSTANT_ACCESS_ENABLED. */
+export async function demoInstantAccess(): Promise<LoginResponse> {
+  const key = import.meta.env.VITE_DEMO_INSTANT_ACCESS_KEY as string | undefined;
+  const res = await apiClient.post(
+    '/auth/demo-access',
+    {},
+    {
+      ...(key != null && key !== ''
+        ? { headers: { 'X-Demo-Access-Key': key } }
+        : {}),
+    },
+  );
+  return unwrapResponse<LoginResponse>(res.data);
 }
 
 export interface ValidateSetupTokenResponse {

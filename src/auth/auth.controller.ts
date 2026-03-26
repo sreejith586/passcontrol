@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -18,6 +18,12 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto) {
     const result = await this.auth.login(dto);
+    return ApiResponse.ok(result);
+  }
+
+  @Post('demo-access')
+  async demoAccess(@Headers('x-demo-access-key') clientKey?: string) {
+    const result = await this.auth.issueInstantDemoSession(clientKey ?? undefined);
     return ApiResponse.ok(result);
   }
 

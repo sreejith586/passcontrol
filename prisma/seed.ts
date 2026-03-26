@@ -40,6 +40,11 @@ const ORG_ADMIN_USER_EMAIL = 'org-admin@example.com';
 const ORG_ADMIN_USER_NAME = 'Org Admin';
 const ORG_ADMIN_USER_PASSWORD = 'Password123!';
 
+/** Read-only seeded account for POST /auth/demo-access only; password is not exposed in the product UI. */
+const INSTANT_DEMO_USER_EMAIL = 'demo-explorer@demo.passcontrol.local';
+const INSTANT_DEMO_USER_NAME = 'Demo Explorer';
+const INSTANT_DEMO_USER_PASSWORD = 'InstantDemoSeedOnly_NotForLogin!';
+
 /** Additional demo users (beyond admin/org-admin). roleKey = org-scoped role. */
 const DEMO_EXTRA_USERS: Array<{ email: string; name: string; roleKey: string }> = [
   { email: 'ops@example.com', name: 'Maria Santos', roleKey: 'restaurant_manager' },
@@ -1421,7 +1426,7 @@ async function ensureDemoData(
   await createEvidenceAttachment(fail13.id, 'refrigeration-unit-check-20240318.jpg');
 
   console.log(
-    'Demo data created: 6 templates, 35 runs, 14 alerts (OPEN/ACK/RESOLVED/reopened/assigned), 3 evidence attachments, org structure (1 brand, 3 locations, 6 zones), 11 users',
+    'Demo data created: 6 templates, 35 runs, 14 alerts (OPEN/ACK/RESOLVED/reopened/assigned), 3 evidence attachments, org structure (1 brand, 3 locations, 6 zones), 12 users',
   );
 }
 
@@ -1474,6 +1479,15 @@ async function main() {
   );
   await setUserRoleInOrg(orgAdminUser.id, organization.id, orgAdminRole.id);
 
+  // Instant demo explorer: org admin on Demo Org (session via demo-access endpoint only)
+  const instantDemoPasswordHash = await bcrypt.hash(INSTANT_DEMO_USER_PASSWORD, 10);
+  const instantDemoUser = await ensureUser(
+    INSTANT_DEMO_USER_EMAIL,
+    INSTANT_DEMO_USER_NAME,
+    instantDemoPasswordHash,
+  );
+  await setUserRoleInOrg(instantDemoUser.id, organization.id, orgAdminRole.id);
+
   // Demo users: 9 extra users with org roles (idempotent)
   await ensureDemoUsers(organization.id, orgAdminPasswordHash);
 
@@ -1494,6 +1508,7 @@ async function main() {
   console.log(`Organization: ${organization.name}`);
   console.log(`Platform user: ${DEMO_USER_EMAIL} (Super Admin)`);
   console.log(`Tenant user: ${ORG_ADMIN_USER_EMAIL} (Org Admin)`);
+  console.log(`Instant demo user: ${INSTANT_DEMO_USER_EMAIL} (demo-access endpoint)`);
   console.log(`Permissions: ${permissions.length}`);
 }
 

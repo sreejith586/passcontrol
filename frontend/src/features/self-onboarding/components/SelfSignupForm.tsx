@@ -40,6 +40,8 @@ export interface SelfSignupFormProps {
   title: string;
   subtitle: string;
   submitLabel: string;
+  /** When true, render without full-page PublicAuthCard (for two-column demo page). */
+  embedded?: boolean;
 }
 
 function errorMessageFromApi(err: unknown): string {
@@ -67,17 +69,19 @@ export function SelfSignupForm({
   title,
   subtitle,
   submitLabel,
+  embedded = false,
 }: SelfSignupFormProps) {
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    if (embedded) return;
     document.title = `${title} - PassControl`;
     return () => {
       document.title = 'PassControl';
     };
-  }, [title]);
+  }, [title, embedded]);
 
   const {
     register,
@@ -120,50 +124,58 @@ export function SelfSignupForm({
   }
 
   if (success) {
-    return (
-      <PublicAuthCard>
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-foreground">Check your email</h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            We sent a verification link to your inbox.
-            {signupMode === 'DEMO' ? (
-              <> For this demo, you can proceed to sign in without verifying your email.</>
-            ) : (
-              <>
-                {' '}
-                Please verify your email before inviting team members or signing in.
-              </>
-            )}
-          </p>
-          <p className="mt-4 text-sm text-muted-foreground">
-            {signupMode === 'DEMO'
-              ? 'Use sign in below to continue with your demo workspace.'
-              : 'After you verify, you can sign in and finish setting up your workspace.'}
-          </p>
-          <div className="mt-8 flex justify-center">
-            <Button
-              type="button"
-              variant="secondary"
-              className="min-w-[10rem]"
-              onClick={() => navigate('/login')}
-            >
-              Go to sign in
-            </Button>
-          </div>
+    const successInner = (
+      <div className="text-center">
+        <h1 className="text-xl font-semibold text-foreground">Check your email</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          We sent a verification link to your inbox.
+          {signupMode === 'DEMO' ? (
+            <> For this demo, you can proceed to sign in without verifying your email.</>
+          ) : (
+            <>
+              {' '}
+              Please verify your email before inviting team members or signing in.
+            </>
+          )}
+        </p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {signupMode === 'DEMO'
+            ? 'Use sign in below to continue with your demo workspace.'
+            : 'After you verify, you can sign in and finish setting up your workspace.'}
+        </p>
+        <div className="mt-8 flex justify-center">
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-w-[10rem]"
+            onClick={() => navigate('/login')}
+          >
+            Go to sign in
+          </Button>
         </div>
-      </PublicAuthCard>
+      </div>
     );
+    if (embedded) {
+      return successInner;
+    }
+    return <PublicAuthCard>{successInner}</PublicAuthCard>;
   }
 
-  return (
-    <PublicAuthCard>
-      <div className="mb-8 text-center">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          PassControl
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-          {title}
-        </h1>
+  const formInner = (
+    <>
+      <div className={embedded ? 'mb-6' : 'mb-8 text-center'}>
+        {!embedded && (
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            PassControl
+          </p>
+        )}
+        {embedded ? (
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        ) : (
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+            {title}
+          </h1>
+        )}
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
       </div>
 
@@ -236,6 +248,12 @@ export function SelfSignupForm({
           </Link>
         </p>
       </form>
-    </PublicAuthCard>
+    </>
   );
+
+  if (embedded) {
+    return <div className="flex min-h-0 flex-1 flex-col">{formInner}</div>;
+  }
+
+  return <PublicAuthCard>{formInner}</PublicAuthCard>;
 }

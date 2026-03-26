@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -22,6 +23,11 @@ interface JwtPayload {
 // Dev-only fallbacks to keep local bootstrapping working until env vars are set.
 const DEV_ONLY_ACCESS_SECRET = 'dev-access-secret-change-me';
 const DEV_ONLY_REFRESH_SECRET = 'dev-refresh-secret-change-me';
+
+/** Seeded org name for instant demo user; avoids issuing tokens for the wrong tenant if mis-assigned. */
+const DEMO_ORG_NAME = 'Demo Org';
+
+const DEFAULT_DEMO_INSTANT_USER_EMAIL = 'demo-explorer@demo.passcontrol.local';
 
 export type ValidateSetupTokenResult =
   | { valid: true }
@@ -68,6 +74,34 @@ export class AuthService {
     return valid ? user : null;
   }
 
+  private async buildAuthResponse(
+    user: { id: string; email: string | null; name: string | null },
+    organizationId: string,
+  ) {
+    const accessToken = await this.jwt.signAsync(
+      { sub: user.id, orgId: organizationId, email: user.email } as JwtPayload,
+      {
+        secret: this.getAccessSecret(),
+        expiresIn: this.getAccessExpiresIn(),
+      },
+    );
+
+    const refreshToken = await this.jwt.signAsync(
+      { sub: user.id, orgId: organizationId, type: 'refresh' } as JwtPayload,
+      {
+        secret: this.getRefreshSecret(),
+        expiresIn: this.getRefreshExpiresIn(),
+      },
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 900,
+      user: { id: user.id, email: user.email, name: user.name },
+    };
+  }
+
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto.email, dto.password);
     if (!user) {
@@ -83,33 +117,79 @@ export class AuthService {
       throw new UnauthorizedException('No organization assigned');
     }
 
-    const accessToken = await this.jwt.signAsync(
-      { sub: user.id, orgId: assignment.organizationId, email: user.email } as JwtPayload,
-      {
-        secret: this.getAccessSecret(),
-        expiresIn: this.getAccessExpiresIn(),
-      },
-    );
-
-    const refreshToken = await this.jwt.signAsync(
-      { sub: user.id, orgId: assignment.organizationId, type: 'refresh' } as JwtPayload,
-      {
-        secret: this.getRefreshSecret(),
-        expiresIn: this.getRefreshExpiresIn(),
-      },
-    );
+    const out = await this.buildAuthResponse(user, assignment.organizationId);
 
     await this.audit.recordAuthEvent('LOGIN_SUCCESS', {
       userId: user.id,
       organizationId: assignment.organizationId,
     });
 
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: 900,
-      user: { id: user.id, email: user.email, name: user.name },
-    };
+    return out;
+  }
+
+  /**
+   * Dedicated instant-demo session. Gated by DEMO_INSTANT_ACCESS_ENABLED; optional shared secret via DEMO_INSTANT_ACCESS_KEY.
+   * Does not change email/password login behavior.
+   */
+  async issueInstantDemoSession(clientDemoKey?: string | null) {
+    const stripWrappingQuotes = (v: string) =>
+      v.replace(/^["']|["']$/g, '').trim();
+
+    const enabledRaw = (process.env.DEMO_INSTANT_ACCESS_ENABLED ?? '').trim();
+    const enabled = stripWrappingQuotes(enabledRaw);
+    if (enabled !== 'true') {
+      throw new ForbiddenException('Instant demo access is disabled');
+    }
+
+    const keyRaw = process.env.DEMO_INSTANT_ACCESS_KEY;
+    const expectedKey =
+      keyRaw != null && String(keyRaw).trim() !== ''
+        ? stripWrappingQuotes(String(keyRaw).trim())
+        : '';
+    if (expectedKey !== '') {
+      const clientKey = stripWrappingQuotes(String(clientDemoKey ?? '').trim());
+      if (clientKey !== expectedKey) {
+        throw new ForbiddenException('Instant demo access is not available');
+      }
+    }
+
+    const email = (
+      process.env.DEMO_INSTANT_USER_EMAIL ?? DEFAULT_DEMO_INSTANT_USER_EMAIL
+    )
+      .toLowerCase()
+      .trim();
+
+    const user = await this.prisma.user.findFirst({
+      where: { email, isActive: true, deletedAt: null },
+    });
+    if (!user) {
+      this.logger.warn(`DEMO_INSTANT: no active user for ${email}`);
+      throw new ForbiddenException('Demo workspace is not available');
+    }
+
+    const assignment = await this.prisma.userRoleAssignment.findFirst({
+      where: { userId: user.id },
+    });
+    if (!assignment) {
+      throw new ForbiddenException('Demo workspace is not available');
+    }
+
+    const org = await this.prisma.organization.findFirst({
+      where: { id: assignment.organizationId, deletedAt: null },
+    });
+    if (!org || org.name !== DEMO_ORG_NAME) {
+      this.logger.warn(
+        `DEMO_INSTANT: user ${email} org ${assignment.organizationId} is not ${DEMO_ORG_NAME}`,
+      );
+      throw new ForbiddenException('Demo workspace is not available');
+    }
+
+    const out = await this.buildAuthResponse(user, assignment.organizationId);
+    await this.audit.recordAuthEvent('DEMO_INSTANT_ACCESS', {
+      userId: user.id,
+      organizationId: assignment.organizationId,
+    });
+    return out;
   }
 
   async refresh(refreshToken: string) {

@@ -26,10 +26,15 @@ const DEMO_USER_EMAIL = 'admin@example.com';
 const DEMO_USER_PASSWORD = 'Password123!';
 const SUPER_ADMIN_ROLE_NAME = 'Super Admin';
 const SUPER_ADMIN_ROLE_KEY = 'super_admin';
-const SUPER_ADMIN_ROLE_SCOPE = 'ORGANIZATION';
+/** Platform-internal role; never tenant-assignable (see roles repository / tenant APIs). */
+const SUPER_ADMIN_ROLE_SCOPE = 'PLATFORM';
 const ORG_ADMIN_USER_EMAIL = 'org-admin@example.com';
 const ORG_ADMIN_USER_NAME = 'Org Admin';
 const ORG_ADMIN_USER_PASSWORD = 'Password123!';
+/** Read-only seeded account for POST /auth/demo-access only; password is not exposed in the product UI. */
+const INSTANT_DEMO_USER_EMAIL = 'demo-explorer@demo.passcontrol.local';
+const INSTANT_DEMO_USER_NAME = 'Demo Explorer';
+const INSTANT_DEMO_USER_PASSWORD = 'InstantDemoSeedOnly_NotForLogin!';
 /** Additional demo users (beyond admin/org-admin). roleKey = org-scoped role. */
 const DEMO_EXTRA_USERS = [
     { email: 'ops@example.com', name: 'Maria Santos', roleKey: 'restaurant_manager' },
@@ -1232,7 +1237,7 @@ async function ensureDemoData(organizationId, userId) {
     const { failItem: fail13 } = await createRunWithFailedItem(tpl(equipment, 'demo-equipment'), equipment.sections[1], equipment.sections[1].items[0], 'COMPLETED', threeDaysAgo, { ...runOpts, locationId: loc2.id });
     await createAlert(fail13, 'OPEN', threeDaysAgo, { severity: 'CRITICAL', assignedToUserId: qaUserId });
     await createEvidenceAttachment(fail13.id, 'refrigeration-unit-check-20240318.jpg');
-    console.log('Demo data created: 6 templates, 35 runs, 14 alerts (OPEN/ACK/RESOLVED/reopened/assigned), 3 evidence attachments, org structure (1 brand, 3 locations, 6 zones), 11 users');
+    console.log('Demo data created: 6 templates, 35 runs, 14 alerts (OPEN/ACK/RESOLVED/reopened/assigned), 3 evidence attachments, org structure (1 brand, 3 locations, 6 zones), 12 users');
 }
 async function main() {
     const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
@@ -1265,6 +1270,10 @@ async function main() {
     // org-admin@example.com → Org Admin (tenant-scoped testing)
     const orgAdminUser = await ensureUser(ORG_ADMIN_USER_EMAIL, ORG_ADMIN_USER_NAME, orgAdminPasswordHash);
     await setUserRoleInOrg(orgAdminUser.id, organization.id, orgAdminRole.id);
+    // Instant demo explorer: org admin on Demo Org (session via demo-access endpoint only)
+    const instantDemoPasswordHash = await bcrypt.hash(INSTANT_DEMO_USER_PASSWORD, 10);
+    const instantDemoUser = await ensureUser(INSTANT_DEMO_USER_EMAIL, INSTANT_DEMO_USER_NAME, instantDemoPasswordHash);
+    await setUserRoleInOrg(instantDemoUser.id, organization.id, orgAdminRole.id);
     // Demo users: 9 extra users with org roles (idempotent)
     await ensureDemoUsers(organization.id, orgAdminPasswordHash);
     // Optional: reset demo data before recreating (SEED_RESET_DEMO=true)
@@ -1282,6 +1291,7 @@ async function main() {
     console.log(`Organization: ${organization.name}`);
     console.log(`Platform user: ${DEMO_USER_EMAIL} (Super Admin)`);
     console.log(`Tenant user: ${ORG_ADMIN_USER_EMAIL} (Org Admin)`);
+    console.log(`Instant demo user: ${INSTANT_DEMO_USER_EMAIL} (demo-access endpoint)`);
     console.log(`Permissions: ${permissions.length}`);
 }
 main()
