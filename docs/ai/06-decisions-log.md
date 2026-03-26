@@ -137,3 +137,18 @@ Each entry: **Date | Decision | Rationale**
 
 - **Decision:** Add optional `assignedToMe` (boolean) and `assignedToUserId` (UUID) to today/overdue/failed list DTOs. Service resolves assignedToMe via ctx.userId; repository filters by assignedToUserId when provided. Frontend: FilterBar with "Assigned to me" checkbox; URL-synced; no assignee dropdown in v1.
 - **Rationale:** Enables practical "My Runs" workflow without new endpoint; follows alerts-style filter resolution; minimal scope (checkbox only).
+
+### Dev-only CORS for local SPA (2026-03)
+
+- **Decision:** Call `app.enableCors` only when `process.env.NODE_ENV !== 'production'`, with explicit origins `http://localhost:5173` and `http://127.0.0.1:5173`, `credentials: true`. Production (e.g. Docker `NODE_ENV=production`, same-origin behind reverse proxy) does not enable this block.
+- **Rationale:** Vite dev server and API on different origins require CORS for authenticated API calls; production same-origin should not get a broad or duplicate CORS policy.
+
+### Product analytics in the SPA (2026-03)
+
+- **Decision:** Integrate Google Analytics 4 and PostHog in the frontend only: small provider modules, unified `analytics` wrapper, env-driven keys (`VITE_GA4_ID`, `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`), UTM capture helpers, and selective event capture (auth funnel, signup modes, key navigation). No new backend analytics ingestion path in v1.
+- **Rationale:** Product metrics without server-side pipeline complexity; aligns with common SPA patterns and keeps PII handling in well-understood client SDKs + host configuration.
+
+### TypeScript incremental cache vs `deleteOutDir` (2026-03)
+
+- **Decision:** Set `compilerOptions.tsBuildInfoFile` to a path under `./dist` (e.g. `./dist/tsconfig.tsbuildinfo`) so Nest `deleteOutDir` and incremental builds do not leave a stale `.tsbuildinfo` next to consumed output.
+- **Rationale:** Avoids “Cannot find module `dist/main`” / broken watch after clean output when incremental info pointed outside `dist`.

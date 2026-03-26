@@ -1,10 +1,10 @@
 # Next Steps
 
-**Review and update after each implementation session.**
+**Review and update after each implementation session.** Last pass: 2026-03-24.
 
 ---
 
-## 1. Phase 8 Alert Operations (8A COMPLETE)
+## 1. Phase 8 Alert Operations (historical — complete)
 
 - ~~**Phase 8A — Alert List Power Features**~~ — *Done.* Bulk acknowledge, bulk resolve, richer filters (severity, sourceType, from, to, assignedUserId), row selection, collapsible advanced filters.
 - ~~**Alert list date filter fix**~~ — *Done.* Date-only `to` now includes full UTC day; backend repository fix.
@@ -51,9 +51,10 @@
 
 ## 5. Platform Hardening (MEDIUM PRIORITY)
 
-- **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints. Document in API surface.
+- **Pagination standardization** — Align pagination params (page, limit, max limit) and response shape across list endpoints (docs: `docs/ai/05-api-surface.md`).
 - **Query/index optimization for escalation queries** — Add or tune indexes for `alert_events` escalation filters (organization_id, status, created_at, location_id). Profile and optimize raw SQL.
 - **Expansion of domain event handlers** — Handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved`. Extend to temperature, IoT, or other alert sources as needed.
+- **Production analytics validation** — Confirm GA4/PostHog env vars in deploy pipeline; verify SPA page views and key events in staging/prod; document measurement IDs per environment.
 
 ---
 

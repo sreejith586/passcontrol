@@ -1,6 +1,6 @@
 # API Surface
 
-Base: `/v1` (versioned)
+Base: `/v1` (URI versioned) for all controllers that declare `version: '1'`. **Exception:** `GET /health` is unversioned (root controller, no `v1` prefix).
 
 ## Checklist Runs
 
@@ -42,7 +42,7 @@ Run list filters (Phase 15E): today, overdue, failed support assignedToMe (bool)
 | GET | /alert-events/escalations/summary | alert.view | Escalation summary (totals, breach counts, severity breakdown) |
 | GET | /alert-events/escalations/summary-by-location | alert.view | Escalation summary grouped by location |
 | GET | /alert-events/escalations/trends | alert.view | Time-series escalation counts (day/week/month buckets) |
-| GET | /alert-events/escalations/prioritized | alert.view | Top N escalations by urgency (resolve/acknowledge breached, severity) |
+| GET | /alert-events/escalations/prioritized | alert.view | Top N escalations by urgency (resolve/acknowledge breached, severity); response may include checklist/location context for dashboard cards |
 | GET | /alert-events/sla-compliance | alert.view | SLA compliance metrics (within-SLA/breached counts and rates) |
 | GET | /alert-events/insights/sla-compliance | alert.view | SLA compliance for alerts triggered in period (from, to; uses triggeredAt) |
 | GET | /alert-events/insights/escalation-trend | alert.view | Daily buckets of triggered alerts with breached counts (days, default 7) |
@@ -97,7 +97,16 @@ Run list filters (Phase 15E): today, overdue, failed support assignedToMe (bool)
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
+| GET | /onboarding/first-run-status | checklist.run.view OR checklist.template.view OR user.view | Self-onboarded flag, tenant type, demo workspace eligibility, verification flags, counts for dashboard onboarding checklist |
 | POST | /onboarding/quick-setup | checklist.template.create | Creates starter template, schedule, and run. Returns `{ runId }`. Redirect to /checklist-runs/:runId. |
+| POST | /onboarding/demo-setup | checklist.template.create | DEMO tenants with empty workspace: idempotent demo brand/location/zone/template/schedule/run + sample failure/alert |
+
+## Public — Self-onboarding
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /public/self-onboarding/signup | None | Self-service signup (`signupMode`: DEMO or STANDARD). Creates org + org admin, sends verification email. Returns message + `organizationId`; no JWT. |
+| POST | /public/self-onboarding/verify-email | None | Body `{ token }` from link; sets `emailVerifiedAt` when needed |
 
 ## Auth
 
@@ -169,6 +178,7 @@ Run list filters (Phase 15E): today, overdue, failed support assignedToMe (bool)
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
+| POST | /checklist-schedules/preview-next-run | checklist.schedule.view | Preview next run datetime for draft config (body: rrule, timezone, optional startsAt/endsAt, scope fields); uses same computation as schedule runner |
 | GET | /checklist-schedules | checklist.schedule.view | List schedules (query: checklistTemplateId, isActive, page, limit) |
 | GET | /checklist-schedules/:id | checklist.schedule.view | Get schedule by ID |
 | POST | /checklist-schedules | checklist.schedule.create | Create schedule (checklistTemplateId, name, timezone, rrule, brandId?, locationId?, zoneId?, ownerUserId?, startsAt?, endsAt?) |
@@ -183,9 +193,62 @@ Scope validation (Phase 14C.1): Checklist templates and schedules validate brand
 
 Owner (Phase 15A): Checklist schedules support optional ownerUserId; create/update validate owner belongs to org; response includes ownerUserId and ownerUser: { id, name }.
 
-## Other
+## Reports
 
-- `/temperature-policies`, `/temperature-readings`, `/organization-settings`
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /reports/checklist-completion | reports.view | JSON preview: runs in date range (paginated) |
+| GET | /reports/checklist-completion/export | reports.view | Excel export |
+| GET | /reports/failed-items | reports.view | JSON preview: failed run items (paginated) |
+| GET | /reports/failed-items/export | reports.view | Excel export |
+| GET | /reports/overdue-runs/export | reports.view | Excel: overdue runs |
+| GET | /reports/consolidated-operations | reports.view | JSON preview: runs + failedItemCount + openAlertCount |
+| GET | /reports/consolidated-operations/export | reports.view | Excel export |
+| GET | /reports/checklist-item-status | reports.view | JSON preview: items in runs (optional result filter) |
+| GET | /reports/checklist-item-status/export | reports.view | Excel export |
+
+## Settings (org email relay)
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /settings/email | alert.workflow-policy.view | Get org email relay settings |
+| PUT | /settings/email | alert.workflow-policy.manage | Update relay settings |
+| POST | /settings/email/test | alert.workflow-policy.view | Send test email to current user |
+
+## Notifications
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /notifications/preferences | alert.view | Effective preferences (defaults merged) |
+| PUT | /notifications/preferences | alert.view | Upsert preferences for current user |
+| GET | /notifications | alert.view | List notifications (page, limit, unreadOnly) |
+| GET | /notifications/unread-count | alert.view | Unread count |
+| PATCH | /notifications/mark-all-read | alert.view | Mark all read |
+| PATCH | /notifications/:id/read | alert.view | Mark one read |
+
+## Temperature policies
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /temperature-policies | temperature.policy.view | List policies |
+| GET | /temperature-policies/:id | temperature.policy.view | Get policy |
+| POST | /temperature-policies | temperature.policy.create | Create policy |
+| PATCH | /temperature-policies/:id | temperature.policy.update | Update policy |
+| DELETE | /temperature-policies/:id | temperature.policy.update | Deactivate policy |
+
+## Temperature readings
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| GET | /temperature-readings | temperature.reading.view | List readings |
+| GET | /temperature-readings/:id | temperature.reading.view | Get reading |
+| POST | /temperature-readings | temperature.reading.create | Create reading (may raise alert via payload) |
+
+## Health (unversioned)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /health | None | `{ status: 'ok' }` liveness |
 
 ## Response Shape
 

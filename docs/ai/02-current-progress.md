@@ -1,6 +1,6 @@
 # Current Progress
 
-**Last updated:** 2026-03-22 (Temperature unit display UX)
+**Last updated:** 2026-03-24 (analytics, dashboard insights, dev CORS, demo signup copy)
 
 ## Implemented Features
 
@@ -65,7 +65,12 @@
 - [x] Alert SLA foundation: AlertSlaPolicy model, snapshot SLA on AlertEvent, AlertSlaResolverService
 - [x] Admin APIs for AlertSlaPolicy: GET/POST/PATCH /v1/alert-sla-policies (alert.sla-policy.view, alert.sla-policy.manage)
 - [x] GET /v1/alert-sla-policies/preview (SLA preview for given severity/scope, uses same resolver as alert creation)
-- [x] `POST /v1/checklist-run-items/:id/acknowledge-alert`, `resolve-alert`
+
+### Public self-onboarding (no JWT)
+
+- [x] `POST /v1/public/self-onboarding/signup` — DEMO or STANDARD org + first org admin; sends verification email; no tokens returned
+- [x] `POST /v1/public/self-onboarding/verify-email` — completes email verification from link token
+- [x] Frontend: `/signup` (standard), `/signup/demo` (demo); success copy for demo clarifies sign-in without verification is allowed
 
 ### User Management (Admin)
 
@@ -77,6 +82,8 @@
 
 ### Onboarding Flow
 
+- [x] `GET /v1/onboarding/first-run-status` — tenant type, demo workspace eligibility, email verification, counts for dashboard checklist
+- [x] `POST /v1/onboarding/demo-setup` — eligible DEMO orgs: sample brand/location/zone/template/schedule/run + failed item/alert (idempotent)
 - [x] Frontend: `/set-password` public route; SetPasswordPage validates token on load; password form or ErrorState; redirect to login with success banner
 - [x] AddUserModal: when setupToken returned, shows copyable setup link (origin + /set-password?token=...)
 - [x] PassControl branding: header, sidebar, login page, set-password page; document title; index.html default title
@@ -101,6 +108,8 @@
 - [x] Phase 11B — App shell & core visual refactor: dark charcoal (slate-900) left sidebar; light neutral canvas (slate-50); white header with shadow; max-w content framing; Card/table rounded-xl, border-slate-200; FilterBar and action bar white with shadow; checklist tabs as segmented control; RunItemRow cards refined; DataTable cleaner container
 - [x] Phase 11C — Surface & detail experience refactor: sidebar branding (ShieldCheck icon + PassControl text; icon-only when collapsed); dashboard redesign (Key metrics section, Operational overview two-column: SLA/trend left, Top priorities/Top sources right; stronger KPI hierarchy, framed modules); alert detail (two-column case layout: main = Activity + Comments, right rail = Case summary + Actions; ActivityTimeline/CommentsSection stronger framing); checklist detail (section cards with bordered headers, stronger submit area, refined right rail with dt/dd hierarchy, Jump to section hover states); shared RailCard uppercase section titles
 - [x] Phase 11D — Information density & UX enrichment: Dashboard (alerts chart: "3 alerts · 2 breached" labels; top problem sources: formatSourceDisplay with sourceId; KPI cards: larger numbers, uppercase labels); Alerts list (enriched rows: formatSourceDisplay, formatDateTimeContextual + formatRelative, severity left border; DataTable getRowClassName); Checklist runs list (Checklist column: name + Run #; Status: badge + status label; Execution: progress + failed count + attachment count; RunStatusBadge font-bold); formatSourceDisplay, formatDateTimeContextual, formatRelative in lib
+- [x] Dashboard operational cards: Escalation trend summary (`GET /v1/alert-events/insights/escalation-trend`); action-required / prioritized escalations (`GET /v1/alert-events/escalations/prioritized`) with enriched checklist/location context
+- [x] Product analytics (frontend): Google Analytics 4 + PostHog; UTM capture; env-configured keys; unified `analytics` wrapper; login/signup/funnel-oriented events
 - [x] Phase 11E.1 — Seed stability & demo foundation: AlertSlaPolicy idempotency (ensureDemoSlaPolicies: create only missing severities); demo gating (DEMO_TEMPLATE_KEYS, demoDataExists); optional reset-demo (SEED_RESET_DEMO=true, deleteDemoData, npm run prisma:seed:reset-demo)
 - [x] Phase 12A.1 — Checklist detail actionable blockers & guided navigation: Jump to first blocker button; Submission readiness shows specific blocking items (label, type) with click-to-scroll; Jump to section shows per-section health (completed/total, blocker count); sections with blockers visually emphasized (amber); run-metrics.ts reused for counts and new helpers (getBlockingItems, getFirstBlockerItemId, getSectionHealth)
 - [x] Phase 13B.1 — Guided First Value onboarding: default landing /dashboard; Get Started panel when totalRuns === 0; POST /onboarding/quick-setup (template + schedule + run); Start setup CTA on Dashboard and Checklist Runs; improved empty states (Alerts: "Go to checklist runs"); product explanation "Templates → Runs → Alerts"
@@ -122,6 +131,9 @@
 
 - [x] Escalation raw SQL: explicit `::uuid` casts for UUID parameters in listEscalations, getEscalationsSummary, listPrioritizedEscalations (fixes PostgreSQL `uuid = text` 500s)
 - [x] Alert list date filter: date-only `to` (YYYY-MM-DD) now means through end of day UTC (use `lt` next day); full ISO datetime preserves precise `lte`; `from` unchanged (start of day UTC)
+- [x] Local dev CORS: `enableCors` for `localhost:5173` / `127.0.0.1:5173` only when `NODE_ENV !== 'production'` (Docker/production unchanged)
+- [x] Docker backend image: Nest `CMD` aligned to compiled output path (`dist/main.js`)
+- [x] TypeScript incremental build: `tsBuildInfoFile` under `./dist/` to avoid stale incremental state with `deleteOutDir`
 
 ### Phase 9 — Evidence Upload Backend
 
@@ -132,15 +144,13 @@
 - [x] Temperature policies, readings, breach handling
 - [x] Files, attachments
 - [x] Auth (JWT), RBAC
-
-## Phase 7 Remaining Gaps
-
-- Template/schedule authoring UI — not in scope for Phase 7
+- [x] Reports module: checklist completion, failed items, overdue runs, consolidated operations, checklist item status — JSON preview + Excel export (`reports.view`)
+- [x] Notification preferences + in-app notification list (mark read, unread count)
+- [x] Organization email relay settings: GET/PUT `/v1/settings/email`, POST `/v1/settings/email/test`
 
 ## Not Yet Implemented
 
 - Handlers for `checklist.run.completed`, `alert.acknowledged`, `alert.resolved` (events published, no consumers)
 - Async/outbox domain event publishing
-- Additional reporting or analytics endpoints
-- Email delivery for invite/setup links (currently admin copies link manually)
+- Email delivery for invite/setup links (currently admin copies link manually); self-onboarding verification email depends on configured mail transport
 - Edit user name/email; delete user; password reset
