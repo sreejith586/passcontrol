@@ -16,6 +16,8 @@ interface DataTableProps<T> {
   getRowId: (row: T) => string;
   onRowClick?: (row: T) => void;
   getRowClassName?: (row: T) => string;
+  /** Merged onto select-all and row checkbox cells only (e.g. mobile tap padding). */
+  selectableColumnClassName?: string;
 }
 
 export function DataTable<T>({
@@ -31,6 +33,7 @@ export function DataTable<T>({
   getRowId,
   onRowClick,
   getRowClassName,
+  selectableColumnClassName,
 }: DataTableProps<T>) {
   const allSelected = data.length > 0 && data.every((r) => selectedIds.has(getRowId(r)));
   const someSelected = data.some((r) => selectedIds.has(getRowId(r)));
@@ -60,7 +63,12 @@ export function DataTable<T>({
           <thead>
             <tr className="border-b border-border bg-slate-50/80">
               {selectable && (
-                <th className="w-12 px-4 py-3 text-left">
+                <th
+                  className={cn(
+                    'w-12 px-4 py-3 text-left',
+                    selectableColumnClassName
+                  )}
+                >
                   <Skeleton className="h-4 w-4" />
                 </th>
               )}
@@ -75,7 +83,12 @@ export function DataTable<T>({
             {[1, 2, 3, 4, 5].map((i) => (
               <tr key={i} className="border-b border-border/60">
                 {selectable && (
-                  <td className="px-4 py-3">
+                  <td
+                    className={cn(
+                      'px-4 py-3',
+                      selectableColumnClassName
+                    )}
+                  >
                     <Skeleton className="h-4 w-4" />
                   </td>
                 )}
@@ -109,7 +122,12 @@ export function DataTable<T>({
         <thead>
           <tr className="border-b border-border bg-slate-50/80">
             {selectable && (
-              <th className="w-12 px-4 py-3 text-left">
+              <th
+                className={cn(
+                  'w-12 px-4 py-3 text-left',
+                  selectableColumnClassName
+                )}
+              >
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -145,7 +163,13 @@ export function DataTable<T>({
                 onClick={() => onRowClick?.(row)}
               >
                 {selectable && (
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className={cn(
+                      'px-4 py-3',
+                      selectableColumnClassName
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={isSelected}

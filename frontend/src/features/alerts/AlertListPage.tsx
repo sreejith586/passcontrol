@@ -566,7 +566,7 @@ export function AlertListPage() {
       </Card>
 
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm max-lg:flex-col max-lg:items-stretch max-lg:gap-2">
           <span className="text-sm font-medium text-foreground">
             {selectedIds.size} selected
           </span>
@@ -574,6 +574,7 @@ export function AlertListPage() {
             <Button
               variant="primary"
               size="sm"
+              className="max-lg:min-h-10"
               onClick={() => bulkAcknowledgeMutation.mutate()}
               disabled={
                 openSelected.length === 0 || bulkAcknowledgeMutation.isPending
@@ -602,6 +603,7 @@ export function AlertListPage() {
           <Button
             variant="ghost"
             size="sm"
+            className="max-lg:min-h-10"
             onClick={() => setSelectedIds(new Set())}
           >
             Clear selection
@@ -626,6 +628,7 @@ export function AlertListPage() {
         onRowClick={(row) => navigate(`/alerts/${row.id}`)}
         getRowClassName={rowClassName}
         selectable
+        selectableColumnClassName="max-lg:px-3 max-lg:py-3 align-middle"
         selectedIds={selectedIds}
         onSelectionChange={handleSelectionChange}
       />
