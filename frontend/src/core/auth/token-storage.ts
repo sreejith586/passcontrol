@@ -18,15 +18,30 @@ export function clearTokens(): void {
   sessionStorage.removeItem(USER_KEY);
 }
 
-export function setStoredUser(user: { id: string; email: string | null; name: string | null }): void {
+export function setStoredUser(user: {
+  id: string;
+  email: string | null;
+  name: string | null;
+  isSuperAdmin?: boolean;
+}): void {
   sessionStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
-export function getStoredUser(): { id: string; email: string | null; name: string | null } | null {
+export function getStoredUser(): {
+  id: string;
+  email: string | null;
+  name: string | null;
+  isSuperAdmin?: boolean;
+} | null {
   const raw = sessionStorage.getItem(USER_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as { id: string; email: string | null; name: string | null };
+    return JSON.parse(raw) as {
+      id: string;
+      email: string | null;
+      name: string | null;
+      isSuperAdmin?: boolean;
+    };
   } catch {
     return null;
   }

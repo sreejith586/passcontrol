@@ -56,9 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = useCallback((me: MeResponse) => {
-    setStoredUser(me.user);
+    const user = { ...me.user, isSuperAdmin: me.isSuperAdmin ?? false };
+    setStoredUser(user);
     setState({
-      user: me.user,
+      user,
       organizationId: me.organizationId,
       permissions: me.permissions ?? [],
       isLoading: false,

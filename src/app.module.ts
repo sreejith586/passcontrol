@@ -25,6 +25,7 @@ import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './notifications/mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { HealthController } from './health.controller';
     ReportsModule,
     MailModule,
     NotificationsModule,
+    SuperAdminModule,
   ],
   controllers: [HealthController],
 })

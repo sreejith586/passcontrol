@@ -2,6 +2,8 @@ export interface AuthUser {
   id: string;
   email: string | null;
   name: string | null;
+  /** From GET /auth/me; config-driven super admin list (SUPER_ADMIN_EMAILS). */
+  isSuperAdmin?: boolean;
 }
 
 export interface AuthSession {
@@ -16,4 +18,6 @@ export interface MeResponse {
   organizationId: string;
   roles: string[];
   permissions: string[];
+  /** Omitted on older API versions; treat as false. */
+  isSuperAdmin?: boolean;
 }

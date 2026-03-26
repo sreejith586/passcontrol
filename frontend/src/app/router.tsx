@@ -37,6 +37,8 @@ import { ReportWorkspacePage } from '@/features/reports/ReportWorkspacePage';
 import { DemoSignupPage } from '@/features/self-onboarding/DemoSignupPage';
 import { OrganizationSignupPage } from '@/features/self-onboarding/OrganizationSignupPage';
 import { VerifyEmailPage } from '@/features/self-onboarding/VerifyEmailPage';
+import { SuperAdminDashboardPage } from '@/features/super-admin/SuperAdminDashboardPage';
+import { SuperAdminRouteGuard } from '@/features/super-admin/SuperAdminRouteGuard';
 
 function NotFoundPage() {
   return (
@@ -78,6 +80,14 @@ const router = createBrowserRouter([
           <RoutePermissionGuard>
             <DashboardPage />
           </RoutePermissionGuard>
+        ),
+      },
+      {
+        path: 'super-admin',
+        element: (
+          <SuperAdminRouteGuard>
+            <SuperAdminDashboardPage />
+          </SuperAdminRouteGuard>
         ),
       },
       {

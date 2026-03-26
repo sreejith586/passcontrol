@@ -12,6 +12,7 @@ import { AuditLogsService } from '../audit/services/audit-logs.service';
 import { PasswordSetupTokenRepository } from './repositories/password-setup-token.repository';
 import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 import { LoginDto } from './dto/login.dto';
+import { isSuperAdminEmail } from '../super-admin/super-admin-emails';
 
 interface JwtPayload {
   sub: string;
@@ -412,6 +413,7 @@ export class AuthService {
       organizationId,
       roles,
       permissions: Array.from(permissions),
+      isSuperAdmin: isSuperAdminEmail(user.email),
     };
   }
 }
