@@ -25,13 +25,6 @@ jobs:
         run: |
           docker build -f Dockerfile.backend \
             -t ghcr.io/sreejith586/passcontrol-backend:${{ github.sha }} .
-      - name: Verify frontend analytics build vars
-        run: |
-          [ -n "${{ vars.VITE_DEMO_INSTANT_ACCESS_KEY }}" ] && echo "VITE_DEMO_INSTANT_ACCESS_KEY set" || (echo "VITE_DEMO_INSTANT_ACCESS_KEY unset" && exit 1)
-          [ -n "${{ vars.VITE_API_BASE_URL }}" ] && echo "VITE_API_BASE_URL set" || (echo "VITE_API_BASE_URL unset" && exit 1)
-          [ -n "${{ vars.VITE_POSTHOG_HOST }}" ] && echo "VITE_POSTHOG_HOST set" || (echo "VITE_POSTHOG_HOST unset" && exit 1)
-          [ -n "${{ secrets.VITE_POSTHOG_KEY }}" ] && echo "VITE_POSTHOG_KEY set" || (echo "VITE_POSTHOG_KEY unset" && exit 1)
-          [ -n "${{ secrets.VITE_GA4_ID }}" ] && echo "VITE_GA4_ID set" || (echo "VITE_GA4_ID unset" && exit 1)
       - name: Build frontend image
         run: |
           docker build -f frontend/Dockerfile \
