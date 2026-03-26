@@ -296,7 +296,7 @@ export function ChecklistRunDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-lg:pb-24">
       <Breadcrumbs
         items={[
           { label: 'Checklist Runs', href: '/checklist-runs' },
@@ -379,7 +379,13 @@ export function ChecklistRunDetailPage() {
         ))}
       </div>
       {!isCompleted && canSubmit && (
-        <div className="rounded-xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+        <div
+          className={cn(
+            'rounded-xl border border-slate-200 bg-white shadow-sm',
+            'max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:rounded-none max-lg:border-t max-lg:px-4 max-lg:py-3 max-lg:shadow-lg',
+            'lg:px-6 lg:py-5'
+          )}
+        >
           <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="w-full sm:w-auto">
               {(updateItemMutation.isPending || submitMutation.isPending) && (

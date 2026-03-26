@@ -22,6 +22,7 @@ export function BooleanItemInput({
         type="button"
         variant={result === 'PASS' ? 'primary' : 'secondary'}
         size="sm"
+        className="max-lg:min-h-10 max-lg:px-4"
         disabled={disabled || isUpdating}
         onClick={() => onUpdate(itemId, { result: 'PASS' })}
       >
@@ -31,6 +32,7 @@ export function BooleanItemInput({
         type="button"
         variant={result === 'FAIL' ? 'danger' : 'secondary'}
         size="sm"
+        className="max-lg:min-h-10 max-lg:px-4"
         disabled={disabled || isUpdating}
         onClick={() => onUpdate(itemId, { result: 'FAIL' })}
       >
