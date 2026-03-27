@@ -16,9 +16,9 @@ export interface UpdateProfileDto {
 }
 
 export async function getMyProfile(): Promise<UserProfile> {
-  return get<UserProfile>('/users/me');
+  return get<UserProfile>('/v1/users/me');
 }
 
 export async function updateMyProfile(dto: UpdateProfileDto): Promise<UserProfile> {
-  return patch<UserProfile>('/users/me', dto);
+  return patch<UserProfile>('/v1/users/me', dto);
 }

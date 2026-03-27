@@ -3,14 +3,14 @@ import { unwrapResponse } from '@/core/api/response-unwrap';
 import type { LoginRequest, LoginResponse } from './types';
 
 export async function login(dto: LoginRequest): Promise<LoginResponse> {
-  return post<LoginResponse>('/auth/login', dto);
+  return post<LoginResponse>('/v1/auth/login', dto);
 }
 
 /** Same shape as login; gated server-side by DEMO_INSTANT_ACCESS_ENABLED. */
 export async function demoInstantAccess(): Promise<LoginResponse> {
   const key = import.meta.env.VITE_DEMO_INSTANT_ACCESS_KEY as string | undefined;
   const res = await apiClient.post(
-    '/auth/demo-access',
+    '/v1/auth/demo-access',
     {},
     {
       ...(key != null && key !== ''
@@ -29,7 +29,7 @@ export interface ValidateSetupTokenResponse {
 export async function validateSetupToken(
   token: string
 ): Promise<ValidateSetupTokenResponse> {
-  return post<ValidateSetupTokenResponse>('/auth/validate-setup-token', {
+  return post<ValidateSetupTokenResponse>('/v1/auth/validate-setup-token', {
     token,
   });
 }
@@ -43,7 +43,7 @@ export async function setPassword(
   password: string,
   passwordConfirm?: string
 ): Promise<SetPasswordResponse> {
-  return post<SetPasswordResponse>('/auth/set-password', {
+  return post<SetPasswordResponse>('/v1/auth/set-password', {
     token,
     password,
     ...(passwordConfirm != null && passwordConfirm !== ''
@@ -64,5 +64,5 @@ export interface ChangePasswordResponse {
 export async function changePassword(
   dto: ChangePasswordDto
 ): Promise<ChangePasswordResponse> {
-  return post<ChangePasswordResponse>('/auth/change-password', dto);
+  return post<ChangePasswordResponse>('/v1/auth/change-password', dto);
 }

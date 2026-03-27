@@ -53,21 +53,21 @@ export async function listUsers(
   const cleanParams: Record<string, number> = {};
   if (params.page != null) cleanParams.page = params.page;
   if (params.limit != null) cleanParams.limit = params.limit;
-  return get<PaginatedData<UserForAssignment>>('/users', cleanParams);
+  return get<PaginatedData<UserForAssignment>>('/v1/users', cleanParams);
 }
 
 /**
  * List roles assignable in the organization. Backend GET /v1/roles.
  */
 export async function listRoles(): Promise<Role[]> {
-  return get<Role[]>('/roles');
+  return get<Role[]>('/v1/roles');
 }
 
 /**
  * Add user to organization (admin provisioning). Backend POST /v1/users/invite.
  */
 export async function addUser(dto: InviteUserDto): Promise<UserForAssignment> {
-  return post<UserForAssignment>('/users/invite', dto);
+  return post<UserForAssignment>('/v1/users/invite', dto);
 }
 
 /**
@@ -77,7 +77,7 @@ export async function addUserRole(
   userId: string,
   roleId: string
 ): Promise<UserForAssignment> {
-  return post<UserForAssignment>(`/users/${userId}/roles`, { roleId });
+  return post<UserForAssignment>(`/v1/users/${userId}/roles`, { roleId });
 }
 
 /**
@@ -87,7 +87,7 @@ export async function removeUserRole(
   userId: string,
   roleId: string
 ): Promise<UserForAssignment> {
-  return del<UserForAssignment>(`/users/${userId}/roles/${roleId}`);
+  return del<UserForAssignment>(`/v1/users/${userId}/roles/${roleId}`);
 }
 
 /**
@@ -97,7 +97,7 @@ export async function updateUserStatus(
   userId: string,
   isActive: boolean
 ): Promise<UserForAssignment> {
-  return patch<UserForAssignment>(`/users/${userId}/status`, { isActive });
+  return patch<UserForAssignment>(`/v1/users/${userId}/status`, { isActive });
 }
 
 /**
@@ -105,5 +105,5 @@ export async function updateUserStatus(
  * Only allowed when user has no password and is deactivated.
  */
 export async function reinviteUser(userId: string): Promise<{ message: string }> {
-  return post<{ message: string }>(`/users/${userId}/reinvite`, {});
+  return post<{ message: string }>(`/v1/users/${userId}/reinvite`, {});
 }

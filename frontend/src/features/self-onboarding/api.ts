@@ -22,7 +22,7 @@ export async function selfOnboardingSignup(
   payload: SelfOnboardingSignupPayload
 ): Promise<SelfOnboardingSignupResult> {
   return post<SelfOnboardingSignupResult>(
-    '/public/self-onboarding/signup',
+    '/v1/public/self-onboarding/signup',
     payload
   );
 }
@@ -35,7 +35,7 @@ export async function selfOnboardingVerifyEmail(
   token: string
 ): Promise<SelfOnboardingVerifyEmailResult> {
   return post<SelfOnboardingVerifyEmailResult>(
-    '/public/self-onboarding/verify-email',
+    '/v1/public/self-onboarding/verify-email',
     { token }
   );
 }

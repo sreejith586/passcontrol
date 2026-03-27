@@ -24,7 +24,7 @@ function getInitials(name: string | null, email: string | null): string {
 function useOrganizationName(organizationId: string | null): string | null {
   const { data } = useQuery({
     queryKey: ['organization-settings', 'context', organizationId] as const,
-    queryFn: () => get<{ name?: string | null }>('/organization-settings/context'),
+    queryFn: () => get<{ name?: string | null }>('/v1/organization-settings/context'),
     enabled: !!organizationId,
   });
   return data?.name ?? null;

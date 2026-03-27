@@ -20,23 +20,23 @@ export async function listZones(params?: {
 }): Promise<Zone[]> {
   const searchParams: Record<string, string> = {};
   if (params?.locationId) searchParams.locationId = params.locationId;
-  return get<Zone[]>('/zones', searchParams);
+  return get<Zone[]>('/v1/zones', searchParams);
 }
 
 export async function getZoneById(id: string): Promise<Zone> {
-  return get<Zone>(`/zones/${id}`);
+  return get<Zone>(`/v1/zones/${id}`);
 }
 
 export async function createZone(payload: {
   locationId: string;
   name: string;
 }): Promise<Zone> {
-  return post<Zone>('/zones', payload);
+  return post<Zone>('/v1/zones', payload);
 }
 
 export async function updateZone(
   id: string,
   payload: { locationId?: string; name?: string }
 ): Promise<Zone> {
-  return patch<Zone>(`/zones/${id}`, payload);
+  return patch<Zone>(`/v1/zones/${id}`, payload);
 }

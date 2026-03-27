@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const me = await get<MeResponse>('/auth/me');
+    const me = await get<MeResponse>('/v1/auth/me');
     setSession(me);
   }, [setSession]);
 
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
       }));
       try {
-        const me = await get<MeResponse>('/auth/me');
+        const me = await get<MeResponse>('/v1/auth/me');
         setSession(me);
       } catch {
         logout();
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, isLoading: false }));
       return;
     }
-    get<MeResponse>('/auth/me')
+    get<MeResponse>('/v1/auth/me')
       .then(setSession)
       .catch(() => {
         logout();

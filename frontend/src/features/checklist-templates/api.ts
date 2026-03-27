@@ -104,26 +104,26 @@ export async function listTemplates(params?: {
   if (params?.status) searchParams.status = params.status;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
-  return get<ChecklistTemplate[]>('/checklist-templates', searchParams);
+  return get<ChecklistTemplate[]>('/v1/checklist-templates', searchParams);
 }
 
 export async function getTemplateById(id: string): Promise<ChecklistTemplate> {
-  return get<ChecklistTemplate>(`/checklist-templates/${id}`);
+  return get<ChecklistTemplate>(`/v1/checklist-templates/${id}`);
 }
 
 export async function createTemplate(
   payload: CreateTemplatePayload
 ): Promise<ChecklistTemplate> {
-  return post<ChecklistTemplate>('/checklist-templates', payload);
+  return post<ChecklistTemplate>('/v1/checklist-templates', payload);
 }
 
 export async function updateTemplate(
   id: string,
   payload: UpdateTemplatePayload
 ): Promise<ChecklistTemplate> {
-  return patch<ChecklistTemplate>(`/checklist-templates/${id}`, payload);
+  return patch<ChecklistTemplate>(`/v1/checklist-templates/${id}`, payload);
 }
 
 export async function publishTemplate(id: string): Promise<ChecklistTemplate> {
-  return post<ChecklistTemplate>(`/checklist-templates/${id}/publish`, {});
+  return post<ChecklistTemplate>(`/v1/checklist-templates/${id}/publish`, {});
 }

@@ -20,46 +20,46 @@ export async function listAlerts(
       cleanParams[k] = v as string | number | boolean;
     }
   });
-  return get<PaginatedData<AlertEvent>>('/alert-events', cleanParams);
+  return get<PaginatedData<AlertEvent>>('/v1/alert-events', cleanParams);
 }
 
 export async function getAlert(id: string): Promise<AlertEvent> {
-  return get<AlertEvent>(`/alert-events/${id}`);
+  return get<AlertEvent>(`/v1/alert-events/${id}`);
 }
 
 export async function listActivities(id: string): Promise<AlertEventActivity[]> {
-  return get<AlertEventActivity[]>(`/alert-events/${id}/activities`);
+  return get<AlertEventActivity[]>(`/v1/alert-events/${id}/activities`);
 }
 
 export async function listComments(id: string): Promise<AlertEventComment[]> {
-  return get<AlertEventComment[]>(`/alert-events/${id}/comments`);
+  return get<AlertEventComment[]>(`/v1/alert-events/${id}/comments`);
 }
 
 export async function acknowledgeAlert(id: string): Promise<AlertEvent> {
-  return post<AlertEvent>(`/alert-events/${id}/acknowledge`);
+  return post<AlertEvent>(`/v1/alert-events/${id}/acknowledge`);
 }
 
 export async function resolveAlert(
   id: string,
   resolutionNote?: string
 ): Promise<AlertEvent> {
-  return post<AlertEvent>(`/alert-events/${id}/resolve`, {
+  return post<AlertEvent>(`/v1/alert-events/${id}/resolve`, {
     resolutionNote: resolutionNote?.trim() || undefined,
   });
 }
 
 export async function reopenAlert(id: string, note?: string): Promise<AlertEvent> {
-  return post<AlertEvent>(`/alert-events/${id}/reopen`, {
+  return post<AlertEvent>(`/v1/alert-events/${id}/reopen`, {
     note: note?.trim() || undefined,
   });
 }
 
 export async function assignAlert(id: string, assignedToUserId: string): Promise<AlertEvent> {
-  return post<AlertEvent>(`/alert-events/${id}/assign`, { assignedToUserId });
+  return post<AlertEvent>(`/v1/alert-events/${id}/assign`, { assignedToUserId });
 }
 
 export async function unassignAlert(id: string): Promise<AlertEvent> {
-  return post<AlertEvent>(`/alert-events/${id}/unassign`);
+  return post<AlertEvent>(`/v1/alert-events/${id}/unassign`);
 }
 
 export async function addComment(
@@ -67,7 +67,7 @@ export async function addComment(
   type: 'COMMENT' | 'RESOLUTION_NOTE',
   body: string
 ): Promise<AlertEventComment> {
-  return post<AlertEventComment>(`/alert-events/${id}/comments`, { type, body });
+  return post<AlertEventComment>(`/v1/alert-events/${id}/comments`, { type, body });
 }
 
 export interface BulkAcknowledgeResult {
@@ -89,7 +89,7 @@ export interface BulkResolveResult {
 export async function bulkAcknowledgeAlerts(
   alertEventIds: string[]
 ): Promise<BulkAcknowledgeResult> {
-  return post<BulkAcknowledgeResult>('/alert-events/bulk-acknowledge', {
+  return post<BulkAcknowledgeResult>('/v1/alert-events/bulk-acknowledge', {
     alertEventIds,
   });
 }
@@ -98,7 +98,7 @@ export async function bulkResolveAlerts(
   alertEventIds: string[],
   resolutionNote?: string
 ): Promise<BulkResolveResult> {
-  return post<BulkResolveResult>('/alert-events/bulk-resolve', {
+  return post<BulkResolveResult>('/v1/alert-events/bulk-resolve', {
     alertEventIds,
     resolutionNote: resolutionNote?.trim() || undefined,
   });

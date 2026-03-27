@@ -78,13 +78,13 @@ export async function listSchedules(
     searchParams.isActive = String(params.isActive);
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
-  return get<ChecklistSchedule[]>('/checklist-schedules', searchParams);
+  return get<ChecklistSchedule[]>('/v1/checklist-schedules', searchParams);
 }
 
 export async function getScheduleById(
   id: string
 ): Promise<ChecklistSchedule> {
-  return get<ChecklistSchedule>(`/checklist-schedules/${id}`);
+  return get<ChecklistSchedule>(`/v1/checklist-schedules/${id}`);
 }
 
 export interface PreviewNextRunParams {
@@ -102,7 +102,7 @@ export async function previewNextRun(
   params: PreviewNextRunParams,
 ): Promise<PreviewNextRunResult> {
   return post<PreviewNextRunResult>(
-    '/checklist-schedules/preview-next-run',
+    '/v1/checklist-schedules/preview-next-run',
     params,
   );
 }
@@ -110,26 +110,26 @@ export async function previewNextRun(
 export async function createSchedule(
   payload: CreateSchedulePayload
 ): Promise<ChecklistSchedule> {
-  return post<ChecklistSchedule>('/checklist-schedules', payload);
+  return post<ChecklistSchedule>('/v1/checklist-schedules', payload);
 }
 
 export async function updateSchedule(
   id: string,
   payload: UpdateSchedulePayload
 ): Promise<ChecklistSchedule> {
-  return patch<ChecklistSchedule>(`/checklist-schedules/${id}`, payload);
+  return patch<ChecklistSchedule>(`/v1/checklist-schedules/${id}`, payload);
 }
 
 export async function activateSchedule(
   id: string
 ): Promise<ChecklistSchedule> {
-  return post<ChecklistSchedule>(`/checklist-schedules/${id}/activate`, {});
+  return post<ChecklistSchedule>(`/v1/checklist-schedules/${id}/activate`, {});
 }
 
 export async function deactivateSchedule(
   id: string
 ): Promise<ChecklistSchedule> {
-  return post<ChecklistSchedule>(`/checklist-schedules/${id}/deactivate`, {});
+  return post<ChecklistSchedule>(`/v1/checklist-schedules/${id}/deactivate`, {});
 }
 
 export interface ChecklistRun {
@@ -141,7 +141,7 @@ export async function generateRunFromSchedule(
   dueAt?: string
 ): Promise<ChecklistRun> {
   return post<ChecklistRun>(
-    `/checklist-schedules/${scheduleId}/generate-run`,
+    `/v1/checklist-schedules/${scheduleId}/generate-run`,
     dueAt ? { dueAt } : {}
   );
 }

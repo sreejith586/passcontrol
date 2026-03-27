@@ -11,5 +11,5 @@ export interface SuperAdminTenant {
 }
 
 export function listSuperAdminTenants(): Promise<SuperAdminTenant[]> {
-  return get<SuperAdminTenant[]>('/super-admin/tenants');
+  return get<SuperAdminTenant[]>('/v1/super-admin/tenants');
 }

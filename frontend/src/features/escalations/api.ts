@@ -17,7 +17,7 @@ export async function listEscalations(
     cleanParams[k] = v as string | number | boolean;
   });
   return get<PaginatedData<EscalationItem>>(
-    '/alert-events/escalations',
+    '/v1/alert-events/escalations',
     cleanParams
   );
 }
@@ -25,7 +25,7 @@ export async function listEscalations(
 export async function getEscalationsSummary(
   params?: Record<string, string>
 ): Promise<EscalationsSummary> {
-  return get<EscalationsSummary>('/alert-events/escalations/summary', params ?? {});
+  return get<EscalationsSummary>('/v1/alert-events/escalations/summary', params ?? {});
 }
 
 export async function getPrioritizedEscalations(
@@ -40,7 +40,7 @@ export async function getPrioritizedEscalations(
     });
   }
   return get<{ items: EscalationItem[] }>(
-    '/alert-events/escalations/prioritized',
+    '/v1/alert-events/escalations/prioritized',
     cleanParams
   );
 }

@@ -2,8 +2,13 @@ import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axio
 import { unwrapResponse } from './response-unwrap';
 import { ApiError } from './errors';
 
-const baseURL =
-  (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '') || '';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+if (!rawBaseUrl) {
+  throw new Error('VITE_API_BASE_URL is not defined');
+}
+
+const baseURL = rawBaseUrl.replace(/\/$/, '');
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL,

@@ -53,11 +53,11 @@ export async function getCompletionReportPreview(
   const params = toParams(filters);
   if (filters.page) params.page = String(filters.page);
   if (filters.limit) params.limit = String(filters.limit);
-  return get<CompletionReportPreviewResponse>('/reports/checklist-completion', params);
+  return get<CompletionReportPreviewResponse>('/v1/reports/checklist-completion', params);
 }
 
 export async function downloadCompletionReport(filters: ReportFilters = {}): Promise<Blob> {
-  return getBlob('/reports/checklist-completion/export', toParams(filters));
+  return getBlob('/v1/reports/checklist-completion/export', toParams(filters));
 }
 
 export async function getFailedItemsPreview(
@@ -66,15 +66,15 @@ export async function getFailedItemsPreview(
   const params = toParams(filters);
   if (filters.page) params.page = String(filters.page);
   if (filters.limit) params.limit = String(filters.limit);
-  return get<FailedRunItemsListResponse>('/reports/failed-items', params);
+  return get<FailedRunItemsListResponse>('/v1/reports/failed-items', params);
 }
 
 export async function downloadFailedItemsReport(filters: ReportFilters = {}): Promise<Blob> {
-  return getBlob('/reports/failed-items/export', toParams(filters));
+  return getBlob('/v1/reports/failed-items/export', toParams(filters));
 }
 
 export async function downloadOverdueRunsReport(filters: ReportFilters = {}): Promise<Blob> {
-  return getBlob('/reports/overdue-runs/export', toParams(filters));
+  return getBlob('/v1/reports/overdue-runs/export', toParams(filters));
 }
 
 /** Consolidated operations row (run + failedItemCount, openAlertCount) */
@@ -96,11 +96,11 @@ export async function getConsolidatedOperationsPreview(
   const params = toParams(filters);
   if (filters.page) params.page = String(filters.page);
   if (filters.limit) params.limit = String(filters.limit);
-  return get<ConsolidatedOperationsPreviewResponse>('/reports/consolidated-operations', params);
+  return get<ConsolidatedOperationsPreviewResponse>('/v1/reports/consolidated-operations', params);
 }
 
 export async function downloadConsolidatedOperationsReport(filters: ReportFilters = {}): Promise<Blob> {
-  return getBlob('/reports/consolidated-operations/export', toParams(filters));
+  return getBlob('/v1/reports/consolidated-operations/export', toParams(filters));
 }
 
 /** Checklist item status row (item-level) */
@@ -132,9 +132,9 @@ export async function getChecklistItemStatusPreview(
   const params = toParams(filters);
   if (filters.page) params.page = String(filters.page);
   if (filters.limit) params.limit = String(filters.limit);
-  return get<ChecklistItemStatusPreviewResponse>('/reports/checklist-item-status', params);
+  return get<ChecklistItemStatusPreviewResponse>('/v1/reports/checklist-item-status', params);
 }
 
 export async function downloadChecklistItemStatusReport(filters: ReportFilters = {}): Promise<Blob> {
-  return getBlob('/reports/checklist-item-status/export', toParams(filters));
+  return getBlob('/v1/reports/checklist-item-status/export', toParams(filters));
 }

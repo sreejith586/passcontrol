@@ -9,20 +9,20 @@ export interface Brand {
 }
 
 export async function listBrands(): Promise<Brand[]> {
-  return get<Brand[]>('/brands');
+  return get<Brand[]>('/v1/brands');
 }
 
 export async function getBrandById(id: string): Promise<Brand> {
-  return get<Brand>(`/brands/${id}`);
+  return get<Brand>(`/v1/brands/${id}`);
 }
 
 export async function createBrand(payload: { name: string }): Promise<Brand> {
-  return post<Brand>('/brands', payload);
+  return post<Brand>('/v1/brands', payload);
 }
 
 export async function updateBrand(
   id: string,
   payload: { name?: string }
 ): Promise<Brand> {
-  return patch<Brand>(`/brands/${id}`, payload);
+  return patch<Brand>(`/v1/brands/${id}`, payload);
 }

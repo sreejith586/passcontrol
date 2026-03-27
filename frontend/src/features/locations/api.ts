@@ -22,11 +22,11 @@ export async function listLocations(params?: {
 }): Promise<Location[]> {
   const searchParams: Record<string, string> = {};
   if (params?.brandId) searchParams.brandId = params.brandId;
-  return get<Location[]>('/locations', searchParams);
+  return get<Location[]>('/v1/locations', searchParams);
 }
 
 export async function getLocationById(id: string): Promise<Location> {
-  return get<Location>(`/locations/${id}`);
+  return get<Location>(`/v1/locations/${id}`);
 }
 
 export async function createLocation(payload: {
@@ -35,12 +35,12 @@ export async function createLocation(payload: {
   timezone: string;
   temperatureUnit?: 'F' | 'C' | null;
 }): Promise<Location> {
-  return post<Location>('/locations', payload);
+  return post<Location>('/v1/locations', payload);
 }
 
 export async function updateLocation(
   id: string,
   payload: { brandId?: string; name?: string; timezone?: string; temperatureUnit?: 'F' | 'C' | null }
 ): Promise<Location> {
-  return patch<Location>(`/locations/${id}`, payload);
+  return patch<Location>(`/v1/locations/${id}`, payload);
 }

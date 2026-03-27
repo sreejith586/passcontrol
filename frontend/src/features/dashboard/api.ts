@@ -11,20 +11,20 @@ import type { EscalationItem } from '@/features/escalations/types';
 export async function getChecklistMetrics(
   params?: Record<string, string>
 ): Promise<ChecklistRunMetrics> {
-  return get<ChecklistRunMetrics>('/checklist-runs/metrics', params ?? {});
+  return get<ChecklistRunMetrics>('/v1/checklist-runs/metrics', params ?? {});
 }
 
 export async function getEscalationSummary(
   params?: Record<string, string>
 ): Promise<EscalationsSummary> {
-  return get<EscalationsSummary>('/alert-events/escalations/summary', params ?? {});
+  return get<EscalationsSummary>('/v1/alert-events/escalations/summary', params ?? {});
 }
 
 export async function getPrioritizedEscalations(
   limit = 10
 ): Promise<{ items: EscalationItem[] }> {
   return get<{ items: EscalationItem[] }>(
-    '/alert-events/escalations/prioritized',
+    '/v1/alert-events/escalations/prioritized',
     { limit }
   );
 }
@@ -35,7 +35,7 @@ export async function getSlaCompliance(params?: {
   to?: string;
 }): Promise<SlaComplianceSummary> {
   return get<SlaComplianceSummary>(
-    '/alert-events/insights/sla-compliance',
+    '/v1/alert-events/insights/sla-compliance',
     params ?? {}
   );
 }
@@ -45,7 +45,7 @@ export async function getEscalationTrend(days = 7): Promise<
   EscalationTrendPoint[]
 > {
   return get<EscalationTrendPoint[]>(
-    '/alert-events/insights/escalation-trend',
+    '/v1/alert-events/insights/escalation-trend',
     { days }
   );
 }
@@ -56,7 +56,7 @@ export async function getTopProblemSources(
   limit = 5
 ): Promise<TopProblemSource[]> {
   return get<TopProblemSource[]>(
-    '/alert-events/insights/top-sources',
+    '/v1/alert-events/insights/top-sources',
     { limit }
   );
 }

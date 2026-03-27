@@ -5,7 +5,7 @@ export interface QuickSetupResponse {
 }
 
 export async function quickSetup(): Promise<QuickSetupResponse> {
-  return post<QuickSetupResponse>('/onboarding/quick-setup', {});
+  return post<QuickSetupResponse>('/v1/onboarding/quick-setup', {});
 }
 
 /** GET /v1/onboarding/first-run-status — self-onboarded flag + counts for dashboard checklist. */
@@ -21,7 +21,7 @@ export interface FirstRunStatusResponse {
 }
 
 export async function getFirstRunStatus(): Promise<FirstRunStatusResponse> {
-  return get<FirstRunStatusResponse>('/onboarding/first-run-status');
+  return get<FirstRunStatusResponse>('/v1/onboarding/first-run-status');
 }
 
 export interface DemoWorkspaceSetupResponse {
@@ -31,5 +31,5 @@ export interface DemoWorkspaceSetupResponse {
 }
 
 export async function demoWorkspaceSetup(): Promise<DemoWorkspaceSetupResponse> {
-  return post<DemoWorkspaceSetupResponse>('/onboarding/demo-setup', {});
+  return post<DemoWorkspaceSetupResponse>('/v1/onboarding/demo-setup', {});
 }

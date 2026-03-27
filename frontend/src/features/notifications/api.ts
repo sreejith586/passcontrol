@@ -15,17 +15,17 @@ export interface NotificationPreferencesResponse {
 }
 
 export async function getNotificationPreferences(): Promise<NotificationPreferencesResponse> {
-  return get<NotificationPreferencesResponse>('/notifications/preferences');
+  return get<NotificationPreferencesResponse>('/v1/notifications/preferences');
 }
 
 export async function putNotificationPreferences(
   items: NotificationPreferenceItem[]
 ): Promise<NotificationPreferencesResponse> {
-  return put<NotificationPreferencesResponse>('/notifications/preferences', { items });
+  return put<NotificationPreferencesResponse>('/v1/notifications/preferences', { items });
 }
 
 export async function getUnreadCount(): Promise<{ count: number }> {
-  return get<{ count: number }>('/notifications/unread-count');
+  return get<{ count: number }>('/v1/notifications/unread-count');
 }
 
 export async function listNotifications(params?: {
@@ -37,13 +37,13 @@ export async function listNotifications(params?: {
   if (params?.page != null) clean.page = params.page;
   if (params?.limit != null) clean.limit = params.limit;
   if (params?.unreadOnly === true) clean.unreadOnly = true;
-  return get<NotificationsListResponse>('/notifications', clean);
+  return get<NotificationsListResponse>('/v1/notifications', clean);
 }
 
 export async function markNotificationRead(id: string): Promise<{ ok: boolean }> {
-  return patch<{ ok: boolean }>(`/notifications/${id}/read`);
+  return patch<{ ok: boolean }>(`/v1/notifications/${id}/read`);
 }
 
 export async function markAllNotificationsRead(): Promise<{ count: number }> {
-  return patch<{ count: number }>('/notifications/mark-all-read');
+  return patch<{ count: number }>('/v1/notifications/mark-all-read');
 }

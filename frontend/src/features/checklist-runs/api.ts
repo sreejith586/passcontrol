@@ -25,7 +25,7 @@ export async function getTodayRuns(
   if (params?.timezone) searchParams.timezone = params.timezone;
   if (params?.date) searchParams.date = params.date;
   searchParams.view = 'full';
-  return get<ChecklistRunListResponse>('/checklist-runs/today', searchParams);
+  return get<ChecklistRunListResponse>('/v1/checklist-runs/today', searchParams);
 }
 
 export async function getOverdueRuns(
@@ -41,7 +41,7 @@ export async function getOverdueRuns(
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
   searchParams.view = 'full';
-  return get<ChecklistRunListResponse>('/checklist-runs/overdue', searchParams);
+  return get<ChecklistRunListResponse>('/v1/checklist-runs/overdue', searchParams);
 }
 
 export async function getFailedRuns(
@@ -58,7 +58,7 @@ export async function getFailedRuns(
   if (params?.from) searchParams.from = params.from;
   if (params?.to) searchParams.to = params.to;
   searchParams.view = 'full';
-  return get<ChecklistRunListResponse>('/checklist-runs/failed', searchParams);
+  return get<ChecklistRunListResponse>('/v1/checklist-runs/failed', searchParams);
 }
 
 export async function getFailedItems(
@@ -84,43 +84,43 @@ export async function getFailedItems(
   if (params?.to) searchParams.to = params.to;
   if (params?.page) searchParams.page = String(params.page);
   if (params?.limit) searchParams.limit = String(params.limit);
-  return get<FailedRunItemsListResponse>('/checklist-run-items/failed', searchParams);
+  return get<FailedRunItemsListResponse>('/v1/checklist-run-items/failed', searchParams);
 }
 
 export async function getRunById(id: string): Promise<ChecklistRun> {
-  return get<ChecklistRun>(`/checklist-runs/${id}`);
+  return get<ChecklistRun>(`/v1/checklist-runs/${id}`);
 }
 
 export async function updateRunItem(
   itemId: string,
   data: { result?: string; valueJson?: Record<string, unknown>; comment?: string }
 ): Promise<unknown> {
-  return patch(`/checklist-run-items/${itemId}`, data);
+  return patch(`/v1/checklist-run-items/${itemId}`, data);
 }
 
 export async function submitRun(runId: string): Promise<ChecklistRun> {
-  return post<ChecklistRun>(`/checklist-runs/${runId}/submit`);
+  return post<ChecklistRun>(`/v1/checklist-runs/${runId}/submit`);
 }
 
 export async function updateRunAssignment(
   runId: string,
   assignedToUserId: string | null
 ): Promise<ChecklistRun> {
-  return patch<ChecklistRun>(`/checklist-runs/${runId}/assignment`, {
+  return patch<ChecklistRun>(`/v1/checklist-runs/${runId}/assignment`, {
     assignedToUserId,
   });
 }
 
 export async function getRunItemById(itemId: string): Promise<RunItemDetail> {
-  return get<RunItemDetail>(`/checklist-run-items/${itemId}`);
+  return get<RunItemDetail>(`/v1/checklist-run-items/${itemId}`);
 }
 
 export async function deleteAttachment(attachmentId: string): Promise<{ id: string; deleted: boolean }> {
-  return del<{ id: string; deleted: boolean }>(`/attachments/${attachmentId}`);
+  return del<{ id: string; deleted: boolean }>(`/v1/attachments/${attachmentId}`);
 }
 
 export async function uploadEvidence(itemId: string, file: File): Promise<RunItemAttachment> {
   const formData = new FormData();
   formData.append('file', file);
-  return postForm<RunItemAttachment>(`/checklist-run-items/${itemId}/evidence`, formData);
+  return postForm<RunItemAttachment>(`/v1/checklist-run-items/${itemId}/evidence`, formData);
 }

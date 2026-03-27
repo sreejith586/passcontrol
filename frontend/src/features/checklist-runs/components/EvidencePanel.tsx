@@ -124,7 +124,7 @@ export function EvidencePanel({
   async function handleView(fileId: string) {
     setViewingFileId(fileId);
     try {
-      const blob = await getBlob(`/files/${fileId}/content`);
+      const blob = await getBlob(`/v1/files/${fileId}/content`);
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
