@@ -3,7 +3,7 @@ import { unwrapResponse } from './response-unwrap';
 import { ApiError } from './errors';
 
 const baseURL =
-  (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '') + '/v1' || '/v1';
+  (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '') || '';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL,
