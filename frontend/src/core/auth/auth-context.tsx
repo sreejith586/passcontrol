@@ -56,7 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = useCallback((me: MeResponse) => {
-    const user = { ...me.user, isSuperAdmin: me.isSuperAdmin ?? false };
+    const isSuperAdmin =
+      me.isSuperAdmin != null
+        ? me.isSuperAdmin
+        : Boolean(me.roles?.includes('super_admin') || me.user.isSuperAdmin);
+
+    const user = { ...me.user, isSuperAdmin };
     setStoredUser(user);
     setState({
       user,
